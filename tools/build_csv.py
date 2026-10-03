@@ -13,14 +13,16 @@ for r in _wb["Datasheets"].iter_rows(min_row=2,values_only=True):
     if not r[0]: continue
     code,w,cri,cct,opt,drv,cov,mod_lm,del_lm,eff,zipf,pdf=r[:12]
     drv="Phase cut" if str(drv).upper()=="PHASE CUT" else drv
-    cct=str(cct).replace("Tunable white","Tunable white")
+    cct=str(cct)
+    if "unable white" in cct.lower() or "uneable white" in cct.lower():
+        cct="Tuneable White "+cct.split()[-1].replace("-","–")   # family filter says just "Tuneable White"; codes keep the range
     img="images/delta-white-thumb.jpg" if cov=="White" else "images/delta-black-thumb.jpg"
     DELTA_MODELS.append((f"Delta {w} {opt}",code,"",w,f"{del_lm}lm",opt,f"Datasheet=files/delta/{code}.pdf",cct,drv,"",cov,img,f"CRI {cri}",f"{eff} lm/W",UGR.get(code,"")))
 
 fam("Delta Recessed Fix Deep","Alphabet Lights","Interior","Recessed Downlight","Deep-set fixed downlight for a 55mm cut-out, with UGR 15 and 2-step MacAdam colour consistency.",
 "A compact 4W or 7W fixed recessed downlight in aluminium with a PC dark cover. The deep-set source keeps glare low (UGR 15) while delivering high colour quality with CRI 95+ and less than 1% ripple. Electronic short-circuit, overload, over-temperature and no-load protection.",
 "Cut-out Ø55mm. Minimum installation depth 80mm. Input voltage AC 220–240V. Power factor 0.95. Colour tolerance 2-step MacAdam. Ripple <1%. Operating temperature −25° to +45°. L90B10 @ 50,000h. L80B10 @ 100,000h. 7-year warranty",
-"2700K | 3000K | 3500K | 4000K | Tunable white 2700-6500K | Tunable white 1800-4000K","CRI 90 | CRI 95+","DALI | Phase cut","","White | Black","recessed-round","Yes",
+"2700K | 3000K | 3500K | 4000K | Tuneable White","CRI 90 | CRI 95+","DALI | Phase cut","","White | Black","recessed-round","Yes",
 DELTA_MODELS,
 "images/delta-thumb.jpg;images/delta-recessed-fix-deep-dimensions.jpg","images/delta-slide-1.jpg;images/delta-slide-2.jpg","images/delta-recessed-fix-deep-dimensions.jpg","Cut-out Ø55mm · minimum installation depth 80mm")
 fam("Fusion DBM LED","Exporlux","Interior","Track Mounted","Three-phase track luminaire for work areas, with near-invisible DARKLIGHT optics.",
