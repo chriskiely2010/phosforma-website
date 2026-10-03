@@ -974,9 +974,11 @@ function renderCodes(){
   const perfTxt=[f.lumen_maintenance,f.sdcm].filter(Boolean).join(' / ');const perf=perfTxt?` <span class="cg-perf">${esc(perfTxt)}</span>`:'';
   $('#cgroups').innerHTML=groups.map(g=>{
     if(subBy&&new Set(g.items.map(variantOf)).size>1){
-      const gh=`<h3 class="cg-h">${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''}${g.fin?` <span>${esc(g.fin)}</span>`:''}${perf}</h3>`;let first=true;
-      return `<div class="cgroup bysub">${vOrder.map(v=>{const items=g.items.filter(m=>variantOf(m)===v);if(!items.length)return '';const top=first?gh:'';first=false;
-        return `<div class="csub"><div class="chero">${heroOf(items,g.fin,v)}</div><div class="cmain">${top}${block(g.key+'|'+v,items,`<h4>${esc(v)}${vl==='Reflector'?' reflector':''} <span>${items.length} code${items.length==1?'':'s'}</span></h4>`)}</div></div>`;}).join('')}</div>`;
+      const tc=t=>String(t).replace(/\b\w/g,c=>c.toUpperCase());
+      return `<div class="cgroup bysub">${vOrder.map(v=>{const items=g.items.filter(m=>variantOf(m)===v);if(!items.length)return '';
+        const sub=vl==='Reflector'?`${g.fin?esc(g.fin)+' with ':''}${esc(tc(v))} Reflector`:[g.fin,v].filter(Boolean).map(esc).join(' · ');
+        const gh=`<h3 class="cg-h">${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''} <span>– ${sub}</span>${perf}</h3>`;
+        return `<div class="csub"><div class="chero">${heroOf(items,g.fin,v)}</div><div class="cmain">${block(g.key+'|'+v,items,gh)}</div></div>`;}).join('')}</div>`;
     }
     return `<div class="cgroup"><div class="chero">${heroOf(g.items,g.fin)}</div>
     <div class="cmain"><h3>${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''}${g.fin?` <span>${esc(g.fin)}</span>`:''}${perf}</h3>${block(g.key,g.items)}</div></div>`;
