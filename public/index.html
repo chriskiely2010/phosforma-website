@@ -672,7 +672,7 @@ function parseCSV(text){
   const head=clean[0].map(h=>h.trim().toLowerCase().replace(/\s+/g,'_'));
   return clean.slice(1).map(r=>Object.fromEntries(head.map((h,i)=>[h,(r[i]||'').trim()])));
 }
-const FAM_FIELDS=['brand','environment','category','tagline','description','specification','cct','cri','control','ip','finishes','drawing','new','images','slides','slide_tag','dimensions','dimensions_note'];
+const FAM_FIELDS=['brand','environment','category','tagline','description','specification','cct','cri','control','ip','ik','finishes','drawing','new','images','slides','slide_tag','dimensions','dimensions_note'];
 function groupFamilies(rows, added=false){
   const map=new Map();
   rows.forEach((r,idx)=>{
@@ -680,7 +680,7 @@ function groupFamilies(rows, added=false){
     let f=map.get(name);
     if(!f){f={family:name,slug:slug(name),models:[],added,rowStart:idx+2};FAM_FIELDS.forEach(k=>f[k]='');map.set(name,f);}
     FAM_FIELDS.forEach(k=>{ if(!f[k] && r[k]) f[k]=r[k]; });
-    if(r.model) f.models.push({scale:parseFloat(r.image_scale)||1,size:(r.model.startsWith(f.family)?r.model.slice(f.family.length):'').replace(/\s+[\d.]+W\b.*$/,'').trim(),name:r.model,code:r.code||'',cct:r.model_cct||'',cri:r.model_cri||'',ugr:r.model_ugr||'',efficacy:r.efficacy||'',finish:r.model_finish||'',image:r.model_image||'',control:r.model_control||'',ip:r.model_ip||'',details:r.model_details||'',power:r.power||'',flux:r.flux||'',beam:r.beam||'',downloads:split((r.downloads||'').replace(/;/g,'|')).map(d=>{const [label,path]=d.split('=').map(x=>x.trim());return {label,path:path||''};})});
+    if(r.model) f.models.push({scale:parseFloat(r.image_scale)||1,size:(r.model.startsWith(f.family)?r.model.slice(f.family.length):'').replace(/\s+[\d.]+W\b.*$/,'').trim(),name:r.model,code:r.code||'',cct:r.model_cct||'',cri:r.model_cri||'',ugr:r.model_ugr||'',efficacy:r.efficacy||'',finish:r.model_finish||'',image:r.model_image||'',control:r.model_control||'',ip:r.model_ip||'',ik:r.model_ik||'',details:r.model_details||'',power:r.power||'',flux:r.flux||'',beam:r.beam||'',downloads:split((r.downloads||'').replace(/;/g,'|')).map(d=>{const [label,path]=d.split('=').map(x=>x.trim());return {label,path:path||''};})});
   });
   return [...map.values()].map(f=>{f.isNew=false;f.drawing=f.drawing||guessDrawing(f);f.imgs=split((f.images||'').replace(/;/g,'|'));f.slideImgs=split((f.slides||'').replace(/;/g,'|'));return f;});
 }
@@ -784,7 +784,7 @@ function viewHome(){
 
 /* catalogue with filters */
 const FILTERS=[['environment','Environment',f=>[f.environment]],['category','Product type',f=>[f.category]],['brand','Partner',f=>[f.brand]],
-  ['cct','Colour temperature',f=>split(f.cct)],['control','Control',f=>split(f.control)],['ip','Protection',f=>split(f.ip).map(x=>x.replace(/ option$/,''))]];
+  ['cct','Colour temperature',f=>split(f.cct)],['control','Control',f=>split(f.control)],['ip','Protection',f=>split(f.ip).map(x=>x.replace(/ option$/,''))],['ik','Impact rating',f=>split(f.ik)]];
 let state={sel:{},q:'',sort:'az',preset:null};
 /* banner at the top of a collection page: image + one big line */
 const COLLECTION_BANNERS={Interior:{tag:'The right light, specified.'}};
@@ -843,7 +843,7 @@ function bindCatalog(){
 }
 
 /* single code page */
-const SPEC_ROWS=[['variant','%V'],['power','Power'],['flux','Delivered lumens'],['efficacy','Efficacy'],['beam','Beam angle'],['cct','Colour temperature'],['cri','Colour rendering'],['ugr','UGR'],['control','Control'],['ip','Protection'],['finish','Finish']];
+const SPEC_ROWS=[['variant','%V'],['power','Power'],['flux','Delivered lumens'],['efficacy','Efficacy'],['beam','Beam angle'],['cct','Colour temperature'],['cri','Colour rendering'],['ugr','UGR'],['control','Control'],['ip','Protection'],['ik','Impact rating (IK)'],['finish','Finish']];
 const VAR_KEYS=[['size','Size'],['finish','Finish'],['power','Power'],['beam','Beam'],['cct','Colour temperature'],['cri','CRI'],['control','Control']];
 function findCode(code){for(const f of CATALOG){const m=f.models.find(x=>x.code===code);if(m)return{f,m};}return null;}
 function viewCode(f,m){
@@ -911,7 +911,7 @@ const modelThumb=(f,m)=>m.image?`<span class="mthumb photo"><img${sc(m)} src="${
 function finishList(f){const l=split(f.finishes).filter(x=>!/multiple/i.test(x));return l.length?l:['White','Black'];}
 function viewProduct(f){
   const fins=finishList(f);
-  const quick=[['Colour temperature',f.cct],['Colour rendering',f.cri],['Control',f.control],['Protection',f.ip],['Finishes',f.finishes],['Brand',f.brand]].filter(x=>x[1]);
+  const quick=[['Colour temperature',f.cct],['Colour rendering',f.cri],['Control',f.control],['Protection',f.ip],['Impact rating',f.ik||(f.environment==='Exterior'?'—':'')],['Finishes',f.finishes],['Brand',f.brand]].filter(x=>x[1]);
   const specs=String(f.specification||'').split(/\.\s+(?=[A-Z0-9Ø])/).map(s=>s.replace(/\.$/,'').trim()).filter(Boolean);
   const allCCT=split(f.cct);
   const hasCol=k=>f.models.some(m=>m[k]);
@@ -938,11 +938,11 @@ function viewProduct(f){
   <section class="psec" id="s-downloads"><div class="wrap"><h2>Downloads</h2>${(()=>{const seen=new Set();const uniq=files.filter(x=>{const key=x.d.path||(x.d.label+'|'+x.m);if(seen.has(key))return false;seen.add(key);return true;});const shared=uniq.length<files.length;if(shared)files.splice(0,files.length,...uniq.map(x=>x.d.path?{...x,m:f.family}:x));return '';})()}${files.length>12?dlPerCode(f,files):`<div class="downloads">${files.map(x=>{const inner=`<span>${esc(x.d.label)}<br><small>${esc(x.m)}</small></span><small>${x.d.path?((x.d.path.match(/\.(\w+)(\?|$)/)||[,'link'])[1].toUpperCase()+' ↗'):/ies|ldt/i.test(x.d.label)?x.d.label.toUpperCase():'PDF'}</small>`;return x.d.path?`<a class="dlrow" href="${esc(x.d.path)}" target="_blank" rel="noopener">${inner}</a>`:`<button data-dl="${esc(x.m+' – '+x.d.label)}">${inner}</button>`;}).join('')}</div>`}</div></section>
   ${related.length?`<section class="psec" id="s-related"><div class="wrap"><h2>More ${esc(f.category.toLowerCase())}</h2><div class="grid">${related.map(card).join('')}</div></div></section>`:''}`;
 }
-const CODE_COLS=[['thumb',''],['code','Code'],['size','Size'],['variant','%V'],['name','Model'],['power','Power'],['flux','Delivered lumens'],['efficacy','Efficacy'],['beam','Beam'],['cct','CCT'],['cri','CRI'],['ugr','UGR'],['control','Control'],['finish','Finish'],['ip','IP']];
+const CODE_COLS=[['thumb',''],['code','Code'],['size','Size'],['variant','%V'],['name','Model'],['power','Power'],['flux','Delivered lumens'],['efficacy','Efficacy'],['beam','Beam'],['cct','CCT'],['cri','CRI'],['ugr','UGR'],['control','Control'],['finish','Finish'],['ip','IP'],['ik','IK']];
 const variantOf=m=>String(m.details||'').split(' · ')[0].replace(/\s+reflector$/i,'').trim();
 const varLabel=f=>f&&f.models.every(m=>/reflector/i.test(m.details||''))?'Reflector':'Version';
-const mval=(f,m,k)=>k==='variant'?variantOf(m):m[k]||({cct:f.cct,control:f.control,ip:f.ip,cri:f.cri}[k])||'';
-function codeCols(f){return CODE_COLS.map(([k,l])=>[k,l==='%V'?varLabel(f):l]).filter(([k])=>k==='size'?new Set(f.models.map(m=>m.size)).size>1:k==='variant'?new Set(f.models.map(variantOf)).size>1:k==='thumb'||k==='name'||k==='ip'||f.models.some(m=>m[k])||(['cct','control','ip','cri'].includes(k)&&f[k]));}
+const mval=(f,m,k)=>k==='variant'?variantOf(m):m[k]||({cct:f.cct,control:f.control,ip:f.ip,ik:f.ik,cri:f.cri}[k])||'';
+function codeCols(f){return CODE_COLS.map(([k,l])=>[k,l==='%V'?varLabel(f):l]).filter(([k])=>k==='size'?new Set(f.models.map(m=>m.size)).size>1:k==='variant'?new Set(f.models.map(variantOf)).size>1:k==='thumb'||k==='name'||k==='ip'||(k==='ik'&&f.environment==='Exterior')||f.models.some(m=>m[k])||(['cct','control','ip','cri'].includes(k)&&f[k]));}
 const CF_KEYS=[['power','Power'],['cct','CCT'],['cri','CRI'],['beam','Beam'],['control','Control'],['finish','Finish']];
 let codeState={f:null,sel:{},all:false};
 function codeRow(f,m,cols){return `<tr>${cols.map(([k])=>k==='thumb'?`<td class="t">${modelThumb(f,m)}</td>`:k==='code'?`<td class="code">${m.code?`<a class="codelink" href="#k-${esc(m.code)}">${esc(m.code)}</a>`:'—'}</td>`:k==='finish'?`<td>${m.finish?`<span class="fin"><i style="background:${finColor(m.finish)}"></i>${esc(m.finish)}</span>`:'—'}</td>`:k==='name'?`<td class="m"><div><b>${esc(m.name)}</b>${m.details?`<span>${esc(m.details)}</span>`:''}</div></td>`:`<td>${esc(String(mval(f,m,k)||'—').replace(/^Tunable white /,'TW '))}</td>`).join('')}<td><div class="dl">${m.downloads.length?dlFiles(m):''}</div></td></tr>`;}
@@ -1019,7 +1019,7 @@ Sample Orbit,,,,,,,,,,,,,,Sample Orbit Ø1200,Direct / indirect,64W,7200lm,Wide,
 Sample Trace,Example Brand,Exterior,Bollard,A compact bollard for paths and courtyards.,"Example row: die-cast aluminium bollard with a glare-free asymmetric optic.",Die-cast aluminium. Anti-corrosion powder coat. Tempered glass. 230Vac.,3000K | 4000K,CRI>80,On/Off | DALI,IP66,Graphite | Black,bollard,Yes,Sample Trace 500,500mm height,9W,780lm,Asymmetric,Datasheet;IES;LDT
 Sample Trace,,,,,,,,,,,,,,Sample Trace 900,900mm height,12W,1050lm,Asymmetric,Datasheet;IES;LDT`;
 const COLS=[['family','Product family name. Repeat it on every model row.',1],['brand','Manufacturer, e.g. Rovasi, O/M, Esse-Ci.',1],['environment','Interior or Exterior.',1],['category','Product type, e.g. Recessed Downlight. New types create a new filter automatically.',1],
- ['tagline','One-line summary under the title.',0],['description','Overview paragraph.',1],['specification','Spec sentences, separated by full stops.',0],['cct · cri · control · ip · finishes','Quick-facts values. Separate options with |',0],
+ ['tagline','One-line summary under the title.',0],['description','Overview paragraph.',1],['specification','Spec sentences, separated by full stops.',0],['cct · cri · control · ip · finishes','Quick-facts values. Separate options with |',0],['ik · model_ik','Impact rating, e.g. IK08. Shown as a column on Exterior products; model_ik overrides it per code.',0],
  ['dimensions · dimensions_note','Dimension drawing file name shown beside the Overview, plus a one-line size summary.',0],['drawing','recessed-round, recessed-square, recessed-adjustable, recessed-linear, surface-cylinder, surface-square, surface-linear, track, pendant, linear, bollard, inground.',0],['new','Yes shows the New badge.',0],
  ['model','One row per model or size.',1],['code','Order code / article number for that model.',0],['model_finish · model_image','Finish of that code and its thumbnail photo. Without a photo, a line drawing in that finish is shown.',0],['model_cri · efficacy','CRI and delivered efficacy of that code.',0],['model_cct · model_control · model_ip','Colour temperature, control and IP rating of that code. Leave blank to use the family values.',0],['model_details · power · flux · beam','Model-level specs for the codes table.',0],['downloads','Separated by ;  Use Label=files/name.pdf to link a file, e.g. Datasheet=files/FUSI013.pdf',0],['slides · slide_tag','Banner images for the top of the product page, separated by ; and an optional big banner line, e.g. The right light, specified.',0],['images','Product photo, dimension drawing and photometric file names from the images folder, separated by ;',0]];
 function viewAdd(){

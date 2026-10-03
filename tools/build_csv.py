@@ -37,7 +37,7 @@ fam("Dea Carmenta S","Karizma Luce","Interior","Recessed Downlight","A true piec
 "2700K | 3000K | 4000K | Warm Dim","CRI>90","On/Off | DALI | Phase Dim","IP20","Black | White","recessed-adjustable","",
 [("Dea Carmenta S Adjustable Downlight","","Tilt 25°, rotation 355°.","","","")])
 
-cols=["family","brand","environment","category","tagline","description","specification","cct","cri","control","ip","finishes","drawing","new","images","slides","slide_tag","dimensions","dimensions_note","model","code","model_finish","model_image","model_cct","model_cri","model_control","model_ip","model_ugr","model_details","power","flux","efficacy","beam","downloads"]
+cols=["family","brand","environment","category","tagline","description","specification","cct","cri","control","ip","finishes","drawing","new","images","slides","slide_tag","dimensions","dimensions_note","model","code","model_finish","model_image","model_cct","model_cri","model_control","model_ip","model_ugr","model_details","power","flux","efficacy","beam","downloads","ik","model_ik"]
 with open("products.csv","w",newline="",encoding="utf-8") as f:
     w=csv.writer(f); w.writerow(cols)
     for p in F:
@@ -46,7 +46,7 @@ with open("products.csv","w",newline="",encoding="utf-8") as f:
             row={k:(p.get(k,"") if i==0 else "") for k in cols[:19]}
             row["family"]=p["family"]
             row.update(model_ugr=mugr,model_cri=mcri,efficacy=meff,model=m,code=code,model_finish=mfin,model_image=mimg,model_cct=mcct,model_control=mctl,model_ip=mip,model_details=det,power=pw,flux=fl,beam=bm,downloads=dl)
-            w.writerow([row[c] for c in cols])
+            w.writerow([row.get(c,"") for c in cols])
 print(sum(len(p["models"]) for p in F),"rows",len(F),"families")
 
 # Supplier index sheets in the site's own column format replace any family of the same name.
