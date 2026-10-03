@@ -37,7 +37,7 @@ fam("Dea Carmenta S","Karizma Luce","Interior","Recessed Downlight","A true piec
 "2700K | 3000K | 4000K | Warm Dim","CRI>90","On/Off | DALI | Phase Dim","IP20","Black | White","recessed-adjustable","",
 [("Dea Carmenta S Adjustable Downlight","","Tilt 25°, rotation 355°.","","","")])
 
-cols=["family","brand","environment","category","tagline","description","specification","cct","cri","control","ip","finishes","drawing","new","images","slides","slide_tag","dimensions","dimensions_note","model","code","model_finish","model_image","model_cct","model_cri","model_control","model_ip","model_ugr","model_details","power","flux","efficacy","beam","downloads","ik","model_ik"]
+cols=["family","brand","environment","category","tagline","description","specification","cct","cri","control","ip","finishes","drawing","new","images","slides","slide_tag","dimensions","dimensions_note","model","code","model_finish","model_image","model_cct","model_cri","model_control","model_ip","model_ugr","model_details","power","flux","efficacy","beam","downloads","ik","model_ik","lumen_maintenance","sdcm"]
 with open("products.csv","w",newline="",encoding="utf-8") as f:
     w=csv.writer(f); w.writerow(cols)
     for p in F:
@@ -57,6 +57,27 @@ for path in sorted(glob.glob("data/*.csv")):
     names={r["family"] for r in sup}
     rows=[r for r in rows if r["family"] not in names]+[{c:r.get(c,"") for c in cols} for r in sup]
     print(path,len(sup),"rows,",len(names),"families")
+# Lumen maintenance and colour consistency for the code-group titles, e.g. "L80 50000H B10 / 3 SDCM".
+# Filled from the specification text when the columns are left blank.
+import re
+def _lm(spec):
+    s=spec.replace(",","").replace(".000","000")
+    m=re.search(r"L(\d{2})\s*B(\d{2})\s*@?\s*(\d{4,6})\s*h",s,re.I) or None
+    if m: return f"L{m.group(1)} {m.group(3)}H B{m.group(2)}"
+    m=re.search(r"L(\d{2})\s*(\d{4,6})\s*H\s*B(\d{2})",s,re.I)
+    if m: return f"L{m.group(1)} {m.group(2)}H B{m.group(3)}"
+    m=re.search(r"Lifetime\s*(\d{4,6})\s*h\s*/\s*L(\d{2})\s*B(\d{2})",s,re.I)
+    if m: return f"L{m.group(2)} {m.group(1)}H B{m.group(3)}"
+    m=re.search(r"Lifetime\s*(\d{4,6})\s*h",s,re.I)
+    if m: return f"L80 {m.group(1)}H B10"      # Karizma states hours only; L80 B10 is their standard
+    return ""
+def _sdcm(spec):
+    m=re.search(r"(\d)[- ]step MacAdam|(\d)\s*SDCM",spec,re.I)
+    return f"{m.group(1) or m.group(2)} SDCM" if m else ""
+for r in rows:
+    if r.get("specification"):
+        r["lumen_maintenance"]=r.get("lumen_maintenance") or _lm(r["specification"])
+        r["sdcm"]=r.get("sdcm") or _sdcm(r["specification"])
 with open("products.csv","w",newline="",encoding="utf-8") as f:
     w=csv.DictWriter(f,fieldnames=cols);w.writeheader();w.writerows(rows)
 print(len(rows),"rows total")

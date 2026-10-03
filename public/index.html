@@ -389,6 +389,7 @@ table.codes td{vertical-align:middle}
 .ccount{margin:0 0 8px;font-size:13px}
 .cgroup{display:grid;grid-template-columns:minmax(0,210px) minmax(0,1fr);gap:28px;padding:28px 0;border-bottom:1px solid var(--line)}
 .cgroup:last-child{border-bottom:0}
+.cgroup h3 .cg-perf{font-weight:400;color:var(--muted);font-size:.8em;margin-left:6px;white-space:nowrap}
 .chero{background:#fff;border:1px solid var(--line);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden;align-self:start}
 .chero img{width:100%;height:100%;object-fit:contain}
 .chero:has(img.sc),.kimg:has(img.sc),.sh-img:has(img.sc),.mthumb:has(img.sc){background:#ccc}
@@ -672,7 +673,7 @@ function parseCSV(text){
   const head=clean[0].map(h=>h.trim().toLowerCase().replace(/\s+/g,'_'));
   return clean.slice(1).map(r=>Object.fromEntries(head.map((h,i)=>[h,(r[i]||'').trim()])));
 }
-const FAM_FIELDS=['brand','environment','category','tagline','description','specification','cct','cri','control','ip','ik','finishes','drawing','new','images','slides','slide_tag','dimensions','dimensions_note'];
+const FAM_FIELDS=['brand','environment','category','tagline','description','specification','cct','cri','control','ip','ik','finishes','drawing','new','images','slides','slide_tag','dimensions','dimensions_note','lumen_maintenance','sdcm'];
 function groupFamilies(rows, added=false){
   const map=new Map();
   rows.forEach((r,idx)=>{
@@ -968,13 +969,14 @@ function renderCodes(){
   const heroOf=(items,fin,v)=>{const hm=items.find(m=>m.image),img=hm?.image;if(img)return `<img${sc(hm)} data-dr="${esc(f.drawing)}" src="${esc(img)}" alt="${esc(f.family)} ${esc(fin)}${v?' '+esc(v):''}" loading="lazy">`;
     let svg=drawing(f.drawing,/black/i.test(fin)?'black':'white',false);if(v)svg=svg.replace(/fill="var\(--beam\)"( opacity="[^"]*")?/g,`fill="${reflColor(v)}" stroke="var(--ink)" stroke-width=".6"`);return svg;};
   const finLabel=g=>{if(!g.fin)return '';const re=new RegExp('^'+g.fin.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\(RAL[^)]*\\)$','i');for(const m of g.items)for(const seg of String(m.details||'').split(' · '))if(re.test(seg.trim()))return seg.trim();return g.fin;};
+  const perfTxt=[f.lumen_maintenance,f.sdcm].filter(Boolean).join(' / ');const perf=perfTxt?` <span class="cg-perf">${esc(perfTxt)}</span>`:'';
   $('#cgroups').innerHTML=groups.map(g=>{
     if(subBy&&new Set(g.items.map(variantOf)).size>1){
-      return `<div class="cgroup bysub"><h3 class="cg-h">${esc(f.family)}${g.sz?' '+esc(g.sz):''}${g.fin?` <span>${esc(g.fin)}</span>`:''}</h3>${vOrder.map(v=>{const items=g.items.filter(m=>variantOf(m)===v);if(!items.length)return '';
+      return `<div class="cgroup bysub"><h3 class="cg-h">${esc(f.family)}${g.sz?' '+esc(g.sz):''}${g.fin?` <span>${esc(g.fin)}</span>`:''}${perf}</h3>${vOrder.map(v=>{const items=g.items.filter(m=>variantOf(m)===v);if(!items.length)return '';
         return `<div class="csub"><div class="chero">${heroOf(items,g.fin,v)}</div><div class="cmain">${block(g.key+'|'+v,items,`<h4>${esc(v)}${vl==='Reflector'?' reflector':''} <span>${items.length} code${items.length==1?'':'s'}</span></h4>`)}</div></div>`;}).join('')}</div>`;
     }
     return `<div class="cgroup"><div class="chero">${heroOf(g.items,g.fin)}</div>
-    <div class="cmain"><h3>${esc(f.family)}${g.sz?' '+esc(g.sz):''}${g.fin?` <span>${esc(g.fin)}</span>`:''}</h3>${block(g.key,g.items)}</div></div>`;
+    <div class="cmain"><h3>${esc(f.family)}${g.sz?' '+esc(g.sz):''}${g.fin?` <span>${esc(g.fin)}</span>`:''}${perf}</h3>${block(g.key,g.items)}</div></div>`;
   }).join('');
 }
 const REFL={'black high gloss':'#0e0e0e','black matt':'#2e2e2e','black':'#1a1a1a','copper':'#b87333','gold':'#c9a24a','silver high gloss':'#c4c7cb','silver':'#c4c7cb','white':'#f5f5f3','chrome':'#e3e6ea'};
