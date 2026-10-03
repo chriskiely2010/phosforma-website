@@ -979,7 +979,7 @@ function renderCodes(){
       const tc=t=>String(t).replace(/\b\w/g,c=>c.toUpperCase());
       return `<div class="cgroup bysub">${vOrder.map(v=>{const items=g.items.filter(m=>variantOf(m)===v);if(!items.length)return '';
         const sub=vl==='Reflector'?`${g.fin?esc(g.fin)+' with ':''}${esc(tc(v))} Reflector`:[g.fin,v].filter(Boolean).map(esc).join(' · ');
-        const gh=`<h3 class="cg-h">${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''} <span>– ${sub}</span>${perf}</h3>`;
+        const gh=`<h3 class="cg-h">${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''} <span>${sub}</span>${perf}</h3>`;
         return `<div class="csub"><div class="chero">${heroOf(items,g.fin,v)}</div><div class="cmain">${block(g.key+'|'+v,items,gh)}</div></div>`;}).join('')}</div>`;
     }
     return `<div class="cgroup"><div class="chero">${heroOf(g.items,g.fin)}</div>
