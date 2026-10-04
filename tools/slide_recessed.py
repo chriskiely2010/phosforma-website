@@ -33,6 +33,27 @@ def trim_ellipse(alpha):
     r = least_squares(res, p0, loss='soft_l1', f_scale=4)
     return r.x  # cx, cy, rx, ry
 
+def remove_clips(fit, y0, ex, ey, rx, ry):
+    """Paint out spring clips that show over the trim face below the ceiling.
+    Works on the fitting layer only: clip pixels (thin metal, far from the trim
+    colour, in the outer ring of the trim ellipse) are filled from the trim around
+    them; any clip pixel past the trim edge is made transparent."""
+    import cv2
+    arr = np.array(fit); rgb = arr[:, :, :3].copy(); al = arr[:, :, 3]
+    h, w = al.shape; yy, xx = np.mgrid[0:h, 0:w]
+    r = ((xx - ex) / rx) ** 2 + ((yy - ey) / ry) ** 2
+    ring = (r < 1.1) & (r > 0.55) & (yy > y0) & (al > 128)
+    if not ring.any(): return fit
+    g = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY).astype(float)
+    med = np.median(g[ring & (r < 0.95)])
+    sat = rgb.max(2).astype(int) - rgb.min(2).astype(int)
+    clip = (ring & (np.abs(g - med) > 45) & (sat < 40)).astype('uint8') * 255
+    clip = cv2.dilate(clip, np.ones((5, 5), np.uint8))
+    clip[(yy <= y0) | (al == 0)] = 0
+    rgb = cv2.inpaint(rgb, clip, 6, cv2.INPAINT_TELEA)
+    al = al.copy(); al[(clip > 0) & (r > 0.97)] = 0
+    return Image.fromarray(np.dstack([rgb, al]))
+
 def make(src, dst, xfrac=0.70, hfrac=0.62, board=0.028, debug=False):
     im = Image.open(src).convert('RGBA')
     im = im.crop(im.split()[3].getbbox())
@@ -57,6 +78,7 @@ def make(src, dst, xfrac=0.70, hfrac=0.62, board=0.028, debug=False):
     keep = keep.filter(ImageFilter.GaussianBlur(1.2))
     a = Image.fromarray((np.array(fit.split()[3]).astype(float) * np.array(keep) / 255).astype('uint8'))
     fit.putalpha(a)
+    fit = remove_clips(fit, line + bt, left + cx, top + cy, rx, ry)
     out = scene.convert('RGBA'); out.alpha_composite(fit)
     if debug:
         dd = ImageDraw.Draw(out); dd.ellipse([ex - rx, ey - ry, ex + rx, ey + ry], outline=(255, 0, 0, 255), width=2)
