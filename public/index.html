@@ -252,6 +252,7 @@ section.block{padding-block:56px;border-bottom:1px solid var(--line)}
 .card .name{font-size:16px;font-weight:500;line-height:1.25}
 .card .type{font-size:13px;color:var(--muted)}
 .card .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;margin-top:auto}
+.card .meta{align-items:center}.card .sw{display:flex;gap:4px;align-items:center}.card .sw i{width:13px;height:13px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.22);display:block}.card .sw em{font-style:normal;margin-left:2px}
 .filters-toggle{display:none}
 .empty{padding:40px;border:1px dashed var(--line);text-align:center;color:var(--muted)}
 @media (max-width:900px){
@@ -760,7 +761,22 @@ const crumbs=items=>`<div class="crumbs">${items.map((it,i)=>(i?'<span class="se
 function card(f){
   return `<a class="card" href="#p-${f.slug}"><div class="pic${f.imgs.length?' photo':''}">${f.added?'<span class="badge added">Just added</span>':f.isNew?'<span class="badge">New</span>':''}${f.imgs.length?`<img src="${esc(f.imgs[0])}" alt="${esc(f.family)}" loading="lazy" data-dr="${esc(f.drawing)}">`:drawing(f.drawing)}</div>
   <div><div class="name">${esc(f.family)}</div><div class="type">${esc(f.category)}</div></div>
-  <div class="meta"><span>${esc(f.brand)}</span><span>${f.models.length} model${f.models.length==1?'':'s'}</span></div></a>`;
+  <div class="meta"><span>${esc(f.brand)}</span>${swatches(f)}</div></a>`;
+}
+/* finish swatches on tiles: one circle per body finish, split at 45° when the reflector colour differs */
+const SW_COL=[[/black|ral\s*90(05|11)|anthracite/i,'#1b1b1b'],[/gold|brass/i,'#c9a24a'],[/copper|bronze|corten|brown/i,'#a8653a'],
+  [/chrome|silver|alumin|metali[sz]ed|nickel/i,'#b9bdc2'],[/grey|gray/i,'#8a8d91'],[/white|trimless|cotton|ral\s*90(03|10|16)/i,'#ffffff']];
+const swCol=n=>{for(const[r,c]of SW_COL)if(r.test(n))return c;return '';};
+function swatches(f){
+  const seen=new Map();
+  f.models.forEach(m=>{const body=m.finish||f.finishes.split('|')[0]||'';const bc=swCol(body);if(!bc)return;
+    const v=variantOf(m);const rc=/reflector/i.test(String(m.details||'').split(' · ')[0])?swCol(v):'';
+    const two=rc&&rc!==bc;const key=bc+(two?'/'+rc:'');
+    if(!seen.has(key))seen.set(key,{bc,rc:two?rc:'',t:two?`${body} with ${v} reflector`:body});});
+  const list=[...seen.values()].sort((a,b)=>(a.rc?1:0)-(b.rc?1:0));
+  if(!list.length)return `<span>${f.models.length} model${f.models.length==1?'':'s'}</span>`;
+  const max=8,more=list.length-max;
+  return `<span class="sw" aria-label="Finishes: ${esc(list.map(x=>x.t).join(', '))}">${list.slice(0,max).map(x=>`<i title="${esc(x.t)}" style="background:${x.rc?`linear-gradient(135deg,${x.bc} 50%,${x.rc} 50%)`:x.bc}"></i>`).join('')}${more>0?`<em>+${more}</em>`:''}</span>`;
 }
 
 let homeTimer;
