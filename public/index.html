@@ -769,8 +769,9 @@ const SW_COL=[[/black|ral\s*90(05|11)|anthracite/i,'#1b1b1b'],[/gold|brass/i,'#c
 const swCol=n=>{for(const[r,c]of SW_COL)if(r.test(n))return c;return '';};
 function swatches(f){
   const seen=new Map();
-  f.models.forEach(m=>{const body=m.finish||f.finishes.split('|')[0]||'';const bc=swCol(body);if(!bc)return;
+  f.models.forEach(m=>{let body=m.finish||f.finishes.split('|')[0]||'';let bc=swCol(body);if(!bc)return;
     const v=variantOf(m);const rc=/reflector/i.test(String(m.details||'').split(' · ')[0])?swCol(v):'';
+    if(/trimless/i.test(body)&&rc){bc=rc;body=v+' reflector, trimless';}
     const two=rc&&rc!==bc;const key=bc+(two?'/'+rc:'');
     if(!seen.has(key))seen.set(key,{bc,rc:two?rc:'',t:two?`${body} with ${v} reflector`:body});});
   const list=[...seen.values()].sort((a,b)=>(a.rc?1:0)-(b.rc?1:0));
@@ -994,7 +995,7 @@ function renderCodes(){
     if(subBy&&new Set(g.items.map(variantOf)).size>1){
       const tc=t=>String(t).replace(/\b\w/g,c=>c.toUpperCase());
       return `<div class="cgroup bysub">${vOrder.map(v=>{const items=g.items.filter(m=>variantOf(m)===v);if(!items.length)return '';
-        const sub=vl==='Reflector'?`${g.fin?esc(g.fin)+' with ':''}${esc(tc(v))} Reflector`:[g.fin,v].filter(Boolean).map(esc).join(' · ');
+        const sub=vl==='Reflector'?`${g.fin&&!/trimless/i.test(g.fin)?esc(g.fin)+' with ':''}${esc(tc(v))} Reflector`:[g.fin,v].filter(Boolean).map(esc).join(' · ');
         const gh=`<h3 class="cg-h">${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''} <span>${sub}</span>${perf}</h3>`;
         return `<div class="csub"><div class="chero">${heroOf(items,g.fin,v)}</div><div class="cmain">${block(g.key+'|'+v,items,gh)}</div></div>`;}).join('')}</div>`;
     }
