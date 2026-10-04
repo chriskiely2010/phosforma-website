@@ -9,7 +9,10 @@ from slide_recessed import make
 src = list(csv.DictReader(open('slide_sources.csv')))
 by = {}
 for r in src:
-    make(r['render'], r['out']); by.setdefault(r['family'], []).append(r['out'])
+    try:
+        make(r['render'], r['out'], linefrac=float(r['line']) if r.get('line') else None); by.setdefault(r['family'], []).append(r['out'])
+    except Exception as e:
+        print('FAILED', r['family'], e)
 for path in glob.glob('data/*.csv'):
     rows = list(csv.DictReader(open(path, encoding='utf-8-sig'))); cols = list(rows[0].keys()); hit = False
     for r in rows:

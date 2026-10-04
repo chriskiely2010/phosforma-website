@@ -30,7 +30,10 @@ def trim_ellipse(alpha):
         t = np.clip((px - cx) / rx, -1, 1)
         return cy + ry * np.sqrt(1 - t * t) - py
     p0 = [(x0 + x1) / 2, y1 - 0.15 * (y1 - y0), (x1 - x0) / 2.4, 0.12 * (y1 - y0)]
-    r = least_squares(res, p0, loss='soft_l1', f_scale=4)
+    bw, bh = x1 - x0, y1 - y0
+    lo = [x0, y0 + 0.3 * bh, 0.2 * bw, 0.02 * bh]; hi = [x1, y1, 0.6 * bw, 0.4 * bh]
+    p0 = [min(max(v, l + 1e-6), h - 1e-6) for v, l, h in zip(p0, lo, hi)]
+    r = least_squares(res, p0, loss='soft_l1', f_scale=4, bounds=(lo, hi))
     return r.x  # cx, cy, rx, ry
 
 def remove_clips(fit, y0, ex, ey, rx, ry):
@@ -47,17 +50,42 @@ def remove_clips(fit, y0, ex, ey, rx, ry):
     g = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY).astype(float)
     med = np.median(g[ring & (r < 0.95)])
     sat = rgb.max(2).astype(int) - rgb.min(2).astype(int)
-    clip = (ring & (np.abs(g - med) > 45) & (sat < 40)).astype('uint8') * 255
+    clip = (ring & ((np.abs(g - med) > 45) | (sat > 90))).astype('uint8') * 255
     clip = cv2.dilate(clip, np.ones((5, 5), np.uint8))
     clip[(yy <= y0) | (al == 0)] = 0
     rgb = cv2.inpaint(rgb, clip, 6, cv2.INPAINT_TELEA)
     al = al.copy(); al[(clip > 0) & (r > 0.97)] = 0
     return Image.fromarray(np.dstack([rgb, al]))
 
-def make(src, dst, xfrac=0.70, hfrac=0.62, board=0.028, debug=False):
+def trim_from_line(alpha, frac, rgb=None):
+    """Trim ellipse when the ceiling line is given as a fraction of the height."""
+    m = alpha > 40; h, w = m.shape
+    top = frac * h
+    if rgb is not None:
+        g = rgb.mean(2); sat = rgb.max(2).astype(int) - rgb.min(2).astype(int)
+        body = sat < 90
+    else:
+        body = np.ones_like(m)
+    xs = np.nonzero(m.any(0))[0]; xc = (xs.min() + xs.max()) / 2
+    cols = np.arange(int(xc - 0.25 * (xs.max() - xs.min())), int(xc + 0.25 * (xs.max() - xs.min())))
+    bottom = np.median([np.nonzero(m[:, x])[0].max() for x in cols if m[:, x].any()])
+    ymid = int((top + bottom) / 2)
+    # solid run around the centre at mid height, stopping at clips (bright or coloured pixels)
+    runs = []
+    for y in range(ymid - 9, ymid + 10, 3):
+        row = m[y] & body[y]
+        l = r = int(xc)
+        while l > 0 and row[l - 1]: l -= 1
+        while r < w - 1 and row[r + 1]: r += 1
+        runs.append((l, r))
+    runs.sort(key=lambda t: t[1] - t[0]); l, r = runs[len(runs) // 2]
+    return ((l + r) / 2, (top + bottom) / 2, (r - l) / 2, (bottom - top) / 2 / 0.9)
+
+def make(src, dst, xfrac=0.70, hfrac=0.62, board=0.028, debug=False, linefrac=None):
     im = Image.open(src).convert('RGBA')
     im = im.crop(im.split()[3].getbbox())
-    cx, cy, rx, ry = trim_ellipse(np.array(im.split()[3]))
+    a0 = np.array(im.split()[3])
+    cx, cy, rx, ry = trim_from_line(a0, linefrac, np.array(im.convert('RGB'))) if linefrac else trim_ellipse(a0)
     s = hfrac * H / im.height
     im = im.resize((round(im.width * s), round(im.height * s)), Image.LANCZOS)
     cx, cy, rx, ry = cx * s, cy * s, rx * s, ry * s
