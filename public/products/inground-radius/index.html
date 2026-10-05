@@ -892,14 +892,14 @@ const FEATURED=[{title:'Daytona',image:'images/feat-daytona.jpg',link:'#all'},{t
 // Home page slider: add a line per slide (image, heading, link)
 const HOME_SLIDES=[{image:'images/home-daytona.jpg',title:'Daytona',link:'#all',position:'center'},{image:'images/home-maya.jpg',title:'Maya System',link:'#all',position:'center'}];
 const SHOW_DIMS=false; // set to true to show the Dimensions panel beside the Overview
-const ORDER={Interior:['Recessed Downlight','Surface Downlights | Spotlights','Track Mounted','Ceiling Suspended | Pendants','Profiles & Systems'],Exterior:['Surface Downlights | Spotlights','Bollard','Inground Uplights','Inground Linear']};
+const ORDER={Interior:['Recessed Downlight','Surface Downlights | Spotlights','Track Mounted','Ceiling Suspended | Pendants','Profiles & Systems','LED Strip'],Exterior:['Surface Downlights | Spotlights','Bollard','Inground Uplights','Inground Linear']};
 const INTRO={
   'Recessed Downlight':'Downlights that sit flush in the ceiling: fixed and adjustable, round, square and linear, with deep-set sources for low glare.',
   'Surface Downlights | Spotlights':'Surface-mounted downlights and spots for ceilings that cannot take recessed luminaires.',
   'Track Mounted':'Spotlights and projectors for 3-phase track, for retail, galleries and hospitality.',
   'Ceiling Suspended | Pendants':'Suspended luminaires for direct and indirect general lighting.',
   'Profiles & Systems':'Linear profiles and continuous-line systems, suspended, surface or recessed.',
-  'Bollard':'Bollards for paths, plazas and landscape.','Inground Uplights':'Walk-over inground uplights for facades, trees and architectural features.','Inground Linear':'Walk-over and drive-over lines of light for paths, plazas and facades.'};
+  'Bollard':'Bollards for paths, plazas and landscape.','LED Strip':'Flexible LED strip for coves, joinery, shelving and continuous lines of light.','Inground Uplights':'Walk-over inground uplights for facades, trees and architectural features.','Inground Linear':'Walk-over and drive-over lines of light for paths, plazas and facades.'};
 const cats=()=>{const m=new Map();CATALOG.forEach(f=>{const k=f.environment+'|'+f.category;m.set(k,(m.get(k)||0)+1)});return m;};
 const catSlug=(env,cat)=>slug(env+'-'+cat);
 const findCat=s=>{for(const f of CATALOG){if(catSlug(f.environment,f.category)===s)return{env:f.environment,cat:f.category};}return null;};
@@ -1140,17 +1140,22 @@ function renderCodes(){
   const heroOf=(items,fin,v)=>{const hm=items.find(m=>m.image),img=hm?.image;if(img)return `<img${sc(hm)} data-dr="${esc(f.drawing)}" src="${esc(img)}" alt="${esc(f.family)} ${esc(fin)}${v?' '+esc(v):''}" loading="lazy">`;
     let svg=drawing(f.drawing,/black/i.test(fin)?'black':'white',false);if(v)svg=svg.replace(/fill="var\(--beam\)"( opacity="[^"]*")?/g,`fill="${reflColor(v)}" stroke="var(--ink)" stroke-width=".6"`);return svg;};
   const finLabel=g=>{if(!g.fin)return '';const re=new RegExp('^'+g.fin.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\(RAL[^)]*\\)$','i');for(const m of g.items)for(const seg of String(m.details||'').split(' · '))if(re.test(seg.trim()))return seg.trim();return g.fin;};
-  const perfTxt=[f.lumen_maintenance,f.sdcm].filter(Boolean).join(' / ');const perf=perfTxt?` <span class="cg-perf">${esc(perfTxt)}</span>`:'';
+  /* lumen maintenance / SDCM per group: model details win over the family figure (e.g. Nichia vs Delta strips) */
+  const lmOf=m=>{const x=String(m.details||'').match(/L(\d{2})\s*B(\d{2})\s*>?\s*(\d{4,6})\s*h/i);return x?`L${x[1]} ${x[3]}H B${x[2]}`:'';};
+  const sdSpec=String(f.specification||'').match(/(\w+)\s*\((\d)-step MacAdam\)/i);
+  const perfOf=items=>{const lms=[...new Set(items.map(lmOf))];const lm=lms.length===1&&lms[0]?lms[0]:f.lumen_maintenance;
+    const sd=sdSpec?(items.every(m=>new RegExp('^'+sdSpec[1],'i').test(m.details||''))?sdSpec[2]+' SDCM':''):f.sdcm;
+    const t=[lm,sd].filter(Boolean).join(' / ');return t?` <span class="cg-perf">${esc(t)}</span>`:'';};
   $('#cgroups').innerHTML=groups.map(g=>{
     if(subBy&&new Set(g.items.map(variantOf)).size>1){
       const tc=t=>String(t).replace(/\b\w/g,c=>c.toUpperCase());
       return `<div class="cgroup bysub">${vOrder.map(v=>{const items=g.items.filter(m=>variantOf(m)===v);if(!items.length)return '';
         const sub=vl==='Reflector'?`${g.fin&&!/trimless/i.test(g.fin)?esc(g.fin)+' with ':''}${esc(tc(v))} Reflector`:[g.fin,v].filter(Boolean).map(esc).join(' · ');
-        const gh=`<h3 class="cg-h">${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''} <span>${sub}</span>${perf}</h3>`;
+        const gh=`<h3 class="cg-h">${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''} <span>${sub}</span>${perfOf(items)}</h3>`;
         return `<div class="csub"><div class="chero">${heroOf(items,g.fin,v)}</div><div class="cmain">${block(g.key+'|'+v,items,gh)}</div></div>`;}).join('')}</div>`;
     }
     return `<div class="cgroup"><div class="chero">${heroOf(g.items,g.fin)}</div>
-    <div class="cmain"><h3>${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''}${g.fin?` <span>${esc(g.fin)}</span>`:''}${perf}</h3>${block(g.key,g.items)}</div></div>`;
+    <div class="cmain"><h3>${esc(baseFam(f.family))}${g.sz?' '+esc(g.sz):''}${g.fin?` <span>${esc(g.fin)}</span>`:''}${perfOf(g.items)}</h3>${block(g.key,g.items)}</div></div>`;
   }).join('');
 }
 const REFL={'black high gloss':'#0e0e0e','black matt':'#2e2e2e','black':'#1a1a1a','copper':'#b87333','gold':'#c9a24a','silver high gloss':'#c4c7cb','silver':'#c4c7cb','white':'#f5f5f3','chrome':'#e3e6ea'};
