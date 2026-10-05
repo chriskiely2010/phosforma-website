@@ -862,14 +862,14 @@ const FEATURED=[{title:'Daytona',image:'images/feat-daytona.jpg',link:'#all'},{t
 // Home page slider: add a line per slide (image, heading, link)
 const HOME_SLIDES=[{image:'images/home-daytona.jpg',title:'Daytona',link:'#all',position:'center'},{image:'images/home-maya.jpg',title:'Maya System',link:'#all',position:'center'}];
 const SHOW_DIMS=false; // set to true to show the Dimensions panel beside the Overview
-const ORDER={Interior:['Recessed Downlight','Surface Downlights | Spotlights','Track Mounted','Ceiling Suspended | Pendants','Profiles & Systems','LED Strip'],Exterior:['Surface Downlights | Spotlights','Bollard','Inground Uplights','Inground Linear']};
+const ORDER={Interior:['Recessed Downlight','Surface Downlights | Spotlights','Track Mounted','Ceiling Suspended | Pendants','Profiles & Systems','Flexible Linear'],Exterior:['Surface Downlights | Spotlights','Bollard','Inground Uplights','Inground Linear']};
 const INTRO={
   'Recessed Downlight':'Downlights that sit flush in the ceiling: fixed and adjustable, round, square and linear, with deep-set sources for low glare.',
   'Surface Downlights | Spotlights':'Surface-mounted downlights and spots for ceilings that cannot take recessed luminaires.',
   'Track Mounted':'Spotlights and projectors for 3-phase track, for retail, galleries and hospitality.',
   'Ceiling Suspended | Pendants':'Suspended luminaires for direct and indirect general lighting.',
   'Profiles & Systems':'Linear profiles and continuous-line systems, suspended, surface or recessed.',
-  'Bollard':'Bollards for paths, plazas and landscape.','LED Strip':'Flexible LED strip for coves, joinery, shelving and continuous lines of light.','Inground Uplights':'Walk-over inground uplights for facades, trees and architectural features.','Inground Linear':'Walk-over and drive-over lines of light for paths, plazas and facades.'};
+  'Bollard':'Bollards for paths, plazas and landscape.','Flexible Linear':'Flexible LED strip for coves, joinery, shelving and continuous lines of light.','Inground Uplights':'Walk-over inground uplights for facades, trees and architectural features.','Inground Linear':'Walk-over and drive-over lines of light for paths, plazas and facades.'};
 const cats=()=>{const m=new Map();CATALOG.forEach(f=>{const k=f.environment+'|'+f.category;m.set(k,(m.get(k)||0)+1)});return m;};
 const catSlug=(env,cat)=>slug(env+'-'+cat);
 const findCat=s=>{for(const f of CATALOG){if(catSlug(f.environment,f.category)===s)return{env:f.environment,cat:f.category};}return null;};
@@ -1380,7 +1380,7 @@ function route(){
   if(h==='home'||h===''){app.innerHTML=viewHome();bindHomeSlider();}
   else if(h==='all'){app.innerHTML=viewCatalog({});bindCatalog();nav='all';}
   else if(h==='interior'||h==='exterior'){const env=h[0].toUpperCase()+h.slice(1);app.innerHTML=viewCatalog({env});bindCatalog();nav=h;}
-  else if(h.startsWith('c-')){const c=findCat(h.slice(2));if(c){app.innerHTML=viewCatalog(c);bindCatalog();nav=c.env.toLowerCase();}else app.innerHTML=viewHome();}
+  else if(h.startsWith('c-')){if(h==='c-interior-led-strip'){history.replaceState(null,'','#c-interior-flexible-linear');h='c-interior-flexible-linear';}const c=findCat(h.slice(2));if(c){app.innerHTML=viewCatalog(c);bindCatalog();nav=c.env.toLowerCase();}else app.innerHTML=viewHome();}
   else if(h.startsWith('b-')){const b=brands().find(x=>slug(x)===h.slice(2));app.innerHTML=b?viewCatalog({brand:b}):viewBrands();if(b)bindCatalog();nav='brands';}
   else if(h.startsWith('ds-')){const r=findCode(h.slice(3));if(r){app.innerHTML=viewDatasheet(r.f,r.m);nav=r.f.environment.toLowerCase();}else app.innerHTML=viewHome();}
   else if(h.startsWith('k-')){const r=findCode(h.slice(2));if(r){app.innerHTML=viewCode(r.f,r.m);nav=r.f.environment.toLowerCase();}else app.innerHTML=viewHome();}
