@@ -11,7 +11,7 @@ on:
     branches: [r2-upload]
 jobs:
   upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
