@@ -51,3 +51,5 @@ BIG PDF BATCHES (added 2026-10-05)
 - Uploaded this way so far: images/{book,city-wall,coiny,flamingo,flash,nanospot,nanospot-steel,qubo,ring,zeus}/datasheets/*.pdf
   (originals on the Mac: Batch 2026-10-05 PUK - Qubo +9/03 Site files/*/datasheets).
 - Check an upload: https://pub-1715671c10f74603a4f8358e5cb4ab02.r2.dev/_upload.txt shows the last commit uploaded.
+- PUK floodlights uploaded 2026-10-05 in 4 parts (r2-upload, r2-upload-2..4); the branches were then emptied
+  with a "[skip ci]" commit so the 1.3 GB no longer sits in git. Reuse r2-upload for the next big set.

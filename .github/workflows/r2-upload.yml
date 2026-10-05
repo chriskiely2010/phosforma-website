@@ -4,7 +4,7 @@
 # The r2-upload branch holds ONLY the files being uploaded (under r2/, same layout as main's r2/) plus
 # this file. It is force-pushed with a fresh single commit each time; old uploads drop out of git but
 # stay in R2. Nothing is ever deleted from the bucket. A big set can be split over branches
-# r2-upload-2, r2-upload-3 ... (one job each); delete those branches once their upload has run.
+# r2-upload-2, r2-upload-3 ... (one job each); once uploaded, force-push a small "[skip ci]" commit over them so the PDFs drop out of git.
 # Needs repository secrets R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT (same as r2-sync.yml).
 name: Upload big PDF batches to R2
 on:
