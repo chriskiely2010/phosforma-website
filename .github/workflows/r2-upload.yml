@@ -1,0 +1,27 @@
+# Big batches of PDFs (e.g. 1 GB+ of supplier datasheets) go to the R2 bucket "phosforma-files" this way,
+# so they never build up in the main branch's history (GitHub limits pushes to 2 GB, and Cloudflare
+# Pages clones the whole repo on every deploy).
+# The r2-upload branch holds ONLY the files being uploaded (under r2/, same layout as main's r2/) plus
+# this file. It is force-pushed with a fresh single commit each time; old uploads drop out of git but
+# stay in R2. Nothing is ever deleted from the bucket.
+# Needs repository secrets R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT (same as r2-sync.yml).
+name: Upload big PDF batches to R2
+on:
+  push:
+    branches: [r2-upload]
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload PDFs
+        run: aws s3 sync r2/ s3://phosforma-files/ --endpoint-url "$ENDPOINT" --size-only --no-progress --content-type application/pdf --only-show-errors
+      - name: Leave a marker so the upload can be checked from the public URL
+        run: |
+          printf '%s\n%s\n%s files\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" "$(find r2 -type f | wc -l)" > upload.txt
+          aws s3 cp upload.txt s3://phosforma-files/_upload.txt --endpoint-url "$ENDPOINT" --content-type text/plain --cache-control no-store

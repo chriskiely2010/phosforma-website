@@ -42,3 +42,12 @@ Launch day
       -> removes noindex, robots.txt allows crawling and points to the sitemap
   [ ] Cloudflare Pages: add phosforma.com.au as custom domain, switch DNS
   [ ] Submit sitemap.xml in Google Search Console
+
+BIG PDF BATCHES (added 2026-10-05)
+- Supplier datasheet sets too big for git (e.g. PUK floodlights, 2,048 PDFs, 1.3 GB) are NOT kept in the
+  site folder or in main's r2/. They go straight to R2 through the r2-upload branch
+  (.github/workflows/r2-upload.yml): a fresh single commit holding only r2/<path>.pdf, force-pushed,
+  in parts under ~350 MB. The site links them like any other PDF (fileUrl -> R2).
+- Uploaded this way so far: images/{book,city-wall,coiny,flamingo,flash,nanospot,nanospot-steel,qubo,ring,zeus}/datasheets/*.pdf
+  (originals on the Mac: Batch 2026-10-05 PUK - Qubo +9/03 Site files/*/datasheets).
+- Check an upload: https://pub-1715671c10f74603a4f8358e5cb4ab02.r2.dev/_upload.txt shows the last commit uploaded.
