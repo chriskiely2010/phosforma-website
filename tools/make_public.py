@@ -13,7 +13,7 @@ open(os.path.join(pub, 'robots.txt'), 'w').write('User-agent: *\nDisallow: /\n')
 # PDFs (datasheets, brochures) live in Cloudflare R2. They are kept in the repo's r2/ folder, which
 # is NOT published; the GitHub workflow .github/workflows/r2-sync.yml copies r2/ to the R2 bucket.
 # R2_LIVE = True: PDFs only in r2/ and the site links them from R2 (FILES_BASE in index.html).
-R2_LIVE = False
+R2_LIVE = True
 r2 = os.path.join(repo, 'r2')
 shutil.rmtree(r2, ignore_errors=True); os.makedirs(r2)
 n = n2 = 0

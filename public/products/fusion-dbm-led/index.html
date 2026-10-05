@@ -630,9 +630,9 @@ footer a{text-decoration:none}footer a:hover{color:var(--accent-ink)}
     <div class="cfilters" id="cfilters"></div>
     <p class="muted ccount" id="ccount">1 code</p>
     <div id="cgroups"><div class="cgroup"><div class="chero"><img data-dr="surface-linear" src="images/fusion-dbm.jpg" alt="Fusion DBM LED Black Crown RAL 9011" loading="lazy"></div>
-    <div class="cmain"><h3>Fusion DBM LED <span>Black Crown RAL 9011</span> <span class="cg-perf">L80 100000H B10 / 3 SDCM</span></h3><div class="tablewrap"><table class="codes"><thead><tr><th>Code</th><th>Model</th><th>Power</th><th>Delivered lumens</th><th>Beam</th><th>CCT</th><th>CRI</th><th>UGR</th><th>Control</th><th>IP</th><th>Downloads</th></tr></thead><tbody><tr><td class="code"><a class="codelink" href="#k-FUSI013">FUSI013</a></td><td class="m"><div><b>Fusion DBM LED 1050 3000K 60°</b><span>420 × 133 × 68mm</span></div></td><td>24W</td><td>3004lm</td><td>60°</td><td>3000K</td><td>CRI 80</td><td>&lt;19</td><td>DALI</td><td>IP20</td><td><div class="dl"><a class="live" href="files/FUSI013.pdf" target="_blank" rel="noopener">Datasheet ↗</a><button data-dl="Fusion DBM LED 1050 3000K 60° – IES">IES</button><button data-dl="Fusion DBM LED 1050 3000K 60° – LDT">LDT</button></div></td></tr></tbody></table></div>
+    <div class="cmain"><h3>Fusion DBM LED <span>Black Crown RAL 9011</span> <span class="cg-perf">L80 100000H B10 / 3 SDCM</span></h3><div class="tablewrap"><table class="codes"><thead><tr><th>Code</th><th>Model</th><th>Power</th><th>Delivered lumens</th><th>Beam</th><th>CCT</th><th>CRI</th><th>UGR</th><th>Control</th><th>IP</th><th>Downloads</th></tr></thead><tbody><tr><td class="code"><a class="codelink" href="#k-FUSI013">FUSI013</a></td><td class="m"><div><b>Fusion DBM LED 1050 3000K 60°</b><span>420 × 133 × 68mm</span></div></td><td>24W</td><td>3004lm</td><td>60°</td><td>3000K</td><td>CRI 80</td><td>&lt;19</td><td>DALI</td><td>IP20</td><td><div class="dl"><a class="live" href="https://pub-1715671c10f74603a4f8358e5cb4ab02.r2.dev/files/FUSI013.pdf" target="_blank" rel="noopener">Datasheet ↗</a><button data-dl="Fusion DBM LED 1050 3000K 60° – IES">IES</button><button data-dl="Fusion DBM LED 1050 3000K 60° – LDT">LDT</button></div></td></tr></tbody></table></div>
     </div></div></div></div></section>
-  <section class="psec" id="s-downloads"><div class="wrap"><h2>Downloads</h2><div class="downloads"><a class="dlrow" href="files/FUSI013.pdf" target="_blank" rel="noopener"><span>Datasheet<br><small>FUSI013 · Fusion DBM LED 1050 3000K 60°</small></span><small>PDF ↗</small></a><button data-dl="FUSI013 · Fusion DBM LED 1050 3000K 60° – IES"><span>IES<br><small>FUSI013 · Fusion DBM LED 1050 3000K 60°</small></span><small>IES</small></button><button data-dl="FUSI013 · Fusion DBM LED 1050 3000K 60° – LDT"><span>LDT<br><small>FUSI013 · Fusion DBM LED 1050 3000K 60°</small></span><small>LDT</small></button></div></div></section>
+  <section class="psec" id="s-downloads"><div class="wrap"><h2>Downloads</h2><div class="downloads"><a class="dlrow" href="https://pub-1715671c10f74603a4f8358e5cb4ab02.r2.dev/files/FUSI013.pdf" target="_blank" rel="noopener"><span>Datasheet<br><small>FUSI013 · Fusion DBM LED 1050 3000K 60°</small></span><small>PDF ↗</small></a><button data-dl="FUSI013 · Fusion DBM LED 1050 3000K 60° – IES"><span>IES<br><small>FUSI013 · Fusion DBM LED 1050 3000K 60°</small></span><small>IES</small></button><button data-dl="FUSI013 · Fusion DBM LED 1050 3000K 60° – LDT"><span>LDT<br><small>FUSI013 · Fusion DBM LED 1050 3000K 60°</small></span><small>LDT</small></button></div></div></section>
   </main>
 
 <footer id="contact"><div class="wrap">
@@ -737,6 +737,9 @@ function parseCSV(text){
   const head=clean[0].map(h=>h.trim().toLowerCase().replace(/\s+/g,'_'));
   return clean.slice(1).map(r=>Object.fromEntries(head.map((h,i)=>[h,(r[i]||'').trim()])));
 }
+/* PDFs are served from Cloudflare R2 once R2_ON is true (make_public.py R2_LIVE keeps them out of the site) */
+const R2_ON=true, FILES_BASE='https://pub-1715671c10f74603a4f8358e5cb4ab02.r2.dev/';
+const fileUrl=p=>R2_ON&&/^(images|files)\/[^?#]+\.pdf$/i.test(p)?FILES_BASE+p:p;
 const baseFam=n=>String(n).replace(/\s+(?:XXS|XS|S|M|L|XL|XM|XXL)(?:\s*\/\s*(?:XXS|XS|S|M|L|XL|XM|XXL))+$/,'');
 const FAM_FIELDS=['brand','environment','category','tagline','description','specification','cct','cri','control','ip','ik','finishes','drawing','new','images','slides','slide_tag','dimensions','dimensions_note','lumen_maintenance','sdcm'];
 function groupFamilies(rows, added=false){
@@ -746,7 +749,7 @@ function groupFamilies(rows, added=false){
     let f=map.get(name);
     if(!f){f={family:name,slug:slug(name),models:[],added,rowStart:idx+2};FAM_FIELDS.forEach(k=>f[k]='');map.set(name,f);}
     FAM_FIELDS.forEach(k=>{ if(!f[k] && r[k]) f[k]=r[k]; });
-    if(r.model) f.models.push({scale:parseFloat(r.image_scale)||1,size:(r.model.startsWith(baseFam(f.family))?r.model.slice(baseFam(f.family).length):'').replace(/\s+[\d.]+W\b.*$/,'').trim(),name:r.model,code:r.code||'',cct:r.model_cct||'',cri:r.model_cri||'',ugr:r.model_ugr||'',efficacy:r.efficacy||'',finish:r.model_finish||'',image:r.model_image||'',control:r.model_control||'',ip:r.model_ip||'',ik:r.model_ik||'',details:r.model_details||'',power:r.power||'',flux:r.flux||'',beam:r.beam||'',downloads:split((r.downloads||'').replace(/;/g,'|')).map(d=>{const [label,path]=d.split('=').map(x=>x.trim());return {label,path:path||''};})});
+    if(r.model) f.models.push({scale:parseFloat(r.image_scale)||1,size:(r.model.startsWith(baseFam(f.family))?r.model.slice(baseFam(f.family).length):'').replace(/\s+[\d.]+W\b.*$/,'').trim(),name:r.model,code:r.code||'',cct:r.model_cct||'',cri:r.model_cri||'',ugr:r.model_ugr||'',efficacy:r.efficacy||'',finish:r.model_finish||'',image:r.model_image||'',control:r.model_control||'',ip:r.model_ip||'',ik:r.model_ik||'',details:r.model_details||'',power:r.power||'',flux:r.flux||'',beam:r.beam||'',downloads:split((r.downloads||'').replace(/;/g,'|')).map(d=>{const [label,path]=d.split('=').map(x=>x.trim());return {label,path:fileUrl(path||'')};})});
   });
   return [...map.values()].map(f=>{f.isNew=false;f.drawing=f.drawing||guessDrawing(f);f.imgs=split((f.images||'').replace(/;/g,'|'));f.slideImgs=split((f.slides||'').replace(/;/g,'|'));return f;});
 }
@@ -1271,7 +1274,7 @@ function viewCatalogues(){
   const card=c=>{const has=!!c.file;
     const cover=c.cover?`<img src="${esc(c.cover)}" alt="${esc(c.brand)} ${esc(c.title)}" loading="lazy">`:`<div class="catcover-ph"><b>${esc(c.brand)}</b><span>Catalogue${c.year?' '+esc(c.year):''}</span></div>`;
     const inner=`<div class="catcover">${cover}</div><div class="catmeta"><b>${esc(c.brand)} ${esc(c.title)}</b><small>${c.year?esc(c.year):'&nbsp;'}</small><span class="${has?'catdl':'catsoon'}">${has?'Download PDF ↗':'PDF to be added'}</span></div>`;
-    return has?`<a class="catcard" data-brand="${esc(c.brand)}" href="${esc(c.file)}" target="_blank" rel="noopener">${inner}</a>`:`<div class="catcard soon" data-brand="${esc(c.brand)}">${inner}</div>`;};
+    return has?`<a class="catcard" data-brand="${esc(c.brand)}" href="${esc(fileUrl(c.file))}" target="_blank" rel="noopener">${inner}</a>`:`<div class="catcard soon" data-brand="${esc(c.brand)}">${inner}</div>`;};
   return catSlider()+dlHero('cat')+`<div class="wrap">${brandsList.length>1?`<div class="catbrands" id="catbrands" role="group" aria-label="Filter by partner"><button class="on" data-b="">All</button>${brandsList.map(b=>`<button data-b="${esc(b)}">${esc(b)}</button>`).join('')}</div>`:''}
   <div class="catgrid" id="catgrid">${list.length?list.map(card).join(''):'<p class="dlempty">No catalogues yet.</p>'}</div></div>`;
 }
