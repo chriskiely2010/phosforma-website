@@ -18,8 +18,12 @@ for root in ['images', 'files']:
             if p in txt:
                 os.makedirs(os.path.join(pub, r), exist_ok=True); shutil.copy(p, os.path.join(pub, p)); n += 1
 shutil.rmtree(tools, ignore_errors=True); os.makedirs(tools)
-for f in ['build_csv.py', 'true_scale.py', 'make_public.py', 'tile_sizes.csv', 'Phosforma_products_template.csv', 'README.txt', 'delta_ugr.json', 'load_batches.py']:
+for f in ['build_csv.py', 'true_scale.py', 'make_public.py', 'tile_sizes.csv', 'Phosforma_products_template.csv', 'README.txt', 'delta_ugr.json', 'load_batches.py', 'prerender.py']:
     if os.path.exists(f): shutil.copy(f, os.path.join(tools, f))
 for d in ['data', 'originals', 'archive']:
     if os.path.exists(d): shutil.copytree(d, os.path.join(tools, d))
 print(n, 'site files copied to public/')
+
+# a real page per product (+ sitemap, robots) on top of the copied site
+import subprocess
+subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prerender.py'), repo], check=True)

@@ -3,8 +3,6 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
-<base href="/">
-<meta name="description" content="Phosforma: architectural lighting distributor in Australia. Specification-grade interior and exterior luminaires from European partners.">
 <title>Phosforma Test Site</title>
 <style>
 /* Layout: XAL-style catalogue (filter rail + grid, product page with quick facts and codes table) in Phosforma's white / graphite / amber identity */
@@ -761,7 +759,7 @@ const brands=()=>[...new Set(CATALOG.map(f=>f.brand))].sort();
 /* ---------- views ---------- */
 const crumbs=items=>`<div class="crumbs">${items.map((it,i)=>(i?'<span class="sep">/</span>':'')+(it[1]?`<a href="${it[1]}">${esc(it[0])}</a>`:`<span>${esc(it[0])}</span>`)).join('')}</div>`;
 function card(f){
-  return `<a class="card" href="/products/${f.slug}/"><div class="pic${f.imgs.length?' photo':''}">${f.added?'<span class="badge added">Just added</span>':f.isNew?'<span class="badge">New</span>':''}${f.imgs.length?`<img src="${esc(f.imgs[0])}" alt="${esc(f.family)}" loading="lazy" data-dr="${esc(f.drawing)}">`:drawing(f.drawing)}</div>
+  return `<a class="card" href="#p-${f.slug}"><div class="pic${f.imgs.length?' photo':''}">${f.added?'<span class="badge added">Just added</span>':f.isNew?'<span class="badge">New</span>':''}${f.imgs.length?`<img src="${esc(f.imgs[0])}" alt="${esc(f.family)}" loading="lazy" data-dr="${esc(f.drawing)}">`:drawing(f.drawing)}</div>
   <div><div class="name">${esc(f.family)}</div><div class="type">${esc(f.category)}</div></div>
   <div class="meta"><span>${esc(f.brand)}</span>${swatches(f)}</div></a>`;
 }
@@ -884,7 +882,7 @@ function viewCode(f,m){
       return cur?`<span class="vopt on">${esc(v)}</span>`:t?`<a class="vopt" href="#k-${esc(t.code)}">${esc(v)}</a>`:`<span class="vopt off" title="Not available with the other options">${esc(v)}</span>`;
     }).join('')}</div></div>`;}).join('');
   const img=m.image||f.imgs[0];
-  return `<div class="wrap">${crumbs([['Home','#home'],[f.environment,'#'+f.environment.toLowerCase()],[f.category,'#c-'+catSlug(f.environment,f.category)],[f.family,'/products/'+f.slug+'/'],[m.code,null]])}
+  return `<div class="wrap">${crumbs([['Home','#home'],[f.environment,'#'+f.environment.toLowerCase()],[f.category,'#c-'+catSlug(f.environment,f.category)],[f.family,'#p-'+f.slug],[m.code,null]])}
   <div class="kpage">
     <div class="kimg">${img?`<img${m.image?sc(m):''} data-dr="${esc(f.drawing)}" src="${esc(img)}" alt="${esc(f.family)} ${esc(m.finish||'')}">`:drawing(f.drawing,/black/i.test(m.finish||'')?'black':'white',false)}</div>
     <div class="kinfo">
@@ -896,7 +894,7 @@ function viewCode(f,m){
     </div>
   </div>
   ${dimSrc?`<section class="kvar"><h2>Dimensions</h2><div class="kdims"><div class="dimimg"><phos-drawing src="${esc(dimSrc)}" aria-label="${esc(f.family)} dimension drawing"></phos-drawing></div>${dimNote?`<p class="muted">${esc(dimNote)}</p>`:''}</div></section>`:''}
-  <section class="kvar"><h2>About ${esc(f.family)}</h2><p class="overview">${esc(f.description)}</p><p style="margin-top:18px"><a class="btn" href="/products/${f.slug}/">View all ${f.models.length} codes</a></p></section>
+  <section class="kvar"><h2>About ${esc(f.family)}</h2><p class="overview">${esc(f.description)}</p><p style="margin-top:18px"><a class="btn" href="#p-${f.slug}">View all ${f.models.length} codes</a></p></section>
   </div>`;
 }
 /* generated datasheet */
@@ -1074,7 +1072,7 @@ function bindAdd(){
   $('#addBtn').addEventListener('click',()=>{
     const good=validate(groupFamilies(parseCSV($('#csv').value),true)).filter(x=>!x.miss.length).map(x=>x.f);
     good.forEach(f=>{const i=CATALOG.findIndex(x=>x.slug===f.slug);if(i>=0)CATALOG[i]=f;else CATALOG.push(f);});
-    $('#preview').innerHTML=`<h3><span>Added to site</span><span class="ok">${good.length} famil${good.length==1?'y':'ies'}</span></h3>`+good.map(f=>`<a class="prow" href="/products/${f.slug}/" style="text-decoration:none">${drawing(f.drawing)}<div><b>${esc(f.family)} →</b><small>${f.models.length} models · open product page</small></div></a>`).join('')+`<div class="prow"><a class="btn" href="#${good[0]?good[0].environment.toLowerCase():'all'}">See them in the catalogue</a></div>`;
+    $('#preview').innerHTML=`<h3><span>Added to site</span><span class="ok">${good.length} famil${good.length==1?'y':'ies'}</span></h3>`+good.map(f=>`<a class="prow" href="#p-${f.slug}" style="text-decoration:none">${drawing(f.drawing)}<div><b>${esc(f.family)} →</b><small>${f.models.length} models · open product page</small></div></a>`).join('')+`<div class="prow"><a class="btn" href="#${good[0]?good[0].environment.toLowerCase():'all'}">See them in the catalogue</a></div>`;
     toast(`${good.length} product famil${good.length==1?'y':'ies'} added. Filters and pages updated.`);
   });
   renderPreview();
@@ -1159,13 +1157,8 @@ function bindDownloads(){
 }
 
 /* ---------- router ---------- */
-const PROD_RE=/^\/products\/([a-z0-9-]+)\/?$/;
-const prodUrl=s=>'/products/'+s+'/';
-function curKey(){const m=location.pathname.match(PROD_RE);if(m)return 'p-'+m[1];return (location.hash||'#home').slice(1);}
-function navTo(url){history.pushState(null,'',url);route();}
 function route(){
-  let h=curKey();
-  if(location.pathname==='/'&&h.startsWith('p-')){history.replaceState(null,'',prodUrl(h.slice(2)));}
+  const h=(location.hash||'#home').slice(1);
   if(['overview','codes','downloads','related'].includes(h)) return;
   const app=$('#app');let nav='';
   if(h==='home'||h===''){app.innerHTML=viewHome();bindHomeSlider();}
@@ -1175,7 +1168,7 @@ function route(){
   else if(h.startsWith('b-')){const b=brands().find(x=>slug(x)===h.slice(2));app.innerHTML=b?viewCatalog({brand:b}):viewBrands();if(b)bindCatalog();nav='brands';}
   else if(h.startsWith('ds-')){const r=findCode(h.slice(3));if(r){app.innerHTML=viewDatasheet(r.f,r.m);nav=r.f.environment.toLowerCase();}else app.innerHTML=viewHome();}
   else if(h.startsWith('k-')){const r=findCode(h.slice(2));if(r){app.innerHTML=viewCode(r.f,r.m);nav=r.f.environment.toLowerCase();}else app.innerHTML=viewHome();}
-  else if(h.startsWith('p-')){const f=CATALOG.find(x=>x.slug===h.slice(2))||CATALOG.find(x=>x.slug===h.slice(2)+'-tr');if(f&&location.pathname!==prodUrl(f.slug)){history.replaceState(null,'',prodUrl(f.slug));}if(f){app.innerHTML=viewProduct(f);bindProduct(f);nav=f.environment.toLowerCase();setMeta(f);}else app.innerHTML=viewHome();}
+  else if(h.startsWith('p-')){const f=CATALOG.find(x=>x.slug===h.slice(2))||CATALOG.find(x=>x.slug===h.slice(2)+'-tr');if(f&&f.slug!==h.slice(2)){history.replaceState(null,'','#p-'+f.slug);}if(f){app.innerHTML=viewProduct(f);bindProduct(f);nav=f.environment.toLowerCase();}else app.innerHTML=viewHome();}
   else if(h==='projects'){app.innerHTML=viewProjects();nav='projects';}
   else if(h==='brands'){app.innerHTML=viewBrands();bindCatSlider();nav='brands';}
   else if(h==='dl'){app.innerHTML=viewDownloads();bindDownloads();bindCatSlider();nav='dl';}
@@ -1183,7 +1176,6 @@ function route(){
   else if(h==='add'){app.innerHTML=viewAdd();bindAdd();nav='add';}
   else if(h==='contact'){$('#contact').scrollIntoView();return;}
   else app.innerHTML=viewHome();
-  if(!h.startsWith('p-'))setMeta(null);
   document.querySelectorAll('header.site [data-nav]').forEach(a=>a.classList.toggle('on',a.dataset.nav===nav));document.querySelectorAll('[data-group=products]').forEach(a=>a.classList.toggle('on',['all','interior','exterior'].includes(nav)));document.activeElement?.blur?.();document.body.classList.toggle('over',h==='home'||h===''||!!document.querySelector('#app > .cbanner'));setHdr();
   $('#nav').classList.remove('open');$('#menuBtn').setAttribute('aria-expanded','false');
   window.scrollTo(0,0);
@@ -1201,21 +1193,6 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-search]')){setT
 document.addEventListener('error',e=>{const t=e.target;if(!t||t.tagName!=='IMG'||!t.dataset.dr||t.dataset.fb)return;t.dataset.fb='1';
   const box=t.parentElement;box.classList.remove('photo');box.innerHTML=drawing(t.dataset.dr,/black/i.test(t.alt)?'black':'white',!box.closest('.cgroup,.kimg,.sh-img'));},true);
 window.addEventListener('hashchange',route);
-window.addEventListener('popstate',route);
-/* page title + description per product (the generated /products/ pages carry the same in their HTML) */
-function setMeta(f){
-  document.title=f?`${f.family} | ${f.brand} | Phosforma`:'Phosforma';
-  const d=document.querySelector('meta[name=description]');if(d)d.content=f?(f.tagline||f.description||'').slice(0,300):'';}
-/* in-app navigation: real links for products, #hash for the rest, no page reloads */
-document.addEventListener('click',e=>{
-  if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
-  const a=e.target.closest('a[href]');if(!a||a.target||a.hasAttribute('download'))return;
-  const href=a.getAttribute('href');
-  if(PROD_RE.test(href)){e.preventDefault();if(location.pathname!==href)navTo(href);return;}
-  if(href.startsWith('#')&&href.length>1){const id=href.slice(1);
-    if(['overview','codes','downloads','related'].includes(id)){e.preventDefault();document.getElementById(id)?.scrollIntoView({behavior:'smooth'});return;}
-    if(location.pathname!=='/'){e.preventDefault();navTo('/'+href);}}
-});
 
 fetch('products.csv').then(r=>{if(!r.ok)throw new Error(r.status);return r.text();}).then(async t=>{CATALOG=groupFamilies(parseCSV(t));
   try{const c=await fetch('catalogues.csv');if(c.ok){const rows=parseCSV(await c.text());CATALOGUES=rows;}}catch(e){}
