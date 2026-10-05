@@ -318,6 +318,8 @@ section.block{padding-block:56px;border-bottom:1px solid var(--line)}
 .cfg-opts.tiles button span{padding:0 10px}
 .cfg-opts.tiles img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
 .cfg-opts.tiles button.on{background:var(--soft);color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}.cfg-opts.tiles button.on small{color:var(--muted);opacity:1}
+.cfg-side{position:relative}.cfg-side>#cfgReset{position:absolute;right:0;top:0;z-index:1}
+@media (max-width:960px){.cfg-side>#cfgReset{position:static;margin-bottom:14px}}
 .cfg-result{position:sticky;top:calc(var(--hd,72px) + 20px);border:1px solid var(--line);background:var(--panel);padding:20px}
 .cfg-img{background:var(--soft);margin:-20px -20px 16px}.cfg-img img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
 .cfg-fam{font-size:12.5px;color:var(--muted);margin:0 0 2px}.cfg-name{font-size:18px;font-weight:500;margin:0}
@@ -1145,7 +1147,7 @@ function bindConfigurator(f){
   cfgState={C,pool,opts,f,sel:{}};
   const fits=(p,sel,skip)=>C.groups.every(g=>g.k===skip||!sel[g.k]||p.v[g.k]===sel[g.k]);
   const render=()=>{const {sel}=cfgState;const match=pool.filter(p=>fits(p,sel));
-        box.innerHTML=`<div class="cfg-head"><h2>Configure ${esc(f.family)}</h2><button class="btn" id="cfgReset">Reset</button></div>
+        box.innerHTML=`<div class="cfg-head"><h2>Configure ${esc(f.family)}</h2></div>
     <div class="cfg-body"><div class="cfg-groups">${C.groups.map((g,gi)=>{const vals=opts[gi];if(vals.length<2)return '';
       const avail=new Set(pool.filter(p=>fits(p,sel,g.k)).map(p=>p.v[g.k]));
       const only=avail.size===1&&!sel[g.k]?[...avail][0]:null;
@@ -1154,7 +1156,7 @@ function bindConfigurator(f){
         let img='';if(g.tiles){const pm=pool.find(p=>p.v[g.k]===v&&p.m.image);img=pm?`<img src="${esc(pm.m.image)}" alt="" loading="lazy">`:'';}
         const sub=g.sub?g.sub(v):'';
         return `<button type="button" class="${cls}" data-k="${g.k}" data-v="${esc(v)}" aria-pressed="${sel[g.k]===v}"${avail.has(v)?'':' title="Not available with the current choices. Picking it clears the conflicting ones."'}>${img}<span>${esc(v)}${sub?`<small>${esc(sub)}</small>`:''}</span></button>`;}).join('')}</div></div>`;}).join('')}</div>
-      <aside class="cfg-result" aria-live="polite">${result(match)}</aside></div>`;};
+      <div class="cfg-side"><button class="btn" id="cfgReset">Reset</button><aside class="cfg-result" aria-live="polite">${result(match)}</aside></div></div>`;align();};
   const result=match=>{
     if(match.length===1){const {m,f:F}=match[0];const ds=m.downloads.find(d=>/datasheet/i.test(d.label)&&d.path);const others=m.downloads.filter(d=>d!==ds&&d.path);
       const det=String(m.details||'').split(' · ');
@@ -1170,13 +1172,23 @@ function bindConfigurator(f){
     return `${pm?`<div class="cfg-img"><img src="${esc(pm.m.image)}" alt=""></div>`:''}<p class="cfg-n"><b>${match.length}</b> codes match</p>
       <p class="muted">Choose ${open.length>1?open.slice(0,-1).join(', ')+' and '+open.slice(-1):open[0]} to get one exact code.</p>
       <dl><dt>Power</dt><dd>${rg(pw,'W')}</dd><dt>Delivered lumens</dt><dd>${rg(lm,'lm')}</dd></dl>`;};
+  /* right column: picture box level with the shape tiles, Reset level with the first row above them */
+  const align=()=>{const side=box.querySelector('.cfg-side'),res=box.querySelector('.cfg-result'),rb=box.querySelector('#cfgReset');if(!side)return;
+    res.style.marginTop='';rb.style.top='';
+    if(!matchMedia('(min-width:961px)').matches)return;
+    const top0=side.getBoundingClientRect().top;const rows=[...box.querySelectorAll('.cfg-opts')];if(!rows.length)return;
+    const tiles=box.querySelector('.cfg-opts.tiles')||rows[0];
+    res.style.marginTop=Math.max(0,tiles.getBoundingClientRect().top-top0)+'px';
+    const ref=rows[0]!==tiles?rows[0]:box.querySelector('.cfg-head h2');const r=ref.getBoundingClientRect();
+    rb.style.top=(r.top-top0+(r.height-rb.offsetHeight)/2)+'px';};
+  if(!window.__cfgResize){window.__cfgResize=1;addEventListener('resize',()=>{if(document.getElementById('cfg')&&cfgState)cfgState.align?.();});}
   box.onclick=e=>{const c=e.target.closest('.cfg-copy');if(c){navigator.clipboard?.writeText(c.dataset.code).then(()=>toast('Code copied: '+c.dataset.code),()=>toast(c.dataset.code));return;}
     if(e.target.id==='cfgReset'){cfgState.sel={};render();return;}
     const b=e.target.closest('.cfg-opts button');if(!b)return;const {k,v}=b.dataset;const sel=cfgState.sel;
     if(sel[k]===v){delete sel[k];}
     else{sel[k]=v;for(const g of [...C.groups].reverse()){if(pool.some(p=>fits(p,sel)))break;if(g.k!==k)delete sel[g.k];}}
     render();};
-  render();
+  cfgState.align=align;render();
 }
 function bindProduct(f){
   bindCodes(f);
