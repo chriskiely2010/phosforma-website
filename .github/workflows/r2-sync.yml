@@ -1,0 +1,25 @@
+# Copies the site's PDFs (datasheets, brochures) from r2/ to the Cloudflare R2 bucket "phosforma-files".
+# Runs whenever r2/ changes on main, or by hand from the Actions tab.
+# Needs repository secrets R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT.
+name: Sync PDFs to R2
+on:
+  push:
+    branches: [main]
+    paths: ['r2/**', '.github/workflows/r2-sync.yml']
+  workflow_dispatch:
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload new and changed PDFs
+        run: aws s3 sync r2/ s3://phosforma-files/ --endpoint-url "$ENDPOINT" --size-only --no-progress --content-type application/pdf --only-show-errors
+      - name: Leave a marker so the upload can be checked from the public URL
+        run: |
+          printf '%s\n%s\n%s files\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" "$(find r2 -type f | wc -l)" > sync.txt
+          aws s3 cp sync.txt s3://phosforma-files/_sync.txt --endpoint-url "$ENDPOINT" --content-type text/plain --cache-control no-store
