@@ -300,6 +300,32 @@ section.block{padding-block:56px;border-bottom:1px solid var(--line)}
 .subnav .wrap{display:flex;gap:26px;overflow-x:auto;font-size:13.5px}
 .subnav a{text-decoration:none;color:var(--muted);padding:14px 0;white-space:nowrap}
 .subnav a:hover{color:var(--ink)}
+
+/* configurator */
+.cfg-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}.cfg-head h2{margin:0}
+.cfg-body{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:44px;align-items:start}
+@media (max-width:960px){.cfg-body{grid-template-columns:1fr}}
+.cfg-g{margin-bottom:26px}.cfg-g h3{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 10px}
+.cfg-opts{display:flex;flex-wrap:wrap;gap:8px}
+.cfg-opts button{border:1px solid var(--line);background:var(--soft);color:var(--ink);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-radius:2px;text-align:left;transition:border-color .15s,background .15s}
+.cfg-opts button:hover{border-color:var(--ink)}
+.cfg-opts button small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.cfg-opts button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}.cfg-opts button.on small{color:inherit;opacity:.75}
+.cfg-opts button.auto{border-color:var(--ink)}
+.cfg-opts button.na{opacity:.35}
+.cfg-opts.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.cfg-opts.tiles button{padding:0 0 10px;display:flex;flex-direction:column;gap:8px}
+.cfg-opts.tiles button span{padding:0 10px}
+.cfg-opts.tiles img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+.cfg-opts.tiles button.on{background:var(--soft);color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}.cfg-opts.tiles button.on small{color:var(--muted);opacity:1}
+.cfg-result{position:sticky;top:calc(var(--hd,72px) + 20px);border:1px solid var(--line);background:var(--panel);padding:20px}
+.cfg-img{background:var(--soft);margin:-20px -20px 16px}.cfg-img img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.cfg-fam{font-size:12.5px;color:var(--muted);margin:0 0 2px}.cfg-name{font-size:18px;font-weight:500;margin:0}
+.cfg-n{font-size:18px;margin:0 0 6px}
+.cfg-code{display:flex;flex-direction:column;gap:8px;background:var(--soft);padding:12px;margin:14px 0;font-family:var(--mono);font-size:12.5px;word-break:break-word}
+.cfg-copy{align-self:flex-start;font:inherit;font-family:var(--sans);font-size:12.5px;border:1px solid var(--ink);background:transparent;color:var(--ink);padding:5px 10px;cursor:pointer;border-radius:2px}
+.cfg-result dl{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13.5px;margin:0 0 16px}.cfg-result dt{color:var(--muted)}.cfg-result dd{margin:0}
+.cfg-dl{display:flex;flex-wrap:wrap;gap:8px}
 .psec{padding-block:48px;border-bottom:1px solid var(--line);scroll-margin-top:calc(var(--hd) + 24px)}
 .psec h2{font-size:24px;font-weight:400;margin-bottom:22px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px}
@@ -596,6 +622,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--accent-ink)}
     </div></div></div>
   
   <section class="psec" id="s-overview"><div class="wrap"><div><h2>Overview</h2><p class="overview">Dea Hestia is a fixed recessed downlight module in 2 versions, made for Dea trim and trimless frames (the cut-out depends on the frame). It comes in black or white with a matt aluminium reflector. It has a Asymmetric beam, in 2700K, 3000K and 4000K, with On/Off, Phase Dim and DALI control.</p></div></div></section>
+  
   <section class="psec" id="s-codes"><div class="wrap"><h2>Models &amp; codes</h2>
     <div class="cfilters" id="cfilters"><label class="cf"><span>CCT</span><select class="input" data-ck="cct"><option value="">All</option><option>2700K</option><option>3000K</option><option>4000K</option></select></label><label class="cf"><span>Control</span><select class="input" data-ck="control"><option value="">All</option><option>DALI</option><option>On/Off</option><option>Phase Dim</option></select></label><label class="cf"><span>Finish</span><select class="input" data-ck="finish"><option value="">All</option><option>Black</option><option>White</option></select></label><button class="btn" id="creset" hidden="">Clear</button></div>
     <p class="muted ccount" id="ccount">18 codes</p>
@@ -988,11 +1015,12 @@ function viewProduct(f){
       <p class="tag">${esc(f.tagline)}</p>
       </div>
       <dl class="quick">${quick.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
-      <div class="p-actions"><a class="btn solid" href="#codes" data-jump="codes">Models & downloads</a><button class="btn" data-dl="Product brochure">Product brochure</button></div>
+      <div class="p-actions">${cfgFor(f)?'<a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models & downloads</a>':'<a class="btn solid" href="#codes" data-jump="codes">Models & downloads</a>'}<button class="btn" data-dl="Product brochure">Product brochure</button></div>
       
     </div></div></div>
   
   <section class="psec" id="s-overview"><div class="wrap${SHOW_DIMS&&f.dimensions?' ov-two':''}"><div><h2>Overview</h2><p class="overview">${esc(f.description)}</p></div>${SHOW_DIMS&&f.dimensions?`<figure class="dims"><h2>Dimensions</h2><div class="dimimg"><phos-drawing src="${esc(f.dimensions)}" aria-label="${esc(f.family)} dimension drawing"></phos-drawing></div>${f.dimensions_note?`<figcaption>${esc(f.dimensions_note)}</figcaption>`:''}</figure>`:''}</div></section>
+  ${cfgFor(f)?'<section class="psec" id="s-config"><div class="wrap"><div class="cfg" id="cfg"></div></div></section>':''}
   <section class="psec" id="s-codes"><div class="wrap"><h2>Models & codes</h2>
     <div class="cfilters" id="cfilters"></div>
     <p class="muted ccount" id="ccount"></p>
@@ -1057,8 +1085,76 @@ function bindCodes(f){
     renderCodes();
 }
 let slideTimer;
+/* ---------- product configurators ----------
+   A guided choice over a collection's real codes: each group is one property read from the codes,
+   options that can't combine with the current picks are greyed, and the result shows the exact code.
+   Add a collection by adding an entry to CONFIGURATORS (families it spans + its option groups). */
+const RAD_SHAPE_SUB={L505:'Straight',L1005:'Straight',R272:'90° arc',R515:'45° arc',R1000:'22.5° arc',R1975:'11.3° arc',R2950:'7.5° arc',R6100:'3.6° arc'};
+const RAD_SEG_SUB={Individual:'2 end caps · stand-alone',Start:'Begins a continuous run',Middle:'Joins two pieces',End:'Closes a continuous run',Full:'Continuous run · no end caps'};
+const CONFIGURATORS=[{
+  name:'Inground Radius',
+  families:['Inground Radius','Inground Radius RGB','Inground Radius RGBW','Inground Radius Pixel RGBW'],
+  groups:[
+    {k:'colour',label:'Light colour',val:(m,f)=>({'Inground Radius':'Single colour','Inground Radius RGB':'RGB','Inground Radius RGBW':'RGBW','Inground Radius Pixel RGBW':'Pixel RGBW'})[f.family]||'',
+      order:['Single colour','RGB','RGBW','Pixel RGBW']},
+    {k:'shape',label:'Shape',tiles:true,order:['L505','L1005','R272','R515','R1000','R1975','R2950','R6100'],sub:v=>RAD_SHAPE_SUB[v]||'',
+      val:m=>{const r=(m.code.match(/\bR(\d{4})\b/)||[])[1];if(!r)return '';if(r!=='0000')return 'R'+(+r);const l=(m.code.match(/\bL(\d{4})\b/)||[])[1];return l?'L'+(+l):'';}},
+    {k:'segment',label:'Segment',order:['Individual','Start','Middle','End','Full'],sub:v=>RAD_SEG_SUB[v]||'',
+      val:m=>({I:'Individual',S:'Start',M:'Middle',E:'End',F:'Full'})[(m.code.match(/^IngroundR\s+([ISMEF])\b/)||[])[1]]||''},
+    {k:'voltage',label:'Voltage',val:m=>/48V/.test(m.code)?'48V DC':'24V DC',order:['24V DC','48V DC']},
+    {k:'wm',label:'Wattage',val:m=>{const x=m.name.match(/([\d.]+)W\/m/);return x?x[1]+' W/m':'';}},
+    {k:'cct',label:'Colour temperature',val:m=>m.cct||''},
+  ]}];
+const cfgFor=f=>CONFIGURATORS.find(c=>c.families.includes(f.family));
+let cfgState=null;
+function bindConfigurator(f){
+  const C=cfgFor(f),box=$('#cfg');if(!C||!box)return;
+  const fams=C.families.map(n=>CATALOG.find(x=>x.family===n)).filter(Boolean);
+  const pool=fams.flatMap(F=>F.models.map(m=>({m,f:F,v:Object.fromEntries(C.groups.map(g=>[g.k,g.val(m,F)]))})));
+  const num=v=>{const n=parseFloat(String(v).replace(/[^0-9.]/g,''));return isNaN(n)?1e9:n;};
+  const opts=C.groups.map(g=>{const vals=[...new Set(pool.map(p=>p.v[g.k]).filter(Boolean))];
+    return vals.sort((a,b)=>{const ia=g.order?g.order.indexOf(a):-1,ib=g.order?g.order.indexOf(b):-1;if(ia>=0||ib>=0)return (ia<0?99:ia)-(ib<0?99:ib);return num(a)-num(b)||String(a).localeCompare(b);});});
+  const home=C.groups[0].val(f.models[0],f);
+  cfgState={C,pool,opts,f,sel:{[C.groups[0].k]:home}};
+  const fits=(p,sel,skip)=>C.groups.every(g=>g.k===skip||!sel[g.k]||p.v[g.k]===sel[g.k]);
+  const render=()=>{const {sel}=cfgState;const match=pool.filter(p=>fits(p,sel));
+    const colour=sel.colour||(new Set(match.map(p=>p.v.colour)).size===1?match[0].v.colour:home);
+    box.innerHTML=`<div class="cfg-head"><h2>Configure ${esc(C.name)}</h2><button class="btn" id="cfgReset">Reset</button></div>
+    <div class="cfg-body"><div class="cfg-groups">${C.groups.map((g,gi)=>{const vals=opts[gi];if(vals.length<2&&g.k!=='colour')return '';
+      const avail=new Set(pool.filter(p=>fits(p,sel,g.k)).map(p=>p.v[g.k]));
+      const only=avail.size===1&&!sel[g.k]?[...avail][0]:null;
+      return `<div class="cfg-g"><h3>${esc(g.label)}</h3><div class="cfg-opts${g.tiles?' tiles':''}">${vals.map(v=>{
+        const cls=[sel[g.k]===v?'on':'',only===v?'auto':'',avail.has(v)?'':'na'].filter(Boolean).join(' ');
+        let img='';if(g.tiles){const pm=pool.find(p=>p.v[g.k]===v&&p.v.colour===colour&&p.m.image)||pool.find(p=>p.v[g.k]===v&&p.m.image);img=pm?`<img src="${esc(pm.m.image)}" alt="" loading="lazy">`:'';}
+        const sub=g.sub?g.sub(v):'';
+        return `<button type="button" class="${cls}" data-k="${g.k}" data-v="${esc(v)}" aria-pressed="${sel[g.k]===v}"${avail.has(v)?'':' title="Not available with the current choices. Picking it clears the conflicting ones."'}>${img}<span>${esc(v)}${sub?`<small>${esc(sub)}</small>`:''}</span></button>`;}).join('')}</div></div>`;}).join('')}</div>
+      <aside class="cfg-result" aria-live="polite">${result(match)}</aside></div>`;};
+  const result=match=>{
+    if(match.length===1){const {m,f:F}=match[0];const ds=m.downloads.find(d=>/datasheet/i.test(d.label)&&d.path);const others=m.downloads.filter(d=>d!==ds&&d.path);
+      const det=String(m.details||'').split(' · ');
+      const r2=v=>String(v||'').replace(/\d+\.\d{3,}/,x=>String(+(+x).toFixed(2)));const rows=[['Power',r2(m.power)],['Delivered lumens',m.flux],['Efficacy',m.efficacy],['Colour temperature',m.cct||F.cct],['Colour rendering',m.cri||F.cri],['Control',m.control||F.control],['Protection',[m.ip||F.ip,m.ik||F.ik].filter(Boolean).join(' · ')],['Build',det.slice(0,2).join(' · ')],['Light source',det.slice(5).join(' · ')]].filter(r=>r[1]);
+      return `${m.image?`<div class="cfg-img"><img src="${esc(m.image)}" alt="${esc(m.name)}"></div>`:''}<p class="cfg-fam">${esc(F.family)}${F!==cfgState.f?` · <a href="/products/${F.slug}/">product page</a>`:''}</p><h3 class="cfg-name">${esc(m.name)}</h3>
+        <div class="cfg-code"><span>${esc(m.code)}</span><button type="button" class="cfg-copy" data-code="${esc(m.code)}">Copy code</button></div>
+        <dl>${rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+        <div class="cfg-dl">${ds?`<a class="btn solid" href="${esc(ds.path)}" target="_blank" rel="noopener">Datasheet ↗</a>`:''}${others.map(d=>`<a class="btn" href="${esc(d.path)}" target="_blank" rel="noopener">${esc(d.label)} ↗</a>`).join('')}</div>`;}
+    const open=C.groups.filter(g=>new Set(match.map(p=>p.v[g.k])).size>1).map(g=>g.label.toLowerCase());
+    const pw=match.map(p=>parseFloat(p.m.power)).filter(x=>!isNaN(x)),lm=match.map(p=>parseFloat(p.m.flux)).filter(x=>!isNaN(x));
+    const rg=(a,u)=>a.length?(Math.min(...a)===Math.max(...a)?`${Math.min(...a)}${u}`:`${Math.min(...a)}–${Math.max(...a)}${u}`):'';
+    const pm=match.find(p=>p.m.image);
+    return `${pm?`<div class="cfg-img"><img src="${esc(pm.m.image)}" alt=""></div>`:''}<p class="cfg-n"><b>${match.length}</b> codes match</p>
+      <p class="muted">Choose ${open.length>1?open.slice(0,-1).join(', ')+' and '+open.slice(-1):open[0]} to get one exact code.</p>
+      <dl><dt>Power</dt><dd>${rg(pw,'W')}</dd><dt>Delivered lumens</dt><dd>${rg(lm,'lm')}</dd></dl>`;};
+  box.onclick=e=>{const c=e.target.closest('.cfg-copy');if(c){navigator.clipboard?.writeText(c.dataset.code).then(()=>toast('Code copied: '+c.dataset.code),()=>toast(c.dataset.code));return;}
+    if(e.target.id==='cfgReset'){cfgState.sel={[C.groups[0].k]:home};render();return;}
+    const b=e.target.closest('.cfg-opts button');if(!b)return;const {k,v}=b.dataset;const sel=cfgState.sel;
+    if(sel[k]===v){if(k!==C.groups[0].k)delete sel[k];}
+    else{sel[k]=v;for(const g of [...C.groups].reverse()){if(pool.some(p=>fits(p,sel)))break;if(g.k!==k)delete sel[g.k];}}
+    render();};
+  render();
+}
 function bindProduct(f){
   bindCodes(f);
+  bindConfigurator(f);
   /* white banner text when the photo is dark behind the title */
   const first=document.querySelector('#pslides img');
   if(first){const chk=()=>{try{const c=document.createElement('canvas'),w=c.width=60,h=c.height=24,x=c.getContext('2d');
@@ -1204,7 +1300,7 @@ function navTo(url){history.pushState(null,'',url);route();}
 function route(){
   let h=curKey();
   if(location.pathname==='/'&&h.startsWith('p-')){history.replaceState(null,'',prodUrl(h.slice(2)));}
-  if(['overview','codes','downloads','related'].includes(h)) return;
+  if(['overview','config','codes','downloads','related'].includes(h)) return;
   const app=$('#app');let nav='';
   if(h==='home'||h===''){app.innerHTML=viewHome();bindHomeSlider();}
   else if(h==='all'){app.innerHTML=viewCatalog({});bindCatalog();nav='all';}
@@ -1251,7 +1347,7 @@ document.addEventListener('click',e=>{
   const href=a.getAttribute('href');
   if(PROD_RE.test(href)){e.preventDefault();if(location.pathname!==href)navTo(href);return;}
   if(href.startsWith('#')&&href.length>1){const id=href.slice(1);
-    if(['overview','codes','downloads','related'].includes(id)){e.preventDefault();document.getElementById(id)?.scrollIntoView({behavior:'smooth'});return;}
+    if(['overview','config','codes','downloads','related'].includes(id)){e.preventDefault();document.getElementById(id)?.scrollIntoView({behavior:'smooth'});return;}
     if(location.pathname!=='/'){e.preventDefault();navTo('/'+href);}}
 });
 
