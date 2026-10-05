@@ -30,7 +30,14 @@ To do before launch
   [ ] Datasheets for all batches
   [ ] Contact / enquiry form, privacy policy, analytics
   [ ] Category and partner pages as real addresses too (same method as products)
+Datasheets / PDFs (Cloudflare R2, bucket phosforma-files)
+  - PDFs are kept in the repo's r2/ folder (not published) and copied to R2 by
+    .github/workflows/r2-sync.yml on every push; check https://<bucket url>/_sync.txt
+  - The site links them via FILES_BASE in index.html (R2_ON) and make_public.py (R2_LIVE)
 Launch day
+  [ ] R2: connect custom domain files.phosforma.com.au to the bucket (R2 > Settings > Custom Domains),
+      set FILES_BASE in index.html to https://files.phosforma.com.au/ and turn off the r2.dev
+      Public Development URL (Cloudflare rate-limits r2.dev; it is meant for testing)
   [ ] prerender.py: LIVE = True, confirm SITE_URL (www or not)
       -> removes noindex, robots.txt allows crawling and points to the sitemap
   [ ] Cloudflare Pages: add phosforma.com.au as custom domain, switch DNS
