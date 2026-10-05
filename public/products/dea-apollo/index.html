@@ -811,7 +811,7 @@ function card(f){
 }
 /* finish swatches on tiles: one circle per body finish, split at 45° when the reflector colour differs */
 const SW_COL=[[/black|ral\s*90(05|11)|anthracite/i,'#1b1b1b'],[/gold|brass/i,'#c9a24a'],[/copper|bronze|corten|brown/i,'#a8653a'],
-  [/chrome|silver|alumin|metali[sz]ed|nickel/i,'#b9bdc2'],[/grey|gray/i,'#8a8d91'],[/white|trimless|cotton|ral\s*90(03|10|16)/i,'#ffffff']];
+  [/chrome|silver|alumin|metali[sz]ed|nickel|stainless|inox|steel/i,'#b9bdc2'],[/grey|gray/i,'#8a8d91'],[/white|trimless|cotton|ral\s*90(03|10|16)/i,'#ffffff']];
 const swCol=n=>{for(const[r,c]of SW_COL)if(r.test(n))return c;return '';};
 function swatches(f){
   const seen=new Map();
