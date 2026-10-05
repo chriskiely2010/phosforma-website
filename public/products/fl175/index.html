@@ -828,7 +828,7 @@ function card(f){
   <div class="meta"><span>${esc(f.brand)}</span>${swatches(f)}</div></a>`;
 }
 /* finish swatches on tiles: one circle per body finish, split at 45° when the reflector colour differs */
-const SW_COL=[[/black|ral\s*90(05|11)|anthracite/i,'#1b1b1b'],[/gold|brass/i,'#c9a24a'],[/copper|bronze|corten|brown/i,'#a8653a'],
+const SW_COL=[[/anthracite|ral\s*7016/i,'#3d4147'],[/black|ral\s*90(05|11)/i,'#1b1b1b'],[/gold|brass/i,'#c9a24a'],[/copper|bronze|corten|brown/i,'#a8653a'],
   [/chrome|silver|alumin|metali[sz]ed|nickel|stainless|inox|steel/i,'#b9bdc2'],[/grey|gray/i,'#8a8d91'],[/white|trimless|cotton|ral\s*90(03|10|16)/i,'#ffffff']];
 const swCol=n=>{for(const[r,c]of SW_COL)if(r.test(n))return c;return '';};
 function swatches(f){
@@ -990,7 +990,7 @@ function viewProjects(){return `<div class="cat-hero"><div class="wrap">${crumbs
 <div class="wrap"><div class="plist">${PROJECTS.map(p=>`<div class="pitem"><div class="pimg">Project photos to come</div><b>${esc(p.name)}</b><span>${esc(p.place)} · ${esc(p.type)}</span></div>`).join('')}</div></div>`;}
 /* product page */
 const dlBtn=(m,d)=>d.path?`<a class="live" href="${esc(d.path)}" target="_blank" rel="noopener">${esc(d.label)} ↗</a>`:`<button data-dl="${esc(m.name+' – '+d.label)}">${esc(d.label)}</button>`;
-const FIN_COLORS={black:'#1f1f1f',white:'#ffffff',grey:'#8b8b88',graphite:'#3b3b3b',rust:'#8a4b2a',gold:'#c9a24b',stainless:'#c7c9cb',brushed:'#b5b5b0',anodised:'#d4d6d8'};
+const FIN_COLORS={anthracite:'#3d4147',aluminium:'#b9bdc2',black:'#1f1f1f',white:'#ffffff',grey:'#8b8b88',graphite:'#3b3b3b',rust:'#8a4b2a',gold:'#c9a24b',stainless:'#c7c9cb',brushed:'#b5b5b0',anodised:'#d4d6d8'};
 const finColor=x=>{const k=Object.keys(FIN_COLORS).find(k=>String(x).toLowerCase().includes(k));return FIN_COLORS[k||'white'];};
 const sc=m=>m&&m.scale&&m.scale<1?` class="sc" style="transform:scale(${m.scale})"`:'';
 const modelThumb=(f,m)=>m.image?`<span class="mthumb photo"><img${sc(m)} src="${esc(m.image)}" alt="${esc(m.name)}" loading="lazy"></span>`:`<span class="mthumb" title="Line drawing until a ${esc(m.finish||'')} photo is added">${drawing(f.drawing,/black|graphite|crown/i.test(m.finish)?'black':'white',false)}</span>`;
