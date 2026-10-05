@@ -70,7 +70,7 @@ nav.main .dd-box a:hover,nav.main .dd-box a.on{color:var(--accent-ink);border-co
 body.over header.site:not(.scrolled){background:linear-gradient(to bottom,rgba(0,0,0,.38),rgba(0,0,0,0)) border-box;color:#fff;border-color:transparent}
 body.over header.site:not(.scrolled) nav.hd-sec a{opacity:.9}
 .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--ink);background:transparent;padding:9px 16px;font-size:13.5px;cursor:pointer;text-decoration:none;border-radius:2px;white-space:nowrap}
-.btn:hover{background:var(--ink);color:var(--bg)}
+.btn:hover{background:var(--accent);border-color:var(--accent);color:#1a1a1a}
 .btn.solid{background:var(--ink);color:var(--bg)}
 .btn.solid:hover{background:var(--accent);border-color:var(--accent);color:#1a1a1a}
 .btn.amber{background:var(--accent);border-color:var(--accent);color:#1a1a1a}
@@ -308,7 +308,7 @@ section.block{padding-block:56px;border-bottom:1px solid var(--line)}
 .cfg-g{margin-bottom:26px}.cfg-g h3{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 10px}
 .cfg-opts{display:flex;flex-wrap:wrap;gap:8px}
 .cfg-opts button{border:1px solid var(--line);background:var(--soft);color:var(--ink);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-radius:2px;text-align:left;transition:border-color .15s,background .15s}
-.cfg-opts button:hover{border-color:var(--ink)}
+
 .cfg-opts button small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
 .cfg-opts button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}.cfg-opts button.on small{color:inherit;opacity:.75}
 .cfg-opts button.auto{border-color:var(--ink)}
@@ -328,6 +328,7 @@ section.block{padding-block:56px;border-bottom:1px solid var(--line)}
 .cfg-copy{align-self:flex-start;font:inherit;font-family:var(--sans);font-size:12.5px;border:1px solid var(--ink);background:transparent;color:var(--ink);padding:5px 10px;cursor:pointer;border-radius:2px}
 .cfg-result dl{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13.5px;margin:0 0 16px}.cfg-result dt{color:var(--muted)}.cfg-result dd{margin:0}
 .cfg-dl{display:flex;flex-wrap:wrap;gap:8px}
+@media (hover:hover){.cfg-opts button:hover,.cfg-opts.tiles button:hover,.cfg-copy:hover{background:var(--accent);border-color:var(--accent);color:#1a1a1a;box-shadow:none}.cfg-opts button:hover small,.cfg-opts.tiles button:hover small{color:#1a1a1a;opacity:.8}.cfg-opts button.na:hover{opacity:.7}}
 .psec{padding-block:48px;border-bottom:1px solid var(--line);scroll-margin-top:calc(var(--hd) + 24px)}
 .psec h2{font-size:24px;font-weight:400;margin-bottom:22px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px}
@@ -613,7 +614,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--accent-ink)}
 </div></header>
 
 <main id="app" aria-live="polite"><section class="pslider" aria-roledescription="carousel" aria-label="Inground Radius RGB"><div class="pslides" id="pslides"><div class="pslide" aria-roledescription="slide" aria-label="1 of 2"><img src="images/inground-radius-rgb/inground-radius-rgb-banner-01.jpg" alt="Inground Radius RGB installed"></div><div class="pslide" aria-roledescription="slide" aria-label="2 of 2"><img src="images/inground-radius-rgb/inground-radius-rgb-banner-02.jpg" alt="Inground Radius RGB installed" loading="lazy"></div></div>
-    <div class="ptext"><div class="wrap"><div class="inner"><div class="pt-title">Inground Radius RGB</div><div class="pt-dots" id="sDots" role="tablist" aria-label="Slides"><button role="tab" data-i="0" aria-label="Slide 1" aria-selected="true"></button><button role="tab" data-i="1" aria-label="Slide 2" aria-selected="false"></button></div></div></div></div></section><div class="wrap"><div class="crumbs"><a href="#home">Home</a><span class="sep">/</span><a href="#exterior">Exterior</a><span class="sep">/</span><a href="#c-exterior-inground-linear">Inground Linear</a><span class="sep">/</span><span>Inground Radius RGB</span></div>
+    <div class="ptext light"><div class="wrap"><div class="inner"><div class="pt-title">Inground Radius RGB</div><div class="pt-dots" id="sDots" role="tablist" aria-label="Slides"><button role="tab" data-i="0" aria-label="Slide 1" aria-selected="true"></button><button role="tab" data-i="1" aria-label="Slide 2" aria-selected="false"></button></div></div></div></div></section><div class="wrap"><div class="crumbs"><a href="#home">Home</a><span class="sep">/</span><a href="#exterior">Exterior</a><span class="sep">/</span><a href="#c-exterior-inground-linear">Inground Linear</a><span class="sep">/</span><span>Inground Radius RGB</span></div>
   <div class="p-top">
     <div class="p-info"><div class="p-intro"><h1>Inground Radius RGB</h1>
       <div class="sub">Inground Linear · Exterior</div>
