@@ -67,6 +67,20 @@ nav.main .m-only{display:none}
 nav.main .dd-box a{display:flex;padding:12px 0;font-size:13.5px;border-bottom:1px solid var(--line)}
 nav.main .dd-box a:last-child{border-bottom:0}
 nav.main .dd-box a:hover,nav.main .dd-box a.on{color:var(--accent-ink);border-color:var(--line)}
+/* products mega menu */
+@media (min-width:961px){
+  .dd-top::after{content:"";position:absolute;left:-20px;right:-20px;top:100%;height:calc(var(--hd)/2 + 6px)}
+  .dd-menu.mega-on{position:fixed;left:0;right:0;top:calc(var(--hd) + env(safe-area-inset-top,0px));padding-top:0}
+  .dd-box.mega{min-width:0;padding:0;border-top:2px solid var(--accent);box-shadow:0 18px 34px rgba(0,0,0,.10)}
+  .mega-in{max-width:var(--wrap);margin:0 auto;padding:34px var(--gutter) 40px;display:grid;grid-template-columns:1fr 1fr;gap:0 clamp(32px,5vw,90px)}
+  .mega-col+.mega-col{border-left:1px solid var(--line);padding-left:clamp(32px,5vw,90px)}
+  nav.main .mega .mega-h{display:inline-flex;border:0;padding:0 0 4px;margin-bottom:18px;font-size:14px;font-weight:500;letter-spacing:.09em;color:var(--ink);border-bottom:2px solid transparent}
+  nav.main .mega .mega-h:hover,nav.main .mega .mega-h.on{border-color:var(--accent);color:var(--ink)}
+  .mega-list{display:grid;grid-template-columns:1fr 1fr;gap:4px 32px}
+  nav.main .mega .mega-list a{border:0;padding:9px 0;font-size:16px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}
+  nav.main .mega .mega-list a:hover,nav.main .mega .mega-list a.on{color:var(--accent-ink)}
+  .mega-n{font-size:12px;color:var(--muted);opacity:.7;margin-left:6px}
+}
 body.over header.site:not(.scrolled){background:linear-gradient(to bottom,rgba(0,0,0,.38),rgba(0,0,0,0)) border-box;color:#fff;border-color:transparent}
 body.over header.site:not(.scrolled) nav.hd-sec a{opacity:.9}
 .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--ink);background:transparent;padding:9px 16px;font-size:13.5px;cursor:pointer;text-decoration:none;border-radius:2px;white-space:nowrap}
@@ -95,6 +109,10 @@ body.over header.site:not(.scrolled) nav.hd-sec a{opacity:.9}
   .dd-box{box-shadow:none;border:0;padding:0 0 0 18px;min-width:0;background:transparent}
   nav.main .dd-box a{border-bottom:1px solid var(--line);font-size:14px}
   nav.main .dd-box a:last-child{border-bottom:1px solid var(--line)}
+  nav.main .mega .mega-h{font-weight:500}
+  nav.main .mega .mega-list{display:flex;flex-direction:column;padding-left:16px}
+  nav.main .mega .mega-list a{text-transform:none;letter-spacing:0;font-weight:400;font-size:14px}
+  .mega-n{display:none}
 }
 
 /* downloads page */
@@ -606,7 +624,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--accent-ink)}
   </a>
   <div class="hd-right">
     <nav class="main" id="nav" aria-label="Main">
-      <div class="dd"><a href="#all" class="dd-top" data-group="products" aria-haspopup="true">Products <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5"/></svg></a><div class="dd-menu"><div class="dd-box"><a href="#all" data-nav="all">All products</a><a href="#interior" data-nav="interior">Interior</a><a href="#exterior" data-nav="exterior">Exterior</a></div></div></div><a href="#projects" data-nav="projects">Projects</a><a href="#brands" data-nav="brands">Partners</a><a href="#dl-cat" data-nav="dl">Downloads</a><a href="#all" class="hd-search" data-search>Search <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6"/><path d="m13 13 5 5"/></svg></a>
+      <div class="dd"><a href="#all" class="dd-top" data-group="products" aria-haspopup="true">Products <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5"/></svg></a><div class="dd-menu"><div class="dd-box mega" id="mega"><a href="#interior" data-nav="interior">Interior</a><a href="#exterior" data-nav="exterior">Exterior</a></div></div></div><a href="#projects" data-nav="projects">Projects</a><a href="#brands" data-nav="brands">Partners</a><a href="#dl-cat" data-nav="dl">Downloads</a><a href="#all" class="hd-search" data-search>Search <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6"/><path d="m13 13 5 5"/></svg></a>
       <a class="m-only" href="#home">About us</a><a class="m-only" href="#contact">Contact us</a><a class="m-only" href="#add" data-nav="add">Add products</a>
     </nav>
   </div>
@@ -1312,6 +1330,16 @@ function bindDownloads(){
   q.addEventListener('input',run);run();
 }
 
+
+/* Products mega menu: Interior | Exterior, each with its categories (only categories that have products) */
+const MENU_LABEL={'Recessed Downlight':'Recessed Downlights','Surface Downlights | Spotlights':'Surface & Spotlights','Track Mounted':'Track Lighting','Ceiling Suspended | Pendants':'Pendants','Bollard':'Bollards'};
+function buildMega(){const box=document.getElementById('mega');if(!box)return;
+  const col=env=>{const have=[...new Set(CATALOG.filter(f=>f.environment===env).map(f=>f.category))];
+    const order=[...(ORDER[env]||[]).filter(c=>have.includes(c)),...have.filter(c=>!(ORDER[env]||[]).includes(c)).sort()];
+    const n=c=>CATALOG.filter(f=>f.environment===env&&f.category===c).length;
+    return `<div class="mega-col"><a class="mega-h" href="#${env.toLowerCase()}" data-nav="${env.toLowerCase()}">${env}</a><div class="mega-list">${order.map(c=>`<a href="#c-${catSlug(env,c)}">${esc(MENU_LABEL[c]||c)}</a>`).join('')}</div></div>`;};
+  box.innerHTML=`<div class="mega-in">${col('Interior')}${col('Exterior')}</div>`;
+  box.parentElement.classList.add('mega-on');}
 /* ---------- router ---------- */
 const PROD_RE=/^\/products\/([a-z0-9-]+)\/?$/;
 const prodUrl=s=>'/products/'+s+'/';
@@ -1374,7 +1402,7 @@ document.addEventListener('click',e=>{
 fetch('products.csv').then(r=>{if(!r.ok)throw new Error(r.status);return r.text();}).then(async t=>{CATALOG=groupFamilies(parseCSV(t));
   try{const c=await fetch('catalogues.csv');if(c.ok){const rows=parseCSV(await c.text());CATALOGUES=rows;}}catch(e){}
   try{const pr=await fetch('partners.csv');if(pr.ok)PARTNERS=parseCSV(await pr.text());}catch(e){}
-  route();})
+  buildMega();route();})
   .catch(()=>{$('#app').innerHTML='<div class="wrap" style="padding-block:60px"><h1>Product data could not load</h1><p class="muted">The site reads products.csv. Reload the page to try again.</p></div>';});
 })();
 </script>
