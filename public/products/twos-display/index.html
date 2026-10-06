@@ -633,7 +633,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--accent-ink)}
 </div></header>
 
 <main id="app" aria-live="polite"><section class="pslider" aria-roledescription="carousel" aria-label="Twos Display"><div class="pslides" id="pslides"><div class="pslide" aria-roledescription="slide" aria-label="1 of 1"><img src="images/twos-display/twos-display-banner-01.jpg" alt="Twos Display installed"></div></div>
-    <div class="ptext"><div class="wrap"><div class="inner"><div class="pt-title">Twos Display</div></div></div></div></section><div class="wrap"><div class="crumbs"><a href="#home">Home</a><span class="sep">/</span><a href="#interior">Interior</a><span class="sep">/</span><a href="#c-interior-profiles-systems">Profiles &amp; Systems</a><span class="sep">/</span><span>Twos Display</span></div>
+    <div class="ptext light"><div class="wrap"><div class="inner"><div class="pt-title">Twos Display</div></div></div></div></section><div class="wrap"><div class="crumbs"><a href="#home">Home</a><span class="sep">/</span><a href="#interior">Interior</a><span class="sep">/</span><a href="#c-interior-profiles-systems">Profiles &amp; Systems</a><span class="sep">/</span><span>Twos Display</span></div>
   <div class="p-top">
     <div class="p-info"><div class="p-intro"><h1>Twos Display</h1>
       <div class="sub">Profiles &amp; Systems · Interior</div>
@@ -695,7 +695,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--accent-ink)}
     <div><h4>Products</h4><ul><li><a href="#interior">Interior collection</a></li><li><a href="#exterior">Exterior collection</a></li><li><a href="#brands">Partners</a></li><li><a href="#add">Add products</a></li></ul></div>
     <div><h4>Company</h4><ul><li>About</li><li>Projects</li><li>News</li><li><a href="#dl-cat">Downloads</a></li></ul></div>
   </div>
-  <div class="fbase"><span>© Phosforma 2017 – 2026</span><span>Test build · not the live site</span></div>
+  <div class="fbase"><span>© Phosforma 2017 – 2026</span></div>
 </div></footer>
 <div class="toast" id="toast" role="status"></div>
 
@@ -915,10 +915,7 @@ function viewHome(){
   <section class="statement"><div class="wrap"><p class="st-line">Light, given form<span class="st-dot">.</span></p></div></section>
   <section class="projsplit"><a class="ps-img" href="#projects"><img src="images/home-projects.jpg" alt="Sculptural black staircase with integrated handrail lighting" loading="lazy" style="object-position:38% center"><span class="ps-btn">Explore Projects <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 11L11 3M5 3h6v6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span></a>
   <div class="ps-text"><div class="ps-inner"><h2 class="ps-line">Where our light lives<span class="st-dot">.</span></h2><p class="ps-body">From workplaces and retail to residences and public buildings, see how architects and designers across Australia have used Phosforma lighting to shape their spaces.</p></div></div></section><section class="featured"><div class="wrap"><h2 class="feat-h">Featured</h2></div><div class="feat-row">${FEATURED.map(x=>`<a class="feat${x.dark?' dark':''}" href="${esc(x.link)}"><div class="feat-img"><img src="${esc(x.image)}" alt="${esc(x.title)}" loading="lazy"><span class="feat-t">${esc(x.title)}</span></div></a>`).join('')}</div></section>
-  <section class="block" style="background:var(--panel)"><div class="wrap"><div class="sec-head"><h2>How products get onto this site</h2><a class="btn amber" href="#add">Add products</a></div>
-    <div class="how"><div><b>Fill in the spreadsheet</b><p>One row per model. Family details go on the first row; each extra row adds a model, its specs and its downloads.</p></div>
-    <div><b>Drop in images and datasheets</b><p>Photos, dimension drawings, PDFs and IES files go in a folder, named to match the spreadsheet.</p></div>
-    <div><b>Publish</b><p>Family pages, filters, model tables and download lists are generated automatically, in the same design.</p></div></div></div></section>`;
+`;
 }
 
 /* catalogue with filters */
