@@ -1,0 +1,863 @@
+{
+ "arkeon-2-0/arkeon-2-0-linear-black.jpg": {
+  "src": "ARKEON_miniatura-2.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.61
+ },
+ "arkeon-2-0/arkeon-2-0-linear-white.jpg": {
+  "src": "ARKEON_miniatura-2.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 0.61
+ },
+ "arkeon-2-0/arkeon-2-0-spot-black.jpg": {
+  "src": "ARKEON-2_spot.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.4
+ },
+ "arkeon-2-0/arkeon-2-0-spot-white.jpg": {
+  "src": "ARKEON-2_spot.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.41
+ },
+ "arkeon-2-0/arkeon-2-0-thumb.jpg": {
+  "src": "ARKEON_miniatura-2.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.61
+ },
+ "arkeon-wall/arkeon-wall-black.jpg": {
+  "src": "ARKEON-WALL_miniatura.jpg",
+  "clean": true,
+  "src_fin": "grey",
+  "want": "black",
+  "scale": 0.58
+ },
+ "arkeon-wall/arkeon-wall-white.jpg": {
+  "src": "ARKEON-WALL_miniatura.jpg",
+  "clean": true,
+  "src_fin": "grey",
+  "want": "white",
+  "scale": 0.58
+ },
+ "ben-ip54/ben-ip54-large-black.jpg": {
+  "src": "BEN_miniatura_LARGE-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.5
+ },
+ "ben-ip54/ben-ip54-large-white.jpg": {
+  "src": "BEN_miniatura_LARGE-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "ben-ip54/ben-ip54-medium-black.jpg": {
+  "src": "BEN_miniatura_MEDIUM-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.5
+ },
+ "ben-ip54/ben-ip54-medium-white.jpg": {
+  "src": "BEN_miniatura_MEDIUM-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "ben-ip54/ben-ip54-small-black.jpg": {
+  "src": "BEN_miniatura_SMALL-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.5
+ },
+ "ben-ip54/ben-ip54-small-white.jpg": {
+  "src": "BEN_miniatura_SMALL-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "ben-ip54/ben-ip54-thumb.jpg": {
+  "src": "BEN-IP54-anteprima_sosp-2.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.22
+ },
+ "ben/ben-large-matt-white.jpg": {
+  "src": "BEN_miniatura_LARGE-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "ben/ben-maxi-matt-white.jpg": {
+  "src": "BEN_miniatura_MAXI-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.36
+ },
+ "ben/ben-medium-matt-white.jpg": {
+  "src": "BEN_miniatura_MEDIUM-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "ben/ben-small-matt-white.jpg": {
+  "src": "BEN_miniatura_SMALL-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "ben/ben-thumb.jpg": {
+  "src": "BEN_miniatura_LARGE-1.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "ben/ben-xl-matt-white.jpg": {
+  "src": "BEN_miniatura_XL-3.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "groove-display/groove-display-profile-black.jpg": {
+  "error": "RuntimeError('KEEP: white profile + white diffuser on white running off the frame, keep the 5 Oct photo')"
+ },
+ "groove-display/groove-display-profile-white.jpg": {
+  "error": "RuntimeError('KEEP: white profile + white diffuser on white running off the frame, keep the 5 Oct photo')"
+ },
+ "groove-display/groove-display-thumb.jpg": {
+  "error": "RuntimeError('KEEP: white profile + white diffuser on white running off the frame, keep the 5 Oct photo')"
+ },
+ "groove/groove-profile-black.jpg": {
+  "src": "GROOVE_miniatura_MOD-SOSP.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.34
+ },
+ "groove/groove-profile-white.jpg": {
+  "src": "GROOVE_miniatura_MOD-SOSP.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.34
+ },
+ "groove/groove-spot-black.jpg": {
+  "src": "43AA313Lx.png",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.47
+ },
+ "groove/groove-spot-white.jpg": {
+  "src": "43AA313Lx.png",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.47
+ },
+ "groove/groove-thumb.jpg": {
+  "src": "GROOVE_miniatura_MOD-SOSP.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.34
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-large-black.jpg": {
+  "src": "HALL-LED-CIELINIG-EVO-PC-LARGE-QUADRATA.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.5
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-large-white.jpg": {
+  "src": "HALL-LED-CIELINIG-EVO-PC-LARGE-QUADRATA.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-medium-black.jpg": {
+  "src": "HALL-LED-CIELINIG-EVO-PC-MEDIUM-QUADRATA.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.5
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-medium-white.jpg": {
+  "src": "HALL-LED-CIELINIG-EVO-PC-MEDIUM-QUADRATA.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-mini-black.jpg": {
+  "src": "HALL-LED-CIELINIG-EVO-PC-MINI-QUADRATA.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.5
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-mini-white.jpg": {
+  "src": "HALL-LED-CIELINIG-EVO-PC-MINI-QUADRATA.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-small-black.jpg": {
+  "src": "HALL-LED-CIELINIG-EVO-PC-SMALL-QUADRATA.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.5
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-small-white.jpg": {
+  "src": "HALL-LED-CIELINIG-EVO-PC-SMALL-QUADRATA.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.5
+ },
+ "hall-led-ceiling-pro/hall-led-ceiling-pro-black.jpg": {
+  "error": "RuntimeError('KEEP: source too small (88 x 254 px), keep the 5 Oct photo')"
+ },
+ "hall-led-ceiling-pro/hall-led-ceiling-pro-white.jpg": {
+  "error": "RuntimeError('KEEP: source too small (88 x 254 px), keep the 5 Oct photo')"
+ },
+ "make-r/make-r-black.jpg": {
+  "src": "MAKE-R_slider-medium-closed.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.23
+ },
+ "make-r/make-r-thumb.jpg": {
+  "src": "MAKE-R_slider-medium-closed-W.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.25
+ },
+ "make-r/make-r-white.jpg": {
+  "src": "MAKE-R_slider-medium-closed-W.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.25
+ },
+ "make/make-deep-mini-black.jpg": {
+  "src": "Make-deep-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.16
+ },
+ "make/make-deep-mini-white.jpg": {
+  "src": "Make-deep-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.16
+ },
+ "make/make-deep-pro-fl-micro-black.jpg": {
+  "error": "FileNotFoundError(2, 'No such file or directory')"
+ },
+ "make/make-deep-pro-fl-micro-white.jpg": {
+  "src": "Make-Spiegazione-famiglia-DEF_crop-deep-pro-fl.png",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.13
+ },
+ "make/make-deep-pro-fl-mini-black.jpg": {
+  "error": "FileNotFoundError(2, 'No such file or directory')"
+ },
+ "make/make-deep-pro-fl-mini-white.jpg": {
+  "src": "Make-Spiegazione-famiglia-DEF_crop-deep-pro-fl.png",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.13
+ },
+ "make/make-deep-pro-fl-small-black.jpg": {
+  "error": "FileNotFoundError(2, 'No such file or directory')"
+ },
+ "make/make-deep-pro-fl-small-white.jpg": {
+  "src": "Make-Spiegazione-famiglia-DEF_crop-deep-pro-fl.png",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.13
+ },
+ "make/make-deep-pro-micro-black.jpg": {
+  "src": "Esse-Ci_Make-Deep-Evo-Micro.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.45
+ },
+ "make/make-deep-pro-micro-white.jpg": {
+  "error": "RuntimeError('deeppro: done separately')"
+ },
+ "make/make-deep-pro-mini-black.jpg": {
+  "src": "Esse-Ci_Make-Deep-Evo-Mini.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.36
+ },
+ "make/make-deep-pro-mini-white.jpg": {
+  "error": "RuntimeError('deeppro: done separately')"
+ },
+ "make/make-deep-pro-small-black.jpg": {
+  "src": "Esse-Ci_Make-Deep-Evo-Small.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.38
+ },
+ "make/make-deep-pro-small-white.jpg": {
+  "error": "RuntimeError('deeppro: done separately')"
+ },
+ "make/make-deep-small-black.jpg": {
+  "src": "Make-deep-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.96
+ },
+ "make/make-deep-small-white.jpg": {
+  "src": "Make-deep-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.96
+ },
+ "make/make-double-mini-black.jpg": {
+  "src": "Make-Double-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.8
+ },
+ "make/make-double-mini-white.jpg": {
+  "src": "Make-Double-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.8
+ },
+ "make/make-double-small-black.jpg": {
+  "src": "Make-Double-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.7
+ },
+ "make/make-double-small-white.jpg": {
+  "src": "Make-Double-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.7
+ },
+ "make/make-fl-large-black.jpg": {
+  "src": "Make-FL-large.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.69
+ },
+ "make/make-fl-large-white.jpg": {
+  "src": "Make-FL-large.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.69
+ },
+ "make/make-fl-medium-black.jpg": {
+  "src": "Make-FL-medium.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.8
+ },
+ "make/make-fl-medium-white.jpg": {
+  "src": "Make-FL-medium.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.8
+ },
+ "make/make-fl-mini-black.jpg": {
+  "src": "Make-FL-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.84
+ },
+ "make/make-fl-mini-white.jpg": {
+  "src": "Make-FL-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.84
+ },
+ "make/make-fl-small-black.jpg": {
+  "src": "Make-FL-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.77
+ },
+ "make/make-fl-small-white.jpg": {
+  "src": "Make-FL-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.77
+ },
+ "make/make-large-black.jpg": {
+  "src": "Make-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.92
+ },
+ "make/make-large-white.jpg": {
+  "src": "Make-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.92
+ },
+ "make/make-medium-black.jpg": {
+  "src": "Make-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.92
+ },
+ "make/make-medium-white.jpg": {
+  "src": "Make-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.92
+ },
+ "make/make-micro-black.jpg": {
+  "src": "Make-micro.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 1.02
+ },
+ "make/make-micro-white.jpg": {
+  "src": "Make-micro.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 1.02
+ },
+ "make/make-mini-black.jpg": {
+  "src": "Make-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.92
+ },
+ "make/make-mini-white.jpg": {
+  "src": "Make-mini.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.92
+ },
+ "make/make-small-black.jpg": {
+  "src": "Make-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.84
+ },
+ "make/make-small-white.jpg": {
+  "src": "Make-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.84
+ },
+ "make/make-thumb.jpg": {
+  "src": "Make-small.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.84
+ },
+ "pipe-line/pipe-line-mono-dk-black.jpg": {
+  "src": "Pipeline-mono-DK.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.58
+ },
+ "pipe-line/pipe-line-mono-dk-white.jpg": {
+  "src": "Pipeline-mono-DK.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 0.58
+ },
+ "teres-ark/teres-ark-mini-black.jpg": {
+  "src": "Teres-Ark_Mini.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.42
+ },
+ "teres-ark/teres-ark-small-black.jpg": {
+  "src": "Teres-Ark_Small.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.39
+ },
+ "teres-ark/teres-ark-zoom-mini-black.jpg": {
+  "src": "Teres-Ark_Zoom-Mini.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.41
+ },
+ "teres-ark/teres-ark-zoom-mini-white.jpg": {
+  "src": "Teres-Ark_Zoom-Mini.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 0.41
+ },
+ "teres-ark/teres-ark-zoom-small-black.jpg": {
+  "src": "Teres-Ark_Zoom-Small.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.38
+ },
+ "teres-ark/teres-ark-zoom-small-white.jpg": {
+  "src": "Teres-Ark_Zoom-Small.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 0.38
+ },
+ "teres-ip66/teres-ip66-medium-black.jpg": {
+  "src": "TERES-IP66_miniaturaMEDIUM-e1586869995930.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.83
+ },
+ "teres-ip66/teres-ip66-medium-white.jpg": {
+  "src": "TERES-IP66_miniaturaMEDIUM-e1586869995930.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.83
+ },
+ "teres-ip66/teres-ip66-small-black.jpg": {
+  "src": "TERES-IP66_miniaturaSMALL-e1586870036781.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.77
+ },
+ "teres-ip66/teres-ip66-small-white.jpg": {
+  "src": "TERES-IP66_miniaturaSMALL-e1586870036781.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.77
+ },
+ "teres-ip66/teres-ip66-thumb.jpg": {
+  "src": "TERES-IP66_miniaturaSMALL-e1586870036781.jpg",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.77
+ },
+ "teres-lv-micro-zoom/teres-lv-micro-zoom-1x-black.jpg": {
+  "src": "teres-micro_miniatura1x.jpg",
+  "clean": false,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.68
+ },
+ "teres-lv-micro-zoom/teres-lv-micro-zoom-2x-black.jpg": {
+  "src": "TERES-MICRO-ZOOM_miniatura2x.jpg",
+  "clean": false,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.6
+ },
+ "teres-lv-mini-zoom/teres-lv-mini-zoom-black.jpg": {
+  "src": "teres-LV-mini-zoom.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.13
+ },
+ "teres-pro-lv/teres-pro-lv-zoom-black.jpg": {
+  "src": "Esse-Ci_TERES-PRO-LV.png",
+  "clean": true,
+  "src_fin": "white",
+  "want": "black",
+  "scale": 0.6
+ },
+ "teres-pro-lv/teres-pro-lv-zoom-white.jpg": {
+  "src": "Esse-Ci_TERES-PRO-LV.png",
+  "clean": true,
+  "src_fin": "white",
+  "want": "white",
+  "scale": 0.6
+ },
+ "twos-display/twos-display-diffuser-black.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-PG_quadrata.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.5
+ },
+ "twos-display/twos-display-diffuser-white.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-PG_quadrata.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.5
+ },
+ "twos-display/twos-display-dk-black.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-DK_quadrata.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.5
+ },
+ "twos-display/twos-display-dk-white.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-DK_quadrata.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.5
+ },
+ "twos-display/twos-display-pc-black.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-PC_quadrata.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.5
+ },
+ "twos-display/twos-display-pc-white.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-PC_quadrata.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.5
+ },
+ "twos-display/twos-display-spot-black.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-Spot_quadrata-HD.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.42
+ },
+ "twos-display/twos-display-spot-white.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-Spot_quadrata-HD.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 0.42
+ },
+ "twos-display/twos-display-thumb.jpg": {
+  "src": "Esse-Ci_TWOS-DISPLAY-DK_quadrata.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.5
+ },
+ "twos/twos-combo-2dk-black.jpg": {
+  "src": "Esse-Ci_TWOS-2DK.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.36
+ },
+ "twos/twos-combo-2dk-white.jpg": {
+  "src": "Esse-Ci_TWOS-2DK.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 0.36
+ },
+ "twos/twos-combo-dk-spots-black.jpg": {
+  "src": "TWOS-COMBO-DK.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.07
+ },
+ "twos/twos-combo-dk-spots-white.jpg": {
+  "src": "TWOS-COMBO-DK.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.07
+ },
+ "twos/twos-combo-pg-downlights-black.jpg": {
+  "src": "TWOS-COMBO-PG-DOWNLIGHT.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.06
+ },
+ "twos/twos-combo-pg-downlights-white.jpg": {
+  "src": "TWOS-COMBO-PG-DOWNLIGHT.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.06
+ },
+ "twos/twos-combo-pg-spots-black.jpg": {
+  "src": "TWOS-COMBO-PG-SPOT.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.07
+ },
+ "twos/twos-combo-pg-spots-white.jpg": {
+  "src": "TWOS-COMBO-PG-SPOT.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.07
+ },
+ "twos/twos-diffuser-black.jpg": {
+  "src": "twos-cld.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.06
+ },
+ "twos/twos-diffuser-white.jpg": {
+  "src": "twos-cld.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.06
+ },
+ "twos/twos-dk-black.jpg": {
+  "src": "twos-dk.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.06
+ },
+ "twos/twos-dk-white.jpg": {
+  "src": "twos-dk.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.07
+ },
+ "twos/twos-downlight-black.jpg": {
+  "src": "TWOS-downlight.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.06
+ },
+ "twos/twos-downlight-white.jpg": {
+  "src": "TWOS-downlight.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.07
+ },
+ "twos/twos-pc-black.jpg": {
+  "src": "ESSECI_twos-pc.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.06
+ },
+ "twos/twos-pc-white.jpg": {
+  "src": "ESSECI_twos-pc.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.06
+ },
+ "twos/twos-spot-pro-black.jpg": {
+  "src": "Esse-Ci_TWOS-SPOT-Pro.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 0.43
+ },
+ "twos/twos-spot-pro-white.jpg": {
+  "src": "Esse-Ci_TWOS-SPOT-Pro.png",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 0.43
+ },
+ "twos/twos-thumb.jpg": {
+  "src": "twos-dk.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.06
+ },
+ "twos/twos-track-module-black.jpg": {
+  "src": "TWOS-low-voltage.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "black",
+  "scale": 1.06
+ },
+ "twos/twos-track-module-white.jpg": {
+  "src": "TWOS-low-voltage.jpg",
+  "clean": true,
+  "src_fin": "black",
+  "want": "white",
+  "scale": 1.07
+ },
+ "arkeon-wall/arkeon-wall-thumb.jpg": {
+  "copy_of": "arkeon-wall/arkeon-wall-white.jpg"
+ },
+ "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-thumb.jpg": {
+  "copy_of": "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-small-white.jpg"
+ },
+ "hall-led-ceiling-pro/hall-led-ceiling-pro-thumb.jpg": {
+  "error": "RuntimeError('KEEP: source too small (88 x 254 px), keep the 5 Oct photo')"
+ }
+}

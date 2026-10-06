@@ -1,0 +1,791 @@
+{
+"groove/groove-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "GROOVE_miniatura_MOD-SOSP.jpg",
+"sfin": null,
+"want": null
+},
+"groove/groove-profile-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "GROOVE_miniatura_MOD-SOSP.jpg",
+"sfin": "white",
+"want": "white"
+},
+"groove/groove-profile-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "GROOVE_miniatura_MOD-SOSP.jpg",
+"sfin": "white",
+"want": "black"
+},
+"groove/groove-spot-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "43AA313Lx.jpg",
+"sfin": "white",
+"want": "white"
+},
+"groove/groove-spot-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "43AA313Lx.jpg",
+"sfin": "white",
+"want": "black"
+},
+"groove-display/groove-display-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "GROOVE-DISPLAY_miniatura.jpg",
+"sfin": null,
+"want": null
+},
+"groove-display/groove-display-profile-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "GROOVE-DISPLAY_miniatura.jpg",
+"sfin": "white",
+"want": "white"
+},
+"groove-display/groove-display-profile-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "GROOVE-DISPLAY_miniatura.jpg",
+"sfin": "white",
+"want": "black"
+},
+"pipe-line/pipe-line-mono-dk-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Pipeline-mono-DK.jpg",
+"sfin": "black",
+"want": "white"
+},
+"pipe-line/pipe-line-mono-dk-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Pipeline-mono-DK.jpg",
+"sfin": "black",
+"want": "black"
+},
+"ben/ben-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_LARGE-1.jpg",
+"sfin": null,
+"want": null
+},
+"ben/ben-small-matt-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_SMALL-1.jpg",
+"sfin": "white",
+"want": "white"
+},
+"ben/ben-medium-matt-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_MEDIUM-1.jpg",
+"sfin": "white",
+"want": "white"
+},
+"ben/ben-large-matt-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_LARGE-1.jpg",
+"sfin": "white",
+"want": "white"
+},
+"ben/ben-xl-matt-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_XL-3.jpg",
+"sfin": "white",
+"want": "white"
+},
+"ben/ben-maxi-matt-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_MAXI-1.jpg",
+"sfin": "white",
+"want": "white"
+},
+"ben-ip54/ben-ip54-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN-IP54-anteprima_sosp-2.jpg",
+"sfin": null,
+"want": null
+},
+"ben-ip54/ben-ip54-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_SMALL-1.jpg",
+"sfin": "white",
+"want": "white"
+},
+"ben-ip54/ben-ip54-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_SMALL-1.jpg",
+"sfin": "white",
+"want": "black"
+},
+"ben-ip54/ben-ip54-medium-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_MEDIUM-1.jpg",
+"sfin": "white",
+"want": "white"
+},
+"ben-ip54/ben-ip54-medium-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_MEDIUM-1.jpg",
+"sfin": "white",
+"want": "black"
+},
+"ben-ip54/ben-ip54-large-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_LARGE-1.jpg",
+"sfin": "white",
+"want": "white"
+},
+"ben-ip54/ben-ip54-large-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "BEN_miniatura_LARGE-1.jpg",
+"sfin": "white",
+"want": "black"
+},
+"twos/twos-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "twos-dk.jpg",
+"sfin": null,
+"want": null
+},
+"twos/twos-dk-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "twos-dk.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-dk-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "twos-dk.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-diffuser-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "twos-cld.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-diffuser-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "twos-cld.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-pc-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "ESSECI_twos-pc.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-pc-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "ESSECI_twos-pc.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-downlight-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-downlight.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-downlight-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-downlight.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-combo-2dk-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-2DK.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-combo-2dk-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-2DK.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-combo-pg-downlights-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-COMBO-PG-DOWNLIGHT.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-combo-pg-downlights-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-COMBO-PG-DOWNLIGHT.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-combo-pg-spots-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-COMBO-PG-SPOT.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-combo-pg-spots-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-COMBO-PG-SPOT.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-combo-dk-spots-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-COMBO-DK.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-combo-dk-spots-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-COMBO-DK.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-track-module-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-low-voltage.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-track-module-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "TWOS-low-voltage.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos/twos-spot-pro-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-SPOT-Pro.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos/twos-spot-pro-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-SPOT-Pro.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos-display/twos-display-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-DK_quadrata.jpg",
+"sfin": null,
+"want": null
+},
+"twos-display/twos-display-dk-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-DK_quadrata.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos-display/twos-display-dk-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-DK_quadrata.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos-display/twos-display-diffuser-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-PG_quadrata.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos-display/twos-display-diffuser-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-PG_quadrata.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos-display/twos-display-pc-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-PC_quadrata.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos-display/twos-display-pc-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-PC_quadrata.jpg",
+"sfin": "black",
+"want": "black"
+},
+"twos-display/twos-display-spot-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-Spot_quadrata-HD.jpg",
+"sfin": "black",
+"want": "white"
+},
+"twos-display/twos-display-spot-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Groove +6",
+"src": "Esse-Ci_TWOS-DISPLAY-Spot_quadrata-HD.jpg",
+"sfin": "black",
+"want": "black"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-mini-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-MINI-QUADRATA.jpg",
+"sfin": "white",
+"want": "white"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-MINI-QUADRATA.jpg",
+"sfin": "white",
+"want": "black"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-SMALL-QUADRATA.jpg",
+"sfin": "white",
+"want": "white"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-SMALL-QUADRATA.jpg",
+"sfin": "white",
+"want": "black"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-medium-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-MEDIUM-QUADRATA.jpg",
+"sfin": "white",
+"want": "white"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-medium-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-MEDIUM-QUADRATA.jpg",
+"sfin": "white",
+"want": "black"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-large-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-LARGE-QUADRATA.jpg",
+"sfin": "white",
+"want": "white"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-large-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-LARGE-QUADRATA.jpg",
+"sfin": "white",
+"want": "black"
+},
+"hall-led-ceiling-pro/hall-led-ceiling-pro-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "hall_led_pro-1.jpg",
+"sfin": "white",
+"want": "white"
+},
+"hall-led-ceiling-pro/hall-led-ceiling-pro-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "hall_led_pro-1.jpg",
+"sfin": "white",
+"want": "black"
+},
+"arkeon-wall/arkeon-wall-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "ARKEON-WALL_miniatura.jpg",
+"sfin": "grey",
+"want": "white"
+},
+"arkeon-wall/arkeon-wall-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "ARKEON-WALL_miniatura.jpg",
+"sfin": "grey",
+"want": "black"
+},
+"teres-lv-micro-zoom/teres-lv-micro-zoom-1x-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres LV Micro Zoom +2",
+"src": "teres-micro_miniatura1x.jpg",
+"sfin": "black",
+"want": "black"
+},
+"teres-lv-micro-zoom/teres-lv-micro-zoom-2x-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres LV Micro Zoom +2",
+"src": "TERES-MICRO-ZOOM_miniatura2x.jpg",
+"sfin": "black",
+"want": "black"
+},
+"teres-lv-mini-zoom/teres-lv-mini-zoom-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres LV Micro Zoom +2",
+"src": "teres-LV-mini-zoom.jpg",
+"sfin": "black",
+"want": "black"
+},
+"teres-pro-lv/teres-pro-lv-zoom-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres LV Micro Zoom +2",
+"src": "teres-pro-zoom.jpg",
+"sfin": "white",
+"want": "white"
+},
+"teres-pro-lv/teres-pro-lv-zoom-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres LV Micro Zoom +2",
+"src": "teres-pro-zoom.jpg",
+"sfin": "white",
+"want": "black"
+},
+"arkeon-2-0/arkeon-2-0-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "ARKEON_miniatura-2.jpg",
+"sfin": "black",
+"want": "black"
+},
+"arkeon-2-0/arkeon-2-0-linear-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "ARKEON_miniatura-2.jpg",
+"sfin": "black",
+"want": "white"
+},
+"arkeon-2-0/arkeon-2-0-linear-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "ARKEON_miniatura-2.jpg",
+"sfin": "black",
+"want": "black"
+},
+"arkeon-2-0/arkeon-2-0-spot-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "ARKEON-2_spot.jpg",
+"sfin": "black",
+"want": "white"
+},
+"arkeon-2-0/arkeon-2-0-spot-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "ARKEON-2_spot.jpg",
+"sfin": "black",
+"want": "black"
+},
+"make/make-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-small.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-micro-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-micro.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-micro-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-micro.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-mini-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-mini.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-mini.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-small.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-small.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-medium-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-mini.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-medium-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-mini.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-large-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-mini.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-large-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-mini.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-fl-mini-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-FL-mini.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-fl-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-FL-mini.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-fl-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-FL-small.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-fl-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-FL-small.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-fl-medium-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-FL-medium.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-fl-medium-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-FL-medium.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-fl-large-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-FL-large.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-fl-large-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-FL-large.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-deep-mini-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-deep-mini.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-deep-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-deep-mini.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-deep-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-deep-small.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-deep-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-deep-small.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-deep-pro-micro-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-Micro.jpg",
+"sfin": "black",
+"want": "deeppro"
+},
+"make/make-deep-pro-micro-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-Micro.jpg",
+"sfin": "black",
+"want": "black"
+},
+"make/make-deep-pro-mini-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-Mini.jpg",
+"sfin": "black",
+"want": "deeppro"
+},
+"make/make-deep-pro-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-Mini.jpg",
+"sfin": "black",
+"want": "black"
+},
+"make/make-deep-pro-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-Small.jpg",
+"sfin": "black",
+"want": "deeppro"
+},
+"make/make-deep-pro-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-Small.jpg",
+"sfin": "black",
+"want": "black"
+},
+"make/make-deep-pro-fl-micro-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-Spiegazione-famiglia-DEF_crop-deep-pro-fl.png",
+"sfin": "white",
+"want": "white"
+},
+"make/make-deep-pro-fl-micro-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-FL-Micro.jpg",
+"sfin": "black",
+"want": "black"
+},
+"make/make-deep-pro-fl-mini-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-Spiegazione-famiglia-DEF_crop-deep-pro-fl.png",
+"sfin": "white",
+"want": "white"
+},
+"make/make-deep-pro-fl-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-FL-Mini.jpg",
+"sfin": "black",
+"want": "black"
+},
+"make/make-deep-pro-fl-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-Spiegazione-famiglia-DEF_crop-deep-pro-fl.png",
+"sfin": "white",
+"want": "white"
+},
+"make/make-deep-pro-fl-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Esse-Ci_Make-Deep-Evo-FL-Small.jpg",
+"sfin": "black",
+"want": "black"
+},
+"make/make-double-mini-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-Double-mini.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-double-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-Double-mini.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make/make-double-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-Double-small.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make/make-double-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "Make-Double-small.jpg",
+"sfin": "white",
+"want": "black"
+},
+"make-r/make-r-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "MAKE-R_slider-medium-closed-W.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make-r/make-r-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "MAKE-R_slider-medium-closed-W.jpg",
+"sfin": "white",
+"want": "white"
+},
+"make-r/make-r-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Arkeon 2.0 +2",
+"src": "MAKE-R_slider-medium-closed.jpg",
+"sfin": "black",
+"want": "black"
+},
+"teres-ark/teres-ark-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "Teres-Ark_Mini.jpg",
+"sfin": "black",
+"want": "black"
+},
+"teres-ark/teres-ark-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "Teres-Ark_Small.jpg",
+"sfin": "black",
+"want": "black"
+},
+"teres-ark/teres-ark-zoom-mini-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "Teres-Ark_Zoom-Mini.jpg",
+"sfin": "black",
+"want": "white"
+},
+"teres-ark/teres-ark-zoom-mini-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "Teres-Ark_Zoom-Mini.jpg",
+"sfin": "black",
+"want": "black"
+},
+"teres-ark/teres-ark-zoom-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "Teres-Ark_Zoom-Small.jpg",
+"sfin": "black",
+"want": "white"
+},
+"teres-ark/teres-ark-zoom-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "Teres-Ark_Zoom-Small.jpg",
+"sfin": "black",
+"want": "black"
+},
+"teres-ip66/teres-ip66-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "TERES-IP66_miniaturaSMALL-e1586870036781.jpg",
+"sfin": "white",
+"want": "white"
+},
+"teres-ip66/teres-ip66-small-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "TERES-IP66_miniaturaSMALL-e1586870036781.jpg",
+"sfin": "white",
+"want": "white"
+},
+"teres-ip66/teres-ip66-small-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "TERES-IP66_miniaturaSMALL-e1586870036781.jpg",
+"sfin": "white",
+"want": "black"
+},
+"teres-ip66/teres-ip66-medium-white.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "TERES-IP66_miniaturaMEDIUM-e1586869995930.jpg",
+"sfin": "white",
+"want": "white"
+},
+"teres-ip66/teres-ip66-medium-black.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Teres Ark +3",
+"src": "TERES-IP66_miniaturaMEDIUM-e1586869995930.jpg",
+"sfin": "white",
+"want": "black"
+},
+"arkeon-wall/arkeon-wall-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "ARKEON-WALL_miniatura.jpg",
+"sfin": "grey",
+"want": "white",
+"copy_of": "arkeon-wall/arkeon-wall-white.jpg"
+},
+"hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "HALL-LED-CIELINIG-EVO-PC-SMALL-QUADRATA.jpg",
+"sfin": "white",
+"want": "white",
+"copy_of": "hall-led-ceiling-ip65-pc/hall-led-ceiling-ip65-pc-small-white.jpg"
+},
+"hall-led-ceiling-pro/hall-led-ceiling-pro-thumb.jpg": {
+"batch": "Batch 2026-10-05 Esse-Ci - Hall Led Ceiling IP65 PC +2",
+"src": "hall_led_pro-1.jpg",
+"sfin": "white",
+"want": "white",
+"copy_of": "hall-led-ceiling-pro/hall-led-ceiling-pro-white.jpg"
+}
+}
