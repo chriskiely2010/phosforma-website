@@ -1027,7 +1027,7 @@ function codeRow(f,m,cols){return `<tr>${cols.map(([k])=>k==='thumb'?`<td class=
 const GROUP_LIMIT=5;
 function renderCodes(){
   const {f,sel}=codeState;
-  const list=f.models.filter(m=>Object.entries(sel).every(([k,v])=>!v||mval(f,m,k)===v));
+  const list=f.models.filter(m=>(!codeState.only||codeState.only.has(m))&&Object.entries(sel).every(([k,v])=>!v||mval(f,m,k)===v));
   const fins=[...new Set(f.models.map(m=>m.finish||''))];
   const grouped=fins.length>1||fins[0];
   let cols=codeCols(f).filter(([k])=>k!=='thumb'&&!(grouped&&k==='finish')&&!(grouped&&k==='name'&&f.models.length>20));if(cols.some(([k])=>k==='name'))cols=cols.filter(([k])=>k!=='variant');
@@ -1110,6 +1110,8 @@ function bindConfigurator(f){
   const opts=C.groups.map(g=>{const vals=[...new Set(pool.map(p=>p.v[g.k]).filter(Boolean))];
     return vals.sort((a,b)=>{const ia=g.order?g.order.indexOf(a):-1,ib=g.order?g.order.indexOf(b):-1;if(ia>=0||ib>=0)return (ia<0?99:ia)-(ib<0?99:ib);return num(a)-num(b)||String(a).localeCompare(b);});});
   cfgState={C,pool,opts,f,sel:{}};
+  /* the configurator drives the codes list below, so its separate filters are not needed */
+  const cf=$('#cfilters');if(cf){cf.innerHTML='';cf.hidden=true;}codeState.sel={};
   const fits=(p,sel,skip)=>C.groups.every(g=>g.k===skip||!sel[g.k]||p.v[g.k]===sel[g.k]);
   const render=()=>{const {sel}=cfgState;const match=pool.filter(p=>fits(p,sel));
         box.innerHTML=`<div class="cfg-head"><h2>Configure ${esc(f.family)}</h2></div>
@@ -1121,7 +1123,8 @@ function bindConfigurator(f){
         let img='';if(g.tiles){const pm=pool.find(p=>p.v[g.k]===v&&p.m.image);img=pm?`<img src="${esc(pm.m.image)}" alt="" loading="lazy">`:'';}
         const sub=g.sub?g.sub(v):'';
         return `<button type="button" class="${cls}" data-k="${g.k}" data-v="${esc(v)}" aria-pressed="${sel[g.k]===v}"${avail.has(v)?'':' title="Not available with the current choices. Picking it clears the conflicting ones."'}>${img}<span>${esc(v)}${sub?`<small>${esc(sub)}</small>`:''}</span></button>`;}).join('')}</div></div>`;}).join('')}</div>
-      <div class="cfg-side"><button class="btn" id="cfgReset">Reset</button><aside class="cfg-result" aria-live="polite">${result(match)}</aside></div></div>`;align();};
+      <div class="cfg-side"><button class="btn" id="cfgReset">Reset</button><aside class="cfg-result" aria-live="polite">${result(match)}</aside></div></div>`;align();
+    codeState.only=Object.keys(sel).length?new Set(match.map(p=>p.m)):null;codeState.open=new Set();renderCodes();};
   const result=match=>{
     if(match.length===1){const {m,f:F}=match[0];const ds=m.downloads.find(d=>/datasheet/i.test(d.label)&&d.path);const others=m.downloads.filter(d=>d!==ds&&d.path);
       const det=String(m.details||'').split(' · ');
