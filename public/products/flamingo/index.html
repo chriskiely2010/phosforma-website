@@ -941,7 +941,7 @@ function renderCatalog(){
     return `<details class="fgroup" open><summary>${label}</summary>${vals.map(v=>`<label class="${counts[v]?'':'zero'}"><input type="checkbox" data-k="${k}" value="${esc(v)}" ${state.sel[k]?.has(v)?'checked':''}> ${esc(v)}<span class="n">${counts[v]}</span></label>`).join('')}</details>`;
   }).join('');
   let list=base.filter(f=>matches(f));
-  list.sort(state.sort==='brand'?(a,b)=>a.brand.localeCompare(b.brand)||a.family.localeCompare(b.family):state.sort==='models'?(a,b)=>b.models.length-a.models.length:(a,b)=>a.family.localeCompare(b.family));
+  list.sort(state.sort==='brand'?(a,b)=>a.brand.localeCompare(b.brand)||famCmp(a.family,b.family):state.sort==='models'?(a,b)=>b.models.length-a.models.length:(a,b)=>famCmp(a.family,b.family));
   list.sort((a,b)=>(b.added?1:0)-(a.added?1:0));
   $('#count').textContent=`${list.length} product famil${list.length==1?'y':'ies'} · ${list.reduce((n,f)=>n+f.models.length,0)} models`;
   $('#grid').innerHTML=list.length?list.map(card).join(''):'<div class="empty">No products match these filters.</div>';
@@ -1104,6 +1104,8 @@ function renderCodes(){
 }
 const REFL={'black high gloss':'#0e0e0e','black matt':'#2e2e2e','black':'#1a1a1a','copper':'#b87333','gold':'#c9a24a','silver high gloss':'#c4c7cb','silver':'#c4c7cb','white':'#f5f5f3','chrome':'#e3e6ea'};
 const SIZES=['XXS','XS','MICRO','MINI','S','SMALL','M','MEDIUM','M AS','XM','L','LARGE','XL','MAXI','MEGA','XXL'];function szRank(v){const i=SIZES.indexOf(String(v).toUpperCase());return i<0?0:i+1;}
+/* families that differ only by a trailing size word (Make R Mini, Make R Small, ...) sort by size, not alphabetically */
+function famCmp(a,b){const x=a.split(' '),y=b.split(' ');if(x.length===y.length&&x.slice(0,-1).join(' ')===y.slice(0,-1).join(' ')){const r=szRank(x[x.length-1])-szRank(y[y.length-1]);if(szRank(x[x.length-1])&&szRank(y[y.length-1])&&r)return r;}return a.localeCompare(b);}
 function reflColor(v){return REFL[String(v).toLowerCase()]||'var(--beam)';}
 function bindCodes(f){
   codeState={f,sel:{},open:new Set()};
