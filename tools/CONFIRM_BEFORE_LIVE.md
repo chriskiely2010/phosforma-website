@@ -46,3 +46,12 @@ Rule (Chris, 7 Oct): a Phosforma datasheet describes ONE code. Nothing on it may
 28. Category: Macrolux pages moved to their own category "Profiles for Flexible Linear" (Interior), after Flexible Linear in the menu.
 28a. Mounting not stated by Macrolux for 14 profiles (ma2_10, ma_12, mb_15, md_12, mt0_12, mt1_12, mx1_12, mx2_12, mt2_27, mt3_27, mx2_27/i, ala, hiss, mc_90).
 29. mt3_27 opal only; New badge on all 37 pages; left out: LED-only profiles, groove 140 / Groove square, groove 70.
+
+## Electron Linibox W and Linibox C (batch 2026-10-07, added to the test site 7 Oct)
+30. Electron's per-code datasheets (1,728 PDFs, ~877 MB) were NOT uploaded: each code has the Phosforma PDF instead, plus Installation, LDT and Brochure. Upload Electron's own sheets to R2 later if wanted.
+31. One page per family with sizes 8 / 13 / 17 as size tables; codes built from Electron's configurator key (no published list); DC / without-driver versions (2,304 codes) left out.
+32. Flux from Electron's LDTs (1,728 checked against the sheet, all match); power = LED power; efficacy calculated; UGR per beam; IP65 / IK06; no RAL numbers.
+33. Categories: Linibox W → Exterior Wall Mounted; Linibox C → Exterior Surface Downlights | Spotlights.
+34. Photos are small (one three-colour photo per size, upscaled 1.5×); Linibox C shown as a surface fitting on grey; no banners.
+35. LDT: Electron only publishes white non-dimmable files (same optics for every colour/control); Linibox C files are Electron's C files (identical to W apart from the name); 17-27C-90-AS header says CRI 80 but has CRI90 lumens.
+36. Photometric fix (applies to all brands): LDT lamp flux is now read as the set total, which corrected Electron (4 LEDs) and 2 other supplier files.

@@ -26,7 +26,7 @@ def read_ldt(path):
     planes = {0: mc, 1: 1, 2: mc // 2 + 1, 3: mc // 2 + 1, 4: mc // 4 + 1}[isym]
     vals = [num(x) for x in L[i:i + planes * ng]]
     data = [vals[p * ng:(p + 1) * ng] for p in range(planes)]
-    k = lumens[0] * (nl[0] or 1) / 1000.0           # cd/klm -> cd
+    k = lumens[0] / 1000.0                          # cd/klm -> cd (EULUMDAT lamp flux is the set's total)
     def plane(c):
         if isym == 1: return data[0]
         if isym == 2:                                # C0-C180 symmetric: stored 0..180
@@ -42,7 +42,7 @@ def read_ldt(path):
     def full(a, b):                                  # one diagram line: plane a for gamma 0..180 and plane b mirrored
         return [round(v * k) for v in plane(a)], [round(v * k) for v in plane(b)]
     c0, c180 = full(0, 180); c90, c270 = full(90, 270)
-    return {'name': L[8].strip() or os.path.basename(path), 'lm': round(lumens[0] * (nl[0] or 1) * lor / 100), 'w': watts[0],
+    return {'name': L[8].strip() or os.path.basename(path), 'lm': round(lumens[0] * lor / 100), 'w': watts[0],
             'g': gang, 'c0': c0, 'c180': c180, 'c90': c90, 'c270': c270}
 
 
@@ -157,6 +157,13 @@ def run():
     for r in csv.DictReader(open('products.csv', encoding='utf-8')):
         if not r['code']: continue
         urls = re.findall(r'(?:LDT|IES)=([^;]+)', r['downloads'] or '')
+        local = [u.strip() for u in urls if not u.strip().startswith('http') and u.strip().lower().endswith('.ldt') and os.path.exists(u.strip())]
+        if local:                                     # the code links its own LDT file (e.g. Electron): use it directly
+            f = local[0]; cid = re.sub(r'[^a-z0-9]+', '-', f.lower()).strip('-')
+            if cid not in curves:
+                try: curves[cid] = read_ldt(f)
+                except Exception as e: print('unreadable', f, e); continue
+            codes[r['code']] = cid; continue
         files = [f for u in urls for f in archive_files(u.strip())]
         if not files: continue
         if 'esse-ci.com' in ''.join(urls): f, other = pick_esse(r['code'].upper())
