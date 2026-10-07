@@ -1042,7 +1042,7 @@ async function datasheetPDF(code){
   const elec=[['Control',v('control')],['Power',v('power')]].filter(r=>r[1]);
   const inst=[['Application',f.environment],['Product type',f.category],['Protection',v('ip')],['Impact rating',v('ik')]].filter(r=>r[1]);
   const volt=specLines.find(t=>/\d\s*V(ac|dc)?\b|volt/i.test(t));
-  const tdata=[['Code',m.code],['Power',v('power')&&v('power')+' system'],['LM',v('flux')&&v('flux')+' delivered'],['Efficacy',v('efficacy')&&v('efficacy')+' luminous efficacy'],['CCT',v('cct')],['CRI',v('cri')],['UGR',v('ugr')],['Beam Angle',v('beam')],['Control',v('control')],['Supply Voltage / Current',volt&&volt+'.']].filter(r=>r[1]);
+  const tdata=[['Code',m.code],['Power',v('power')&&v('power')+' system'],['LM',v('flux')&&v('flux')+' delivered'],['Efficacy',v('efficacy')&&v('efficacy')+' luminous efficacy'],['CCT',v('cct')],['CRI',v('cri')],['UGR',v('ugr')],['Beam Angle',v('beam')],['Control',v('control')],['Supply Voltage / Current',volt&&volt+'.'],['Lumen Maintenance',String(f.lumen_maintenance||'').replace(/(\d)H\b/,'$1h')],['Chromaticity',f.sdcm&&(/sdcm/i.test(f.sdcm)?String(f.sdcm).replace(/\s*sdcm/i,'SDCM'):f.sdcm+'SDCM')]].filter(r=>r[1]);
   const dimCol=dwg?[H2('Dimensions',18),label('2d Drawing'),{image:dwg.url,fit:[W/2-24,185],margin:[0,4,0,10]},...(dimNote?dimNote.split(' · ').map(t=>{t=t.trim();let a,b;const m1=t.match(/^(.*?\d\s*mm)\s+([A-Za-z].*)$/),i=t.search(/[Ø\d]/);
       if(m1){a=m1[2];b=m1[1];}else if(i>0){a=t.slice(0,i).trim();b=t.slice(i).trim();}else if(i===0){a='Size';b=t;}else{a='';b=t;}
       a=a&&a[0].toUpperCase()+a.slice(1);
