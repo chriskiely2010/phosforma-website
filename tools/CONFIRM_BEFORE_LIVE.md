@@ -2,8 +2,13 @@
 
 Running list, added to as we go. Nothing here is fixed yet: everything is left as is until the final review.
 
+Rule (Chris, 7 Oct): a Phosforma datasheet describes ONE code. Nothing on it may list options, ranges or other versions.
+
 ## Datasheet PDF (draft branch `datasheet-draft`, not on the test site)
-1. Overview text is the family description, not code-specific (e.g. Teres Pro 15W 15° says "15° to 50°, at 15W or 21W").
+1. Overview is now code-specific: the family's opening sentences only when they list no options (any sentence with "or", ranges, sizes, "can be ordered" etc. is dropped), then "This code (…) is the <model>: <its details>. <lm> at <CCT>, CRI, UGR, beam, control. <finish> finish." Check the wording on a few codes per brand.
+1a. Dimensions are now code-specific: the code's own sizes (e.g. Arkeon 46DR66PGK4B shows Length 3088mm, not 1128–3088mm) plus the family section/profile; ranges, other lengths and modules are dropped. The 2d drawing is still the family drawing.
+1b. Still family-level on the PDF: supply voltage sentence, lumen maintenance, chromaticity, IP text, dimension drawing. Check none of these lists options for a code.
+1c. The on-screen datasheet page (#ds-CODE) and the code page still show family text: bring them in line with the PDF?
 2. Supply Voltage / Current is taken from the specification sentence, so wording varies by supplier (e.g. "Input voltage AC 220–240V.", "48V").
 3. Generated date was removed with the old bottom line: the PDF no longer shows when it was made.
 4. Footer keeps the page number (1/2): keep or remove.
