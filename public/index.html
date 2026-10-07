@@ -1002,9 +1002,11 @@ async function datasheetPDF(code){
   const box=(name,tag,swatch)=>({table:{widths:[14,'*','auto'],body:[[swatch?{canvas:[{type:'ellipse',x:5,y:6,r1:4.5,r2:4.5,color:swatch,lineColor:'#9a9a9c',lineWidth:.4}]}:'',{text:name,fontSize:8.5},{text:tag,fontSize:6.5,color:C.muted,characterSpacing:.4,margin:[0,1,0,0]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:i=>i?6:0,paddingRight:()=>0,paddingTop:()=>2,paddingBottom:()=>2},margin:[0,0,0,14]});
   const keyLines=[v('power')&&v('power')+' system',v('flux')&&v('flux')+' delivered',v('efficacy')&&v('efficacy')+' luminous efficacy',v('cct'),[v('cri'),v('ugr')&&'UGR '+String(v('ugr')).replace(/^UGR\s*/i,'')].filter(Boolean).join(' · '),v('beam')&&'Beam '+v('beam'),v('control')&&'Control '+v('control')].filter(Boolean);
   const descLine=[f.family,f.category,v('variant'),v('power'),v('beam'),v('cct'),v('cri'),v('control'),m.finish].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(' - ');
+  const refl=(String(m.details||'').split(/\s*[·|]\s*/).find(t=>/reflector/i.test(t)&&!/adjustable/i.test(t))||'').replace(/\s*reflector\s*/i,'').trim();
+  const reflColor=r=>({gold:'#c9a24b',copper:'#b87333',chrome:'#d6d8db',silver:'#c9cbce',metalized:'#c9cbce',aluminium:'#b9bdc2',black:'#1f1f1f',white:'#ffffff'})[Object.keys({gold:1,copper:1,chrome:1,silver:1,metalized:1,aluminium:1,black:1,white:1}).find(k=>r.toLowerCase().includes(k))||'white'];
   const hero={table:{widths:['*'],body:[[{columns:[
       {width:170,stack:[photo?{image:photo.url,width:170,height:Math.min(170,170*photo.ratio)}:{canvas:[{type:'rect',x:0,y:0,w:170,h:170,color:'#e9e9ea'}]}]},
-      {width:210,margin:[48,8,0,0],stack:[label('Finish'),box(m.finish||split(f.finishes)[0]||'—','STANDARD',finColor(m.finish||f.finishes)),label('Brand'),box(f.brand||'—','PARTNER',null)]},
+      {width:210,margin:[48,8,0,0],stack:[label('Fitting finish'),box(m.finish||split(f.finishes)[0]||'—','STANDARD',finColor(m.finish||f.finishes)),...(refl?[label('Reflector finish'),box(refl,'STANDARD',reflColor(refl))]:[]),label('Brand'),box(f.brand||'—','PARTNER',null)]},
       {width:'*',text:''}
     ]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>(photo&&photo.bg)||C.band,paddingLeft:()=>34,paddingRight:()=>34,paddingTop:()=>22,paddingBottom:()=>22},margin:[-34,0,-34,0]};
   const specLines=String(f.specification||'').split(/\.\s+(?=[A-Z0-9Ø])/).map(s=>s.replace(/\.$/,'').trim()).filter(Boolean);
