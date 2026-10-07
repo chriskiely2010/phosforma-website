@@ -32,14 +32,14 @@
   <url><loc>https://www.phosforma.com.au/products/boulevard-mini/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/carmenta-s-lente/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/caro-rec/</loc></url>
-  <url><loc>https://www.phosforma.com.au/products/casa-xxs/</loc></url>
-  <url><loc>https://www.phosforma.com.au/products/casa-xs/</loc></url>
-  <url><loc>https://www.phosforma.com.au/products/casa-s/</loc></url>
-  <url><loc>https://www.phosforma.com.au/products/casa-m/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/casa-m-alto/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/casa-swing-xs/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/casa-swing-s/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/casa-swing-m/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/casa-xxs/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/casa-xs/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/casa-s/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/casa-m/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/cira/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/city-wall/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/coiny/</loc></url>
@@ -57,9 +57,9 @@
   <url><loc>https://www.phosforma.com.au/products/dea-apollo/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-carmenta-s/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-carmenta-m/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-ceres-m-duo/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-ceres-s/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-ceres-m/</loc></url>
-  <url><loc>https://www.phosforma.com.au/products/dea-ceres-m-duo/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-ceres-s-duo/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-charon-xs/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-chiara-s/</loc></url>
@@ -71,8 +71,12 @@
   <url><loc>https://www.phosforma.com.au/products/dea-diana-xs-tr/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-dion-m/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-durga-m/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-eros-m-pe/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-eros-m-pe-in/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-eros-s-me-in/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-eros-s-me-in-duo/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-eros-s-pe/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-eros-s-pe-in/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-eros-s-tu-in/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-eros-xs-me-in/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-eros-xs-me-in-duo/</loc></url>
@@ -85,6 +89,10 @@
   <url><loc>https://www.phosforma.com.au/products/dea-stella-s/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-stella-m/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dea-trivia-xs-s-m/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-vesta-m-pe/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-vesta-m-pe-in/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-vesta-s-pe/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/dea-vesta-s-pe-in/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/delta-recessed-fix-deep/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/diciotto/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/dimora/</loc></url>
@@ -126,6 +134,7 @@
   <url><loc>https://www.phosforma.com.au/products/nanospot/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/nanospot-steel/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/periscope/</loc></url>
+  <url><loc>https://www.phosforma.com.au/products/perla/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/piazza/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/piazza-lente/</loc></url>
   <url><loc>https://www.phosforma.com.au/products/pipe-line/</loc></url>
