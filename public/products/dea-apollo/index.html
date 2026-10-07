@@ -1001,13 +1001,32 @@ async function pdfPhoto(src,scale){
   const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   x.drawImage(im,0,0,W,H);const p=x.getImageData(3,3,1,1).data;x.fillStyle=`rgb(${p[0]},${p[1]},${p[2]})`;
   if(scale&&scale<1){x.fillRect(0,0,W,H);const w=W*scale,h=H*scale;x.drawImage(im,(W-w)/2,(H-h)/2,w,h);}
-  return {url:c.toDataURL('image/jpeg',.9),ratio:H/W};
+  return {url:c.toDataURL('image/jpeg',.9),ratio:H/W,bg:'#'+[p[0],p[1],p[2]].map(n=>n.toString(16).padStart(2,'0')).join('')};
 }
 async function pdfLogo(){
   const s=document.querySelector('.logo svg').cloneNode(true);s.setAttribute('width','1000');s.setAttribute('height','216');s.setAttribute('xmlns','http://www.w3.org/2000/svg');s.setAttribute('fill','#10181f');
   const im=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s.outerHTML));
   const c=document.createElement('canvas');c.width=1000;c.height=216;const x=c.getContext('2d');x.drawImage(im,0,0,1000,216);
   x.globalCompositeOperation='source-atop';x.fillStyle='#777779';x.fillRect(442,0,558,216);return c.toDataURL('image/png');
+}
+async function pdfBrandLogo(name){
+  const pr=PARTNERS.find(p=>p.name===name);if(!pr||!pr.logo)return null;
+  let src=pr.logo;
+  if(/\.svg(\?|$)/i.test(src)){
+    const svg=new DOMParser().parseFromString(await (await fetch(src)).text(),'image/svg+xml').documentElement;
+    const vb=(svg.getAttribute('viewBox')||'').split(/[\s,]+/).map(Number);
+    if(vb.length===4&&vb[2]>0){svg.setAttribute('width',vb[2]);svg.setAttribute('height',vb[3]);}
+    src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));
+  }
+  const im=await loadImg(src);const W=800,H=Math.max(1,Math.round(W*im.naturalHeight/im.naturalWidth));
+  const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0,W,H);
+  // trim the tile background around the mark and make it transparent so it sits on the grey band
+  const d=x.getImageData(0,0,W,H),p=d.data,bg=[p[0],p[1],p[2],p[3]];let x0=W,y0=H,x1=-1,y1=-1;
+  for(let y=0;y<H;y++)for(let i=0;i<W;i++){const k=(y*W+i)*4;const diff=p[k+3]<20?0:(bg[3]<20?255:Math.max(Math.abs(p[k]-bg[0]),Math.abs(p[k+1]-bg[1]),Math.abs(p[k+2]-bg[2])));
+    if(diff<18){p[k+3]=0;continue;}if(bg[3]>=20&&diff<60)p[k+3]=Math.round(p[k+3]*(diff-18)/42);if(i<x0)x0=i;if(i>x1)x1=i;if(y<y0)y0=y;if(y>y1)y1=y;}
+  if(x1<0)return null;x.putImageData(d,0,0);
+  const o=document.createElement('canvas');o.width=x1-x0+1;o.height=y1-y0+1;o.getContext('2d').drawImage(c,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  return {url:o.toDataURL('image/png'),ratio:o.height/o.width};
 }
 async function pdfDrawing(src){
   if(/\.svg(\?|$)/i.test(src)){
@@ -1026,6 +1045,57 @@ async function pdfDrawing(src){
 const IP1={0:'not protected against solids',1:'protected against solids larger than 50 mm',2:'protected against solids larger than 12 mm',3:'protected against solids larger than 2.5 mm',4:'protected against solids larger than 1 mm',5:'dust protected',6:'dust tight'};
 const IP2={0:'not protected against liquids',1:'protected against dripping water',2:'protected against dripping water when tilted',3:'protected against spraying water',4:'protected against splashing water',5:'protected against water jets',6:'protected against powerful water jets',7:'protected against temporary immersion',8:'protected against continuous immersion',9:'protected against high-pressure, high-temperature water'};
 function ipText(ip){return String(ip||'').split(/[\/,;]| or /).map(s=>s.trim()).filter(Boolean).map(s=>{const m=s.match(/IP\s*(\d)(\d)/i);return m?`${s.replace(/\s+/g,'')} (${IP1[m[1]]||''}, ${IP2[m[2]]||''})`:s;}).join(' · ');}
+/* photometric diagrams for the PDF datasheet: polar curve and vertical beam cone, drawn as SVG in Phosforma style */
+let _phot;
+// curves: files/photometry/i/<first 3 chars>.json maps code -> curve id (or [id, code lumens] when the LDT was measured at another colour temperature)
+async function loadCurve(code){try{const k=code.slice(0,3).replace(/[^A-Za-z0-9]/g,'_').toUpperCase();
+  const ix=await (await fetch('/files/photometry/i/'+k+'.json')).json();const v=ix[code];if(!v)return null;
+  const id=Array.isArray(v)?v[0]:v;const c=await (await fetch('/files/photometry/c/'+id+'.json')).json();
+  if(Array.isArray(v)){const lm=parseFloat(String(v[1]||'').replace(/[^\d.]/g,''));if(lm&&c.lm){const f=lm/c.lm;['c0','c180','c90','c270'].forEach(k=>c[k]=c[k].map(x=>x*f));c.lm=Math.round(lm);}}
+  return c;}catch(e){return null;}}
+function photBeam(c){const I=c.c0,pk=Math.max(...I),i0=I.indexOf(pk);let g=0;
+  for(let i=i0;i<I.length-1;i++){if(I[i+1]<=pk/2){g=c.g[i]+(c.g[i+1]-c.g[i])*(I[i]-pk/2)/(I[i]-I[i+1]);break;}}return {peak:pk,i0:I[0],beam:2*g};}
+const niceStep=m=>{const r=m/5,p=Math.pow(10,Math.floor(Math.log10(r))),f=r/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p;};
+function polarSVG(c,C){
+  // lower half for downward light; full circle when the fitting also sends light above the horizontal
+  const all=[...c.c0,...c.c90,...c.c180,...c.c270],pk=Math.max(...all);
+  const full=c.g.some((g,i)=>g>92&&Math.max(c.c0[i],c.c90[i],c.c180[i],c.c270[i])>0.03*pk);
+  const W=250,R=full?92:112,cx=W/2,cy=full?R+10:10,H=full?2*R+24:R+28,st=niceStep(pk),top=st*Math.ceil(pk/st),sc=R/top,gmax=full?180:90;
+  const P=(g,v,side)=>{const a=g*Math.PI/180;return [(cx+side*Math.sin(a)*v*sc).toFixed(1),(cy+Math.cos(a)*v*sc).toFixed(1)];};
+  const line=(arr,side)=>c.g.map((g,i)=>g<=gmax?P(g,arr[i],side):null).filter(Boolean);
+  const pathOf=(r,l)=>{const a=l.slice().reverse().concat(r);return 'M'+a.map(p=>p.join(',')).join('L');};
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H+18}" viewBox="0 0 ${W} ${H+18}" font-family="Helvetica">`;
+  for(let k=1;k*st<=top+1e-6;k++){const r=k*st*sc;
+    s+=full?`<circle cx="${cx}" cy="${cy}" r="${r.toFixed(1)}" fill="none" stroke="${C.line}" stroke-width="0.5"/>`:`<path d="M${cx-r},${cy} A${r},${r} 0 0 0 ${cx+r},${cy}" fill="none" stroke="${C.line}" stroke-width="0.5"/>`;
+    const [lx,ly]=P(84,k*st,1);s+=`<text x="${lx}" y="${(+ly-2).toFixed(1)}" font-size="6" fill="${C.muted}" text-anchor="middle">${Math.round(k*st)}</text>`;}
+  for(let a=15;a<=gmax;a+=15)for(const sd of [-1,1]){if(a===180&&sd<0)continue;const [x,y]=P(a,top,sd);s+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${C.line}" stroke-width="0.5"/>`;
+    if(a%30===0&&a!==90&&a<180){const [tx,ty]=P(a,top*1.1,sd);s+=`<text x="${tx}" y="${(+ty+2).toFixed(1)}" font-size="6.5" fill="${C.muted}" text-anchor="middle">${a}°</text>`;}}
+  s+=`<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy+R}" stroke="${C.line}" stroke-width="0.5"/><text x="${cx}" y="${cy+R+9}" font-size="6.5" fill="${C.muted}" text-anchor="middle">0°</text>`;
+  if(full)s+=`<text x="${cx}" y="${cy-R-3}" font-size="6.5" fill="${C.muted}" text-anchor="middle">180°</text>`;
+  s+=`<path d="${pathOf(line(c.c0,1),line(c.c180,-1))}" fill="${C.ink}" fill-opacity="0.07" stroke="${C.ink}" stroke-width="1.1"/>`;
+  s+=`<path d="${pathOf(line(c.c90,1),line(c.c270,-1))}" fill="none" stroke="${C.muted}" stroke-width="0.9" stroke-dasharray="3 2"/>`;
+  const ly=H+12;s+=`<line x1="20" y1="${ly-2}" x2="36" y2="${ly-2}" stroke="${C.ink}" stroke-width="1.1"/><text x="40" y="${ly}" font-size="6.5" fill="${C.muted}">C0-C180</text>`;
+  s+=`<line x1="90" y1="${ly-2}" x2="106" y2="${ly-2}" stroke="${C.muted}" stroke-width="0.9" stroke-dasharray="3 2"/><text x="110" y="${ly}" font-size="6.5" fill="${C.muted}">C90-C270</text><text x="${W-20}" y="${ly}" font-size="6.5" fill="${C.muted}" text-anchor="end">cd</text>`;
+  return s+'</svg>';
+}
+// the beam cone only makes sense for a beam pointing straight down and no wider than 70°
+const coneFits=c=>{const b=photBeam(c),I=c.c0;return b.beam>0&&b.beam<=70&&I.indexOf(Math.max(...I))<=c.g.findIndex(g=>g>=10);};
+function coneSVG(c,C){
+  const b=photBeam(c),half=b.beam/2*Math.PI/180,W=250,H=210,cx=110,y0=18,u=36;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Helvetica">`;
+  const wAt=d=>2*d*Math.tan(half);
+  const xr=cx+wAt(5)/2*u,xl=cx-wAt(5)/2*u,yb=y0+5*u;
+  s+=`<path d="M${cx},${y0} L${xr.toFixed(1)},${yb} L${xl.toFixed(1)},${yb} Z" fill="${C.ink}" fill-opacity="0.07" stroke="${C.ink}" stroke-width="0.8"/>`;
+  s+=`<rect x="${cx-5}" y="${y0-12}" width="10" height="12" fill="${C.ink}"/>`;
+  s+=`<text x="${cx}" y="${y0+22}" font-size="7" fill="${C.ink}" text-anchor="middle" font-weight="bold">${Math.round(b.beam)}°</text>`;
+  s+=`<text x="0" y="8" font-size="6.5" fill="${C.muted}">Distance</text><text x="${W}" y="8" font-size="6.5" fill="${C.muted}" text-anchor="end">Illuminance · beam Ø</text>`;
+  for(let d=1;d<=5;d++){const y=y0+d*u,rx=wAt(d)/2*u;
+    s+=`<ellipse cx="${cx}" cy="${y}" rx="${rx.toFixed(1)}" ry="${Math.max(1.5,rx*0.12).toFixed(1)}" fill="none" stroke="${C.ink}" stroke-width="0.6"/>`;
+    s+=`<line x1="20" y1="${y}" x2="${(cx-rx-3).toFixed(1)}" y2="${y}" stroke="${C.line}" stroke-width="0.5" stroke-dasharray="1.5 1.5"/>`;
+    s+=`<text x="0" y="${y+2}" font-size="7" fill="${C.ink}">${d} m</text>`;
+    s+=`<text x="${W}" y="${y-1}" font-size="7" fill="${C.ink}" text-anchor="end" font-weight="bold">${Math.round(b.i0/(d*d))} lx</text><text x="${W}" y="${y+7}" font-size="6.5" fill="${C.muted}" text-anchor="end">Ø ${wAt(d).toFixed(1)} m</text>`;}
+  return s+'</svg>';
+}
 async function datasheetPDF(code){
   const hit=findCode(code);if(!hit)return;const {f,m}=hit;
   toast('Preparing the datasheet PDF…');
@@ -1036,48 +1106,80 @@ async function datasheetPDF(code){
   const img=m.image||f.imgs[0];
   const dimSrc=(m.size&&f.imgs.find(p=>new RegExp('dimensions-'+m.size.toLowerCase().replace(/\s+/g,'-')+'\\.','i').test(p)))||f.dimensions;
   const dimNote=(m.size&&String(f.dimensions_note||'').split(' · ').find(t=>t.startsWith(m.size+' Ø')))||f.dimensions_note;
-  const [logo,photo,dwg]=await Promise.all([pdfLogo(),img&&/\.(jpe?g|png|webp)(\?|$)/i.test(img)?pdfPhoto(img,m.image?m.scale:0).catch(()=>null):null,dimSrc?pdfDrawing(dimSrc).catch(()=>null):null]);
+  const [logo,photo,dwg,blogo,phot]=await Promise.all([pdfLogo(),img&&/\.(jpe?g|png|webp)(\?|$)/i.test(img)?pdfPhoto(img,m.image?m.scale:0).catch(()=>null):null,dimSrc?pdfDrawing(dimSrc).catch(()=>null):null,pdfBrandLogo(f.brand).catch(()=>null),loadCurve(m.code)]);
+  const curve=phot;
   const v=k=>mval(f,m,k);
   const today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'numeric'});
   const sub=[m.name,m.finish].filter(Boolean).join(' · ');
-  const W=595.28-68;
-  const dash=()=>({canvas:[{type:'rect',x:0,y:0,w:10,h:1.4,color:C.accent}],margin:[0,0,0,5]});
-  const label=t=>({stack:[{text:t,fontSize:7.5,color:C.muted,margin:[0,0,0,3]},dash()]});
-  const H2=t=>({text:t,fontSize:20,bold:true,color:C.ink,margin:[0,22,0,12]});
-  const box=(name,tag,swatch)=>({table:{widths:[14,'*','auto'],body:[[swatch?{canvas:[{type:'ellipse',x:5,y:6,r1:4.5,r2:4.5,color:swatch,lineColor:'#9a9a9c',lineWidth:.4}]}:'',{text:name,fontSize:8.5},{text:tag,fontSize:6.5,color:C.muted,characterSpacing:.4,margin:[0,1,0,0]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>'#ffffff',paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>6,paddingBottom:()=>6},margin:[0,0,0,14]});
+  const W=595.28-68,LW=Math.round(W*0.62);  // page-1 text column is wider so Technical Data lines don't wrap; Dimensions sits to the right
+  const hlabel=t=>({text:t,fontSize:8,bold:true,color:C.ink,margin:[0,0,0,4]});
+  const label=t=>({text:t,fontSize:7.5,color:C.muted,margin:[0,0,0,5]});
+  const H2=(t,b=12)=>({text:t,fontSize:16,bold:true,color:C.ink,margin:[0,16,0,b]});
+  const box=(name,tag,swatch)=>({table:{widths:[14,'*','auto'],body:[[swatch?{canvas:[{type:'ellipse',x:5,y:3.6,r1:4.5,r2:4.5,color:swatch,lineColor:'#9a9a9c',lineWidth:.4}]}:'',{text:name,fontSize:8.5},{text:tag,fontSize:6.5,color:C.muted,characterSpacing:.4,margin:[0,1,0,0]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:i=>i===1?2:i?6:0,paddingRight:()=>0,paddingTop:()=>2,paddingBottom:()=>2},margin:[0,0,0,14]});
   const keyLines=[v('power')&&v('power')+' system',v('flux')&&v('flux')+' delivered',v('efficacy')&&v('efficacy')+' luminous efficacy',v('cct'),[v('cri'),v('ugr')&&'UGR '+String(v('ugr')).replace(/^UGR\s*/i,'')].filter(Boolean).join(' · '),v('beam')&&'Beam '+v('beam'),v('control')&&'Control '+v('control')].filter(Boolean);
   const descLine=[f.family,f.category,v('variant'),v('power'),v('beam'),v('cct'),v('cri'),v('control'),m.finish].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(' - ');
+  const refl=(String(m.details||'').split(/\s*[·|]\s*/).find(t=>/reflector/i.test(t)&&!/adjustable/i.test(t))||'').replace(/\s*reflector\s*/i,'').trim();
+  const reflColor=r=>({gold:'#c9a24b',copper:'#b87333',chrome:'#d6d8db',silver:'#c9cbce',metalized:'#c9cbce',aluminium:'#b9bdc2',black:'#1f1f1f',white:'#ffffff'})[Object.keys({gold:1,copper:1,chrome:1,silver:1,metalized:1,aluminium:1,black:1,white:1}).find(k=>r.toLowerCase().includes(k))||'white'];
   const hero={table:{widths:['*'],body:[[{columns:[
       {width:170,stack:[photo?{image:photo.url,width:170,height:Math.min(170,170*photo.ratio)}:{canvas:[{type:'rect',x:0,y:0,w:170,h:170,color:'#e9e9ea'}]}]},
-      {width:'*',margin:[16,0,10,0],stack:[label('Part of'),{text:f.family,bold:true,fontSize:10,margin:[0,0,0,14]},label('Description'),{text:descLine,fontSize:8.5,lineHeight:1.3,color:C.muted,margin:[0,0,0,8]},...keyLines.map(t=>({text:t,bold:true,fontSize:8.5,lineHeight:1.3}))]},
-      {width:150,stack:[label('Finish'),box(m.finish||split(f.finishes)[0]||'—','STANDARD',finColor(m.finish||f.finishes)),label('Brand'),box(f.brand||'—','PARTNER',null),{text:`Specification sheet generated on ${today}. Phosforma reserves the right to update the technical specifications.`,fontSize:6.5,color:C.muted,alignment:'right',lineHeight:1.3,margin:[0,10,0,0]}]}
-    ]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>C.band,paddingLeft:()=>34,paddingRight:()=>34,paddingTop:()=>22,paddingBottom:()=>22},margin:[-34,0,-34,0]};
+      {width:W-170,margin:[LW+48-170,30,0,0],stack:[hlabel('Fitting finish'),box(m.finish||split(f.finishes)[0]||'—','STANDARD',finColor(m.finish||f.finishes)),...(refl?[hlabel('Reflector finish'),box(refl,'STANDARD',reflColor(refl))]:[]),hlabel('Brand'),blogo?{image:blogo.url,fit:[110,22],margin:[0,5,0,0]}:box(f.brand||'—','PARTNER',null)]},
+      {width:'*',text:''}
+    ]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>(photo&&photo.bg)||C.band,paddingLeft:()=>34,paddingRight:()=>34,paddingTop:()=>0,paddingBottom:()=>22},margin:[-34,0,-34,0]};
   const specLines=String(f.specification||'').split(/\.\s+(?=[A-Z0-9Ø])/).map(s=>s.replace(/\.$/,'').trim()).filter(Boolean);
   const striped=(rows,w)=>({table:{widths:['*','auto'],body:rows.map(([a,b])=>[{text:a,bold:b!=='',fontSize:8},{text:String(b),fontSize:8,alignment:'right'}])},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:i=>i%2===0?C.stripe:null,paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>6,paddingBottom:()=>6},width:w||'*'});
-  const half=(content)=>({columns:[{width:'50%',stack:[content]},{width:'*',text:''}]});
-  const badge=t=>({width:34,table:{widths:[26],body:[[{text:t,bold:true,fontSize:7,alignment:'center',margin:[0,4,0,4]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>C.tint}});
+  const plain=rows=>({table:{widths:['*','auto'],body:rows.map(([a,b])=>[{text:a,bold:b!=='',fontSize:8},{text:String(b),fontSize:8,alignment:'right'}])},layout:{hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>4,paddingBottom:()=>4}});
+  const half=(content)=>({columns:[{width:'50%',margin:[0,0,24,0],stack:[content]},{width:'*',text:''}]});
+  const badge=t=>({width:34,table:{widths:[26],body:[[{text:t,bold:true,fontSize:7,alignment:'center',margin:[0,4,0,4]}]]},layout:'noBorders'});
   const perf=[];
   if(v('ip'))perf.push({columns:[badge(String(v('ip')).match(/IP\s*\d\d/gi)?.slice(0,2).map(s=>s.replace(/\s/g,'')).join('\n')||'IP'),{width:'*',text:ipText(v('ip')),fontSize:8,lineHeight:1.25,margin:[6,2,0,0]}],margin:[0,0,0,10]});
   if(v('ik'))perf.push({columns:[badge(String(v('ik')).match(/IK\s*\d+/i)?.[0].replace(/\s/g,'')||'IK'),{width:'*',text:'Impact resistance '+v('ik'),fontSize:8,margin:[6,5,0,0]}],margin:[0,0,0,10]});
   const phys=[['Finish',m.finish],['Size',m.size],['Dimensions',dimNote],['Brand',f.brand]].filter(r=>r[1]);
-  const photo2=[['Delivered lumens',v('flux')],['Power (system)',v('power')],['Luminous efficacy',v('efficacy')],['Optic / beam angle',v('beam')],['Colour rendering',v('cri')],['Colour temperature',v('cct')],['UGR',v('ugr')],['Colour consistency (SDCM)',f.sdcm],['Lumen maintenance',f.lumen_maintenance]].filter(r=>r[1]);
+  // lumen maintenance / chromaticity: spreadsheet columns first, otherwise read from the specification text (e.g. Esse-Ci "L90/B10 >50,000h", "MacAdam 3")
+  const spec=String(f.specification||'');
+  const lmT=spec.match(/L\s?(\d{2})\s*\/?\s*B\s?(\d{2})\s*[>≥]?\s*([\d.,]+)\s*h/i);
+  const lumM=f.lumen_maintenance?String(f.lumen_maintenance).replace(/(\d)H\b/,'$1h'):lmT?`L${lmT[1]} ${lmT[3].replace(/[.,]/g,'')}h B${lmT[2]}`:'';
+  const sdT=spec.match(/mac\s*adams?\s*(?:step\s*)?(\d)|(\d)[- ]step\s*macadam|(\d)\s*sdcm|sdcm\s*[<≤]?\s*(\d)/i);
+  const chrom=f.sdcm?String(f.sdcm).replace(/\s*sdcm/i,'SDCM').replace(/^(\d)$/,'$1SDCM'):sdT?(sdT[1]||sdT[2]||sdT[3]||sdT[4])+'SDCM':'';
+  const photo2=[['Delivered lumens',v('flux')],['Power (system)',v('power')],['Luminous efficacy',v('efficacy')],['Optic / beam angle',v('beam')],['Colour rendering',v('cri')],['Colour temperature',v('cct')],['UGR',v('ugr')],['Colour consistency (SDCM)',chrom],['Lumen maintenance',lumM]].filter(r=>r[1]);
   const elec=[['Control',v('control')],['Power',v('power')]].filter(r=>r[1]);
   const inst=[['Application',f.environment],['Product type',f.category],['Protection',v('ip')],['Impact rating',v('ik')]].filter(r=>r[1]);
+  let volt=specLines.find(t=>/\d\s*V(ac|dc)?\b.*Hz|V(ac|dc)\b|input voltage/i.test(t))||specLines.find(t=>/\d\s*V(ac|dc)?\b/i.test(t));
+  if(volt&&!/Hz|input|supply/i.test(volt)){const vm=volt.match(/\d+(?:[–-]\d+)?\s*V(?:ac|dc)?\b/i);volt=vm?vm[0]:volt;}
+  // spec text can list several control versions, e.g. "230–240V 50–60Hz (DALI versions 220–240V 50–60Hz)": keep only the one for this code
+  if(volt){const dm=volt.match(/\s*\((DALI|1-10V|Push|Casambi|Phase)[^)]*\)/i);
+    if(dm){const ctl=String(v('control')||'');volt=new RegExp(dm[1],'i').test(ctl)?dm[0].replace(/^\s*\(|\)$/g,'').replace(new RegExp('^'+dm[1]+'\\s*versions?\\s*','i'),'').trim():volt.replace(dm[0],'').trim();}}
+  const tdata=[['Code',m.code],['Power',v('power')&&v('power')+' system'],['LM',v('flux')&&v('flux')+' delivered'],['Efficacy',v('efficacy')&&v('efficacy')+' luminous efficacy'],['CCT',v('cct')],['CRI',v('cri')],['UGR',v('ugr')],['Beam Angle',v('beam')],['Control',v('control')],['Supply Voltage / Current',volt&&volt+'.'],['Lumen Maintenance',lumM],['Chromaticity',chrom]].filter(r=>r[1]);
+  // dimensions for THIS code: sizes stated in the code's own details first, then family measurements that are not ranges or other versions
+  const detSegs=String(m.details||'').split(/\s*·\s*/).map(t=>t.trim()).filter(Boolean);
+  const codeDims=detSegs.filter(t=>/\d\s*mm\b|cut-?out/i.test(t)&&!/LEDs\/m|cut every/i.test(t)).map(t=>t.replace(/^L\s+(\d+\s*mm)$/i,'$1 length').replace(/^(\d+\s*mm)\s+long$/i,'$1 length').replace(/^cut-?out\s+(Ø?\d+)$/i,'cut-out $1mm'));
+  const famDims=String(dimNote||'').split(' · ').map(t=>t.trim()).filter(t=>t&&!/\d\s*[–-]\s*\d|\d\s*\/\s*\d|\bmodules?\b|\bor\b/i.test(t)&&!codeDims.some(c=>c.replace(/\s/g,'')===t.replace(/\s/g,'')));
+  const dimLines=codeDims.length?[...famDims.filter(t=>/section|profile|tube|depth/i.test(t)&&!/Ø?\d+\s*×/.test(t.replace(/^(section|profile)\s+/i,'X'))||/^(section|profile)\b/i.test(t)),...codeDims]:famDims;
+  // overview for THIS code: the family's opening sentences that don't list options, then what this code is
+  const ovFam=String(f.description||'').split(/(?<=[.!?])\s+(?=[A-Z])/).map(t=>t.trim())
+    .filter(t=>!/\bchoose\b|\boptions?\b|\bavailable\b|\beither\b|\bfrom\b.{0,40}\bto\b|\bthis page\b|\blist(?:s|ed)\b|\bsizes\b|\bor\b|\bordered\b|\boptional\b|\bcan be\b|\d\s*(?:W|mm|°|K)?\s*(?:or|to|–|-|\/)\s*\d|\bor\s+\d|\bversions?\b|\bselect/i.test(t)).slice(0,2).join(' ');
+  const ovSegs=detSegs.filter(t=>!/RAL|^(white|black|grey|graphite|anthracite|aluminium|gold|chrome)\b[^·]*$/i.test(t)||/reflector/i.test(t));
+  const ovSpec=[[v('flux')&&v('flux').replace(/lm$/,' lm'),v('cct')].filter(Boolean).join(' at '),v('cri'),v('ugr')&&String(v('ugr')).replace(/^(?!UGR)/,'UGR '),v('beam')&&!/diffus/i.test(v('beam'))&&v('beam')+' beam',v('control')&&v('control')+' control'].filter(Boolean).join(', ');
+  const ovCode=`This code (${m.code}) is the ${m.name}${ovSegs.length?': '+ovSegs.join(', ').replace(/^[A-Z](?![A-Z])/,c=>c.toLowerCase()):''}.${ovSpec?' '+ovSpec.replace(/^./,c=>c.toUpperCase())+'.':''}${m.finish?' '+m.finish+' finish.':''}`;
+  const dimCol=dwg?[H2('Dimensions',18),label('2d Drawing'),{image:dwg.url,fit:[W-LW-48,185],margin:[0,4,0,10]},...(dimLines.length?dimLines.map(t=>{t=t.trim();let a,b;const m1=t.match(/^(.*?\d\s*mm)\s+([A-Za-z].*)$/),i=t.search(/[Ø\d]/);
+      if(m1){a=m1[2];b=m1[1];}else if(i>0){a=t.slice(0,i).trim();b=t.slice(i).trim();}else if(i===0){a='Size';b=t;}else{a='';b=t;}
+      a=a&&a[0].toUpperCase()+a.slice(1);
+      return {text:a?[{text:a,bold:true},{text:' - '+b,color:C.muted}]:[{text:b[0].toUpperCase()+b.slice(1),color:C.muted}],fontSize:8,lineHeight:1.3,margin:[0,0,0,6]};}):[])]:[];
   const content=[hero,
-    H2('Technical data'),
-    {columns:[
-      {width:'55%',stack:[label('Description'),{text:f.description||'',fontSize:8.5,lineHeight:1.35,margin:[0,0,0,8]},...specLines.map(s=>({text:s+'.',fontSize:8.5,lineHeight:1.35,color:C.muted}))]},
-      {width:'*',margin:[24,0,0,0],stack:[...(perf.length?[label('Technical performance'),...perf]:[]),...(phys.length?[{stack:[label('Physical properties')],margin:[0,10,0,2]},striped(phys)]:[])]}
-    ]}];
+    {margin:[0,12,0,0],columns:[{width:LW,margin:[0,0,24,0],stack:[
+      {stack:[H2('Overview',18),{text:ovFam,fontSize:8.5,lineHeight:1.35,margin:[0,0,0,6]},{text:ovCode,fontSize:8.5,lineHeight:1.35,margin:[0,0,0,4]}]},
+      {stack:[H2('Technical Data',18),...tdata.map(([a,b])=>({text:[{text:a,bold:true},{text:' - '+b,color:C.muted}],fontSize:8,lineHeight:1.3,margin:[0,0,0,6]})),...(perf.length?[{...label('Technical performance'),margin:[0,22,0,8]},...perf]:[])]}
+    ]},{width:'*',margin:[24,0,0,0],stack:dimCol}]}];
   const sect=(pb,...items)=>({stack:items,unbreakable:true,pageBreak:pb});
-  if(dwg)content.push(sect('before',H2('Dimensions'),label('Drawing'),{image:dwg.url,width:Math.min(340,165/dwg.ratio),margin:[0,4,0,10]},...(dimNote?[half(striped(dimNote.split(' · ').map(t=>{const i=t.search(/[Ø\d]/);return i>0?[t.slice(0,i).trim(),t.slice(i).trim()]:[t,'']})))]:[])));
-  if(photo2.length)content.push(sect(dwg?undefined:'before',H2('Photometric data'),label('Details'),half(striped(photo2))));
-  if(elec.length||inst.length)content.push(sect(undefined,H2('Electrical data & installation'),{columns:[{width:'*',stack:[label('Electrical'),striped(elec.length?elec:[['Control','—']])]},{width:'*',margin:[24,0,0,0],stack:[label('Installation'),striped(inst)]}]}));
-  content.push({text:`Product code ${m.code}${m.details?' · '+m.details:''}`,fontSize:7,color:C.muted,margin:[0,24,0,0]});
-  const doc={pageSize:'A4',pageMargins:[34,74,34,70],info:{title:`${f.family} ${m.code} datasheet`,author:'Phosforma',subject:sub},
+
+  if(curve){const b=photBeam(curve),cone=coneFits(curve);content.push(sect('before',H2('Photometric data',18),{columns:[
+      {width:'50%',margin:[0,0,24,0],stack:[label('Polar curve'),{svg:polarSVG(curve,C),width:W/2-24}]},
+      cone?{width:'*',margin:[24,0,0,0],stack:[label('Beam cone'),{svg:coneSVG(curve,C),width:W/2-24}]}:{width:'*',text:''}]},
+      {text:[...(cone?[{text:'Beam angle',bold:true},{text:` - ${Math.round(b.beam)}°   `,color:C.muted}]:[]),{text:'Peak intensity',bold:true},{text:` - ${Math.round(b.peak)} cd   `,color:C.muted},{text:'Luminaire lumens',bold:true},{text:` - ${curve.lm} lm`,color:C.muted}],fontSize:8,margin:[0,10,0,0]}));}
+  // Electrical data & installation section removed (Chris, 7 Oct)
+  const doc={pageSize:'A4',pageMargins:[34,58,34,70],info:{title:`${f.family} ${m.code} datasheet`,author:'Phosforma',subject:sub},
     defaultStyle:{font:'Helvetica',fontSize:9,color:C.ink},
-    header:()=>({margin:[34,24,34,0],stack:[{columns:[{width:'*',stack:[{text:[{text:f.family+' / ',fontSize:12},{text:m.code,fontSize:12,bold:true},{text:sub?'  -  '+sub:'',fontSize:9.5,color:C.muted}]},{text:(m.details||m.code),fontSize:6.5,color:C.muted,margin:[0,4,0,0]}]},{width:92,image:logo,fit:[92,20],alignment:'right'}]},{canvas:[{type:'line',x1:0,y1:10,x2:W,y2:10,lineWidth:.6,lineColor:C.ink}]}]}),
-    footer:(p,n)=>({margin:[34,14,34,0],stack:[{canvas:[{type:'line',x1:0,y1:0,x2:W,y2:0,lineWidth:.6,lineColor:C.ink}]},{columns:[{width:150,stack:[{canvas:[{type:'rect',x:0,y:0,w:10,h:1.4,color:C.accent}],margin:[0,0,0,4]},{text:'Phosforma PTY Limited',bold:true,fontSize:7.5}]},{width:'*',text:'info@phosforma.com.au\nphosforma.com.au',fontSize:7,color:C.muted,lineHeight:1.25,margin:[0,8,0,0]},{width:60,text:`— ${p}/${n}`,fontSize:7.5,color:C.muted,alignment:'right',margin:[0,8,0,0]}],margin:[0,10,0,0]}]}),
+    header:()=>({margin:[34,20,34,0],stack:[{columns:[{width:'*',text:[{text:f.family+' / ',fontSize:12},{text:m.code,fontSize:12,bold:true}],margin:[0,6,0,0]},{width:92,image:logo,fit:[92,20],alignment:'right'}]}]}),
+    footer:(p,n)=>({margin:[34,14,34,0],stack:[{canvas:[{type:'line',x1:0,y1:0,x2:W,y2:0,lineWidth:.6,lineColor:C.ink}]},{columns:[{width:120,text:'info@phosforma.com.au',fontSize:7,color:C.muted,margin:[0,4,0,0]},{width:'*',text:'Phosforma reserves the right to update the technical specifications.',fontSize:7,color:C.muted,margin:[0,4,0,0]},{width:30,text:`${p}/${n}`,fontSize:7,color:C.muted,alignment:'right',margin:[0,4,0,0]}],margin:[0,10,0,0]}]}),
     content};
   pm.createPdf(doc).download(`${m.code.replace(/[^\w.-]+/g,'_')}.pdf`);
   }catch(e){console.error(e);toast('Sorry, the PDF could not be made. Use the datasheet page and print to PDF instead.');}

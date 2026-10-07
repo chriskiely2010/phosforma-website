@@ -29,7 +29,7 @@ for root in ['images', 'files']:
 if os.path.exists('vendor'): shutil.copytree('vendor', os.path.join(pub, 'vendor'))
 if os.path.exists('files/photometry'): shutil.copytree('files/photometry', os.path.join(pub, 'files', 'photometry'), dirs_exist_ok=True)
 shutil.rmtree(tools, ignore_errors=True); os.makedirs(tools)
-for f in ['build_csv.py', 'true_scale.py', 'make_public.py', 'tile_sizes.csv', 'Phosforma_products_template.csv', 'README.txt', 'delta_ugr.json', 'load_batches.py', 'prerender.py', 'photometry.py']:
+for f in ['build_csv.py', 'true_scale.py', 'make_public.py', 'tile_sizes.csv', 'Phosforma_products_template.csv', 'README.txt', 'delta_ugr.json', 'load_batches.py', 'prerender.py', 'photometry.py', 'CONFIRM_BEFORE_LIVE.md']:
     if os.path.exists(f): shutil.copy(f, os.path.join(tools, f))
 for d in ['data', 'originals', 'archive', 'photometry_src']:
     if os.path.exists(d): shutil.copytree(d, os.path.join(tools, d))
