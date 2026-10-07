@@ -965,6 +965,25 @@ async function pdfLogo(){
   const c=document.createElement('canvas');c.width=1000;c.height=216;const x=c.getContext('2d');x.drawImage(im,0,0,1000,216);
   x.globalCompositeOperation='source-atop';x.fillStyle='#777779';x.fillRect(442,0,558,216);return c.toDataURL('image/png');
 }
+async function pdfBrandLogo(name){
+  const pr=PARTNERS.find(p=>p.name===name);if(!pr||!pr.logo)return null;
+  let src=pr.logo;
+  if(/\.svg(\?|$)/i.test(src)){
+    const svg=new DOMParser().parseFromString(await (await fetch(src)).text(),'image/svg+xml').documentElement;
+    const vb=(svg.getAttribute('viewBox')||'').split(/[\s,]+/).map(Number);
+    if(vb.length===4&&vb[2]>0){svg.setAttribute('width',vb[2]);svg.setAttribute('height',vb[3]);}
+    src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));
+  }
+  const im=await loadImg(src);const W=800,H=Math.max(1,Math.round(W*im.naturalHeight/im.naturalWidth));
+  const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0,W,H);
+  // trim the tile background around the mark and make it transparent so it sits on the grey band
+  const d=x.getImageData(0,0,W,H),p=d.data,bg=[p[0],p[1],p[2],p[3]];let x0=W,y0=H,x1=-1,y1=-1;
+  for(let y=0;y<H;y++)for(let i=0;i<W;i++){const k=(y*W+i)*4;const diff=p[k+3]<20?0:(bg[3]<20?255:Math.max(Math.abs(p[k]-bg[0]),Math.abs(p[k+1]-bg[1]),Math.abs(p[k+2]-bg[2])));
+    if(diff<18){p[k+3]=0;continue;}if(bg[3]>=20&&diff<60)p[k+3]=Math.round(p[k+3]*(diff-18)/42);if(i<x0)x0=i;if(i>x1)x1=i;if(y<y0)y0=y;if(y>y1)y1=y;}
+  if(x1<0)return null;x.putImageData(d,0,0);
+  const o=document.createElement('canvas');o.width=x1-x0+1;o.height=y1-y0+1;o.getContext('2d').drawImage(c,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  return {url:o.toDataURL('image/png'),ratio:o.height/o.width};
+}
 async function pdfDrawing(src){
   if(/\.svg(\?|$)/i.test(src)){
     const svg=new DOMParser().parseFromString(await (await fetch(src)).text(),'image/svg+xml').documentElement;
@@ -992,7 +1011,7 @@ async function datasheetPDF(code){
   const img=m.image||f.imgs[0];
   const dimSrc=(m.size&&f.imgs.find(p=>new RegExp('dimensions-'+m.size.toLowerCase().replace(/\s+/g,'-')+'\\.','i').test(p)))||f.dimensions;
   const dimNote=(m.size&&String(f.dimensions_note||'').split(' · ').find(t=>t.startsWith(m.size+' Ø')))||f.dimensions_note;
-  const [logo,photo,dwg]=await Promise.all([pdfLogo(),img&&/\.(jpe?g|png|webp)(\?|$)/i.test(img)?pdfPhoto(img,m.image?m.scale:0).catch(()=>null):null,dimSrc?pdfDrawing(dimSrc).catch(()=>null):null]);
+  const [logo,photo,dwg,blogo]=await Promise.all([pdfLogo(),img&&/\.(jpe?g|png|webp)(\?|$)/i.test(img)?pdfPhoto(img,m.image?m.scale:0).catch(()=>null):null,dimSrc?pdfDrawing(dimSrc).catch(()=>null):null,pdfBrandLogo(f.brand).catch(()=>null)]);
   const v=k=>mval(f,m,k);
   const today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'numeric'});
   const sub=[m.name,m.finish].filter(Boolean).join(' · ');
@@ -1007,7 +1026,7 @@ async function datasheetPDF(code){
   const reflColor=r=>({gold:'#c9a24b',copper:'#b87333',chrome:'#d6d8db',silver:'#c9cbce',metalized:'#c9cbce',aluminium:'#b9bdc2',black:'#1f1f1f',white:'#ffffff'})[Object.keys({gold:1,copper:1,chrome:1,silver:1,metalized:1,aluminium:1,black:1,white:1}).find(k=>r.toLowerCase().includes(k))||'white'];
   const hero={table:{widths:['*'],body:[[{columns:[
       {width:170,stack:[photo?{image:photo.url,width:170,height:Math.min(170,170*photo.ratio)}:{canvas:[{type:'rect',x:0,y:0,w:170,h:170,color:'#e9e9ea'}]}]},
-      {width:210,margin:[48,8,0,0],stack:[hlabel('Fitting finish'),box(m.finish||split(f.finishes)[0]||'—','STANDARD',finColor(m.finish||f.finishes)),...(refl?[hlabel('Reflector finish'),box(refl,'STANDARD',reflColor(refl))]:[]),hlabel('Brand'),box(f.brand||'—','PARTNER',null)]},
+      {width:210,margin:[48,8,0,0],stack:[hlabel('Fitting finish'),box(m.finish||split(f.finishes)[0]||'—','STANDARD',finColor(m.finish||f.finishes)),...(refl?[hlabel('Reflector finish'),box(refl,'STANDARD',reflColor(refl))]:[]),hlabel('Brand'),blogo?{image:blogo.url,fit:[110,22],margin:[0,5,0,0]}:box(f.brand||'—','PARTNER',null)]},
       {width:'*',text:''}
     ]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>(photo&&photo.bg)||C.band,paddingLeft:()=>34,paddingRight:()=>34,paddingTop:()=>22,paddingBottom:()=>22},margin:[-34,0,-34,0]};
   const specLines=String(f.specification||'').split(/\.\s+(?=[A-Z0-9Ø])/).map(s=>s.replace(/\.$/,'').trim()).filter(Boolean);
