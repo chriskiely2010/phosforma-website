@@ -36,4 +36,4 @@ Rule (Chris, 7 Oct): a Phosforma datasheet describes ONE code. Nothing on it may
 20. FL175 vs FL112 render scale is inconsistent.
 21. Karizma batch folder on the Mac still has the older pendant photos.
 22. Ben IP54 not split by size; "Photo Review 6 Oct" flags; Fusion DBM track tile.
-23. Merge `datasheet-draft` into main once the above is signed off.
+23. Datasheet format published to the test site on 7 Oct (Chris asked); Electrical data & installation section removed. Items above still to confirm before the real launch.
