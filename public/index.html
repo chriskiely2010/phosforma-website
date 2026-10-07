@@ -1047,7 +1047,11 @@ async function datasheetPDF(code){
   const photo2=[['Delivered lumens',v('flux')],['Power (system)',v('power')],['Luminous efficacy',v('efficacy')],['Optic / beam angle',v('beam')],['Colour rendering',v('cri')],['Colour temperature',v('cct')],['UGR',v('ugr')],['Colour consistency (SDCM)',chrom],['Lumen maintenance',lumM]].filter(r=>r[1]);
   const elec=[['Control',v('control')],['Power',v('power')]].filter(r=>r[1]);
   const inst=[['Application',f.environment],['Product type',f.category],['Protection',v('ip')],['Impact rating',v('ik')]].filter(r=>r[1]);
-  const volt=specLines.find(t=>/\d\s*V(ac|dc)?\b|volt/i.test(t));
+  let volt=specLines.find(t=>/\d\s*V(ac|dc)?\b.*Hz|V(ac|dc)\b|input voltage/i.test(t))||specLines.find(t=>/\d\s*V(ac|dc)?\b/i.test(t));
+  if(volt&&!/Hz|input|supply/i.test(volt)){const vm=volt.match(/\d+(?:[–-]\d+)?\s*V(?:ac|dc)?\b/i);volt=vm?vm[0]:volt;}
+  // spec text can list several control versions, e.g. "230–240V 50–60Hz (DALI versions 220–240V 50–60Hz)": keep only the one for this code
+  if(volt){const dm=volt.match(/\s*\((DALI|1-10V|Push|Casambi|Phase)[^)]*\)/i);
+    if(dm){const ctl=String(v('control')||'');volt=new RegExp(dm[1],'i').test(ctl)?dm[0].replace(/^\s*\(|\)$/g,'').replace(new RegExp('^'+dm[1]+'\\s*versions?\\s*','i'),'').trim():volt.replace(dm[0],'').trim();}}
   const tdata=[['Code',m.code],['Power',v('power')&&v('power')+' system'],['LM',v('flux')&&v('flux')+' delivered'],['Efficacy',v('efficacy')&&v('efficacy')+' luminous efficacy'],['CCT',v('cct')],['CRI',v('cri')],['UGR',v('ugr')],['Beam Angle',v('beam')],['Control',v('control')],['Supply Voltage / Current',volt&&volt+'.'],['Lumen Maintenance',lumM],['Chromaticity',chrom]].filter(r=>r[1]);
   const dimCol=dwg?[H2('Dimensions',18),label('2d Drawing'),{image:dwg.url,fit:[W/2-24,185],margin:[0,4,0,10]},...(dimNote?dimNote.split(' · ').map(t=>{t=t.trim();let a,b;const m1=t.match(/^(.*?\d\s*mm)\s+([A-Za-z].*)$/),i=t.search(/[Ø\d]/);
       if(m1){a=m1[2];b=m1[1];}else if(i>0){a=t.slice(0,i).trim();b=t.slice(i).trim();}else if(i===0){a='Size';b=t;}else{a='';b=t;}
