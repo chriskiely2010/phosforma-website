@@ -1550,7 +1550,7 @@ function buildMega(){const box=document.getElementById('mega');if(!box)return;
 /* ---------- router ---------- */
 const PROD_RE=/^\/products\/([a-z0-9-]+)\/?$/;
 const prodUrl=s=>'/products/'+s+'/';
-function curKey(){const m=location.pathname.match(PROD_RE);if(m)return 'p-'+m[1];return (location.hash||'#home').slice(1);}
+function curKey(){const m=location.pathname.match(PROD_RE);if(m)return 'p-'+m[1];const h=(location.hash||'#home').slice(1);try{return decodeURIComponent(h);}catch(e){return h;}}
 function navTo(url){history.pushState(null,'',url);route();}
 function route(){
   let h=curKey();

@@ -37,3 +37,11 @@ Rule (Chris, 7 Oct): a Phosforma datasheet describes ONE code. Nothing on it may
 21. Karizma batch folder on the Mac still has the older pendant photos.
 22. Ben IP54 not split by size; "Photo Review 6 Oct" flags; Fusion DBM track tile.
 23. Datasheet format published to the test site on 7 Oct (Chris asked); Electrical data & installation section removed. Items above still to confirm before the real launch.
+
+## Macrolux profiles without LED (batch 2026-10-07, added to the test site 7 Oct)
+24. Codes: Macrolux has no 1000/2000mm codes; each row is the cut-to-length code plus the length (e.g. `1301.0210.00.94 L=1000`). Confirm with Macrolux they cut to these lengths, and the price.
+25. Page names as Macrolux writes them (mt1_27, ml_20 LED, mt2_27/i); versions sharing a profile code share one page.
+26. 23 shared accessories on one "Macrolux profile accessories" page; single pieces only (packs, corner cuts, corner modules, MD_45 H profile, driver brackets, LED primer, 24V cables left out).
+27. No photos, drawings or dimensions yet: pages show the line drawing; the Phosforma PDF has no photo, dimensions or photometric data. Datasheet link = Macrolux's per-profile brochure.
+28. Mounting not stated by Macrolux for 14 profiles (ma2_10, ma_12, mb_15, md_12, mt0_12, mt1_12, mx1_12, mx2_12, mt2_27, mt3_27, mx2_27/i, ala, hiss, mc_90).
+29. mt3_27 opal only; New badge on all 37 pages; left out: LED-only profiles, groove 140 / Groove square, groove 70.
