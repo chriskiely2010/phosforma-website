@@ -1043,10 +1043,10 @@ async function datasheetPDF(code){
   const volt=specLines.find(t=>/\d\s*V(ac|dc)?\b|volt/i.test(t));
   const tdata=[['Code',m.code],['Power',v('power')&&v('power')+' system'],['LM',v('flux')&&v('flux')+' delivered'],['Efficacy',v('efficacy')&&v('efficacy')+' luminous efficacy'],['CCT',v('cct')],['CRI',v('cri')],['UGR',v('ugr')],['Beam Angle',v('beam')],['Control',v('control')],['Supply Voltage / Current',volt&&volt+'.']].filter(r=>r[1]);
   const content=[hero,
-    {columns:[
-      {width:'50%',stack:[H2('Overview'),{text:f.description||'',fontSize:8.5,lineHeight:1.35}]},
-      {width:'*',margin:[24,0,0,0],stack:[H2('Technical Data'),...tdata.map(([a,b])=>({text:[{text:a,bold:true},{text:' - '+b,color:C.muted}],fontSize:8,lineHeight:1.3,margin:[0,0,0,6]})),...(perf.length?[{...label('Technical performance'),margin:[0,22,0,8]},...perf]:[])]}
-    ],margin:[0,12,0,0]}];
+    {margin:[0,12,0,0],stack:[
+      {stack:[H2('Overview'),{text:f.description||'',fontSize:8.5,lineHeight:1.35,margin:[0,0,0,4]}]},
+      {stack:[H2('Technical Data'),...tdata.map(([a,b])=>({text:[{text:a,bold:true},{text:' - '+b,color:C.muted}],fontSize:8,lineHeight:1.3,margin:[0,0,0,6]})),...(perf.length?[{...label('Technical performance'),margin:[0,22,0,8]},...perf]:[])]}
+    ]}];
   const sect=(pb,...items)=>({stack:items,unbreakable:true,pageBreak:pb});
   if(dwg)content.push(sect('before',H2('Dimensions'),label('2d Drawing'),{image:dwg.url,width:Math.min(340,165/dwg.ratio),margin:[0,4,0,10]},...(dimNote?[half(striped(dimNote.split(' · ').map(t=>{const i=t.search(/[Ø\d]/);return i>0?[t.slice(0,i).trim(),t.slice(i).trim()]:[t,'']})))]:[])));
   if(photo2.length)content.push(sect(dwg?undefined:'before',H2('Photometric data'),label('Details'),half(striped(photo2))));
