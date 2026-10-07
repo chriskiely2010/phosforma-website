@@ -999,7 +999,7 @@ async function datasheetPDF(code){
   const W=595.28-68;
   const label=t=>({text:t,fontSize:7.5,color:C.muted,margin:[0,0,0,8]});
   const H2=t=>({text:t,fontSize:20,bold:true,color:C.ink,margin:[0,22,0,12]});
-  const box=(name,tag,swatch)=>({table:{widths:[14,'*','auto'],body:[[swatch?{canvas:[{type:'ellipse',x:5,y:6,r1:4.5,r2:4.5,color:swatch,lineColor:'#9a9a9c',lineWidth:.4}]}:'',{text:name,fontSize:8.5},{text:tag,fontSize:6.5,color:C.muted,characterSpacing:.4,margin:[0,1,0,0]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>'#ffffff',paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>6,paddingBottom:()=>6},margin:[0,0,0,14]});
+  const box=(name,tag,swatch)=>({table:{widths:[14,'*','auto'],body:[[swatch?{canvas:[{type:'ellipse',x:5,y:6,r1:4.5,r2:4.5,color:swatch,lineColor:'#9a9a9c',lineWidth:.4}]}:'',{text:name,fontSize:8.5},{text:tag,fontSize:6.5,color:C.muted,characterSpacing:.4,margin:[0,1,0,0]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:i=>i?6:0,paddingRight:()=>0,paddingTop:()=>2,paddingBottom:()=>2},margin:[0,0,0,14]});
   const keyLines=[v('power')&&v('power')+' system',v('flux')&&v('flux')+' delivered',v('efficacy')&&v('efficacy')+' luminous efficacy',v('cct'),[v('cri'),v('ugr')&&'UGR '+String(v('ugr')).replace(/^UGR\s*/i,'')].filter(Boolean).join(' · '),v('beam')&&'Beam '+v('beam'),v('control')&&'Control '+v('control')].filter(Boolean);
   const descLine=[f.family,f.category,v('variant'),v('power'),v('beam'),v('cct'),v('cri'),v('control'),m.finish].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(' - ');
   const hero={table:{widths:['*'],body:[[{columns:[
