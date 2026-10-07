@@ -1067,7 +1067,7 @@ function viewCode(f,m){
 }
 /* downloadable PDF datasheet (pdfmake, loaded only when asked for) */
 let _pm;
-function loadPM(){return _pm||(_pm=new Promise((res,rej)=>{const add=(s,n)=>{const t=document.createElement('script');t.src=s;t.onload=n;t.onerror=()=>{_pm=null;rej(new Error(s));};document.head.appendChild(t);};add('/vendor/pdfmake.min.js',()=>add('/vendor/vfs_fonts.min.js',()=>res(window.pdfMake)));}));}
+function loadPM(){return _pm||(_pm=new Promise((res,rej)=>{const add=(s,n)=>{const t=document.createElement('script');t.src=s;t.onload=n;t.onerror=()=>{_pm=null;rej(new Error(s));};document.head.appendChild(t);};add('/vendor/pdfmake.min.js',()=>add('/vendor/helvetica_afm.js',()=>{window.pdfMake.fonts={Helvetica:{normal:'Helvetica',bold:'Helvetica-Bold',italics:'Helvetica-Oblique',bolditalics:'Helvetica-BoldOblique'}};res(window.pdfMake);}));}));}
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
 async function pdfPhoto(src,scale){
   const im=await loadImg(src);const W=Math.min(1100,im.naturalWidth),H=Math.round(W*im.naturalHeight/im.naturalWidth);
@@ -1077,9 +1077,10 @@ async function pdfPhoto(src,scale){
   return {url:c.toDataURL('image/jpeg',.9),ratio:H/W};
 }
 async function pdfLogo(){
-  const s=document.querySelector('.logo svg').cloneNode(true);s.setAttribute('width','1000');s.setAttribute('height','216');s.setAttribute('xmlns','http://www.w3.org/2000/svg');s.setAttribute('fill','#262626');
+  const s=document.querySelector('.logo svg').cloneNode(true);s.setAttribute('width','1000');s.setAttribute('height','216');s.setAttribute('xmlns','http://www.w3.org/2000/svg');s.setAttribute('fill','#10181f');
   const im=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s.outerHTML));
-  const c=document.createElement('canvas');c.width=1000;c.height=216;c.getContext('2d').drawImage(im,0,0,1000,216);return c.toDataURL('image/png');
+  const c=document.createElement('canvas');c.width=1000;c.height=216;const x=c.getContext('2d');x.drawImage(im,0,0,1000,216);
+  x.globalCompositeOperation='source-atop';x.fillStyle='#777779';x.fillRect(442,0,558,216);return c.toDataURL('image/png');
 }
 async function pdfDrawing(src){
   if(/\.svg(\?|$)/i.test(src)){
@@ -1103,7 +1104,8 @@ async function datasheetPDF(code){
   toast('Preparing the datasheet PDF…');
   try{
   const pm=await loadPM();
-  const C={band:'#f3f3f1',ink:'#262626',muted:'#6e6e6b',line:'#e3e3e1',accent:'#d9822f',stripe:'#f3f3f1'};
+  /* Phosforma brand guidelines (Nov 2016): black #10181f, grey #777779, orange #ff5000; Helvetica Neue Medium/Regular (Helvetica here) */
+  const C={band:'#f5f6f6',ink:'#10181f',muted:'#777779',line:'#d9d9da',accent:'#ff5000',tint:'#ffdccc',stripe:'#f5f6f6'};
   const img=m.image||f.imgs[0];
   const dimSrc=(m.size&&f.imgs.find(p=>new RegExp('dimensions-'+m.size.toLowerCase().replace(/\s+/g,'-')+'\\.','i').test(p)))||f.dimensions;
   const dimNote=(m.size&&String(f.dimensions_note||'').split(' · ').find(t=>t.startsWith(m.size+' Ø')))||f.dimensions_note;
@@ -1111,22 +1113,25 @@ async function datasheetPDF(code){
   const v=k=>mval(f,m,k);
   const today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'numeric'});
   const sub=[m.name,m.finish].filter(Boolean).join(' · ');
-  const label=t=>({text:t.toUpperCase(),fontSize:7.5,color:C.muted,characterSpacing:.6,margin:[0,0,0,5]});
-  const H2=(t,pb)=>({text:t.toUpperCase(),fontSize:19,bold:true,margin:[0,26,0,12],pageBreak:pb});
-  const box=(name,tag,swatch)=>({table:{widths:[12,'*','auto'],body:[[swatch?{canvas:[{type:'rect',x:0,y:1.5,w:8,h:8,color:swatch,lineColor:'#999',lineWidth:.4}]}:'',{text:name,fontSize:8.5},{text:tag,fontSize:7,color:C.ink,fillColor:'#e6e6e3',margin:[4,1,4,1]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>'#ffffff',paddingLeft:()=>8,paddingRight:()=>6,paddingTop:()=>6,paddingBottom:()=>6},margin:[0,0,0,14]});
+  const W=595.28-68;
+  const dash=()=>({canvas:[{type:'rect',x:0,y:0,w:10,h:1.4,color:C.accent}],margin:[0,0,0,5]});
+  const label=t=>({stack:[{text:t,fontSize:7.5,color:C.muted,margin:[0,0,0,3]},dash()]});
+  const H2=t=>({text:t,fontSize:20,bold:true,color:C.ink,margin:[0,22,0,12]});
+  const box=(name,tag,swatch)=>({table:{widths:[14,'*','auto'],body:[[swatch?{canvas:[{type:'ellipse',x:5,y:6,r1:4.5,r2:4.5,color:swatch,lineColor:'#9a9a9c',lineWidth:.4}]}:'',{text:name,fontSize:8.5},{text:tag,fontSize:6.5,color:C.muted,characterSpacing:.4,margin:[0,1,0,0]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>'#ffffff',paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>6,paddingBottom:()=>6},margin:[0,0,0,14]});
   const keyLines=[v('power')&&v('power')+' system',v('flux')&&v('flux')+' delivered',v('efficacy')&&v('efficacy')+' luminous efficacy',v('cct'),[v('cri'),v('ugr')&&'UGR '+String(v('ugr')).replace(/^UGR\s*/i,'')].filter(Boolean).join(' · '),v('beam')&&'Beam '+v('beam'),v('control')&&'Control '+v('control')].filter(Boolean);
   const descLine=[f.family,f.category,v('variant'),v('power'),v('beam'),v('cct'),v('cri'),v('control'),m.finish].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(' - ');
   const hero={table:{widths:['*'],body:[[{columns:[
-      {width:170,stack:[photo?{image:photo.url,width:170,height:Math.min(170,170*photo.ratio)}:{canvas:[{type:'rect',x:0,y:0,w:170,h:170,color:'#e9e9e6'}]}]},
-      {width:'*',margin:[16,0,10,0],stack:[label('Part of'),{text:f.family.toUpperCase(),bold:true,fontSize:9,margin:[0,0,0,14]},label('Description'),{text:descLine,fontSize:8.5,lineHeight:1.25,margin:[0,0,0,6]},...keyLines.map(t=>({text:t,bold:true,fontSize:8.5,lineHeight:1.25}))]},
+      {width:170,stack:[photo?{image:photo.url,width:170,height:Math.min(170,170*photo.ratio)}:{canvas:[{type:'rect',x:0,y:0,w:170,h:170,color:'#e9e9ea'}]}]},
+      {width:'*',margin:[16,0,10,0],stack:[label('Part of'),{text:f.family,bold:true,fontSize:10,margin:[0,0,0,14]},label('Description'),{text:descLine,fontSize:8.5,lineHeight:1.3,color:C.muted,margin:[0,0,0,8]},...keyLines.map(t=>({text:t,bold:true,fontSize:8.5,lineHeight:1.3}))]},
       {width:150,stack:[label('Finish'),box(m.finish||split(f.finishes)[0]||'—','STANDARD',finColor(m.finish||f.finishes)),label('Brand'),box(f.brand||'—','PARTNER',null),{text:`Specification sheet generated on ${today}. Phosforma reserves the right to update the technical specifications.`,fontSize:6.5,color:C.muted,alignment:'right',lineHeight:1.3,margin:[0,10,0,0]}]}
-    ]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>C.band,paddingLeft:()=>34,paddingRight:()=>34,paddingTop:()=>8,paddingBottom:()=>20},margin:[-34,0,-34,0]};
+    ]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>C.band,paddingLeft:()=>34,paddingRight:()=>34,paddingTop:()=>22,paddingBottom:()=>22},margin:[-34,0,-34,0]};
   const specLines=String(f.specification||'').split(/\.\s+(?=[A-Z0-9Ø])/).map(s=>s.replace(/\.$/,'').trim()).filter(Boolean);
-  const striped=(rows,w)=>({table:{widths:['*','auto'],body:rows.map(([a,b])=>[{text:a,bold:true,fontSize:8},{text:String(b),fontSize:8,alignment:'right'}])},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:i=>i%2===0?C.stripe:null,paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>7,paddingBottom:()=>7},width:w||'*'});
+  const striped=(rows,w)=>({table:{widths:['*','auto'],body:rows.map(([a,b])=>[{text:a,bold:b!=='',fontSize:8},{text:String(b),fontSize:8,alignment:'right'}])},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:i=>i%2===0?C.stripe:null,paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>6,paddingBottom:()=>6},width:w||'*'});
   const half=(content)=>({columns:[{width:'50%',stack:[content]},{width:'*',text:''}]});
+  const badge=t=>({width:34,table:{widths:[26],body:[[{text:t,bold:true,fontSize:7,alignment:'center',margin:[0,4,0,4]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>C.tint}});
   const perf=[];
-  if(v('ip'))perf.push({columns:[{width:34,table:{widths:[26],body:[[{text:String(v('ip')).match(/IP\s*\d\d/gi)?.slice(0,2).map(s=>s.replace(/\s/g,'')).join('\n')||'IP',bold:true,fontSize:7,alignment:'center',margin:[0,4,0,4]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>'#fff3e6'}},{width:'*',text:ipText(v('ip')),fontSize:8,lineHeight:1.25,margin:[6,2,0,0]}],margin:[0,0,0,10]});
-  if(v('ik'))perf.push({columns:[{width:34,table:{widths:[26],body:[[{text:String(v('ik')).match(/IK\s*\d+/i)?.[0].replace(/\s/g,'')||'IK',bold:true,fontSize:7,alignment:'center',margin:[0,4,0,4]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>'#fff3e6'}},{width:'*',text:'Impact resistance '+v('ik'),fontSize:8,margin:[6,5,0,0]}],margin:[0,0,0,10]});
+  if(v('ip'))perf.push({columns:[badge(String(v('ip')).match(/IP\s*\d\d/gi)?.slice(0,2).map(s=>s.replace(/\s/g,'')).join('\n')||'IP'),{width:'*',text:ipText(v('ip')),fontSize:8,lineHeight:1.25,margin:[6,2,0,0]}],margin:[0,0,0,10]});
+  if(v('ik'))perf.push({columns:[badge(String(v('ik')).match(/IK\s*\d+/i)?.[0].replace(/\s/g,'')||'IK'),{width:'*',text:'Impact resistance '+v('ik'),fontSize:8,margin:[6,5,0,0]}],margin:[0,0,0,10]});
   const phys=[['Finish',m.finish],['Size',m.size],['Dimensions',dimNote],['Brand',f.brand]].filter(r=>r[1]);
   const photo2=[['Delivered lumens',v('flux')],['Power (system)',v('power')],['Luminous efficacy',v('efficacy')],['Optic / beam angle',v('beam')],['Colour rendering',v('cri')],['Colour temperature',v('cct')],['UGR',v('ugr')],['Colour consistency (SDCM)',f.sdcm],['Lumen maintenance',f.lumen_maintenance]].filter(r=>r[1]);
   const elec=[['Control',v('control')],['Power',v('power')]].filter(r=>r[1]);
@@ -1134,18 +1139,18 @@ async function datasheetPDF(code){
   const content=[hero,
     H2('Technical data'),
     {columns:[
-      {width:'55%',stack:[label('Description'),{text:f.description||'',fontSize:8.5,lineHeight:1.3,margin:[0,0,0,8]},...specLines.map(s=>({text:s+'.',fontSize:8.5,lineHeight:1.3}))]},
-      {width:'*',margin:[24,0,0,0],stack:[...(perf.length?[label('Technical performance'),...perf]:[]),...(phys.length?[{...label('Physical properties'),margin:[0,10,0,6]},striped(phys)]:[])]}
+      {width:'55%',stack:[label('Description'),{text:f.description||'',fontSize:8.5,lineHeight:1.35,margin:[0,0,0,8]},...specLines.map(s=>({text:s+'.',fontSize:8.5,lineHeight:1.35,color:C.muted}))]},
+      {width:'*',margin:[24,0,0,0],stack:[...(perf.length?[label('Technical performance'),...perf]:[]),...(phys.length?[{stack:[label('Physical properties')],margin:[0,10,0,2]},striped(phys)]:[])]}
     ]}];
-  if(dwg){content.push(H2('Dimensions','before'),label('Drawing'),{image:dwg.url,width:Math.min(380,300/dwg.ratio),margin:[0,4,0,10]});if(dimNote)content.push(half(striped(dimNote.split(' · ').map(t=>{const i=t.search(/[Ø\d]/);return i>0?[t.slice(0,i).trim(),t.slice(i).trim()]:['Size',t];}))));}
-  if(photo2.length)content.push(H2('Photometric data',dwg?undefined:'before'),label('Details'),half(striped(photo2)));
-  if(elec.length||inst.length)content.push(H2('Electrical data & installation'),{columns:[{width:'*',stack:[label('Electrical'),striped(elec.length?elec:[['Control','—']])]},{width:'*',margin:[24,0,0,0],stack:[label('Installation'),striped(inst)]}]});
+  const sect=(pb,...items)=>({stack:items,unbreakable:true,pageBreak:pb});
+  if(dwg)content.push(sect('before',H2('Dimensions'),label('Drawing'),{image:dwg.url,width:Math.min(340,165/dwg.ratio),margin:[0,4,0,10]},...(dimNote?[half(striped(dimNote.split(' · ').map(t=>{const i=t.search(/[Ø\d]/);return i>0?[t.slice(0,i).trim(),t.slice(i).trim()]:[t,'']})))]:[])));
+  if(photo2.length)content.push(sect(dwg?undefined:'before',H2('Photometric data'),label('Details'),half(striped(photo2))));
+  if(elec.length||inst.length)content.push(sect(undefined,H2('Electrical data & installation'),{columns:[{width:'*',stack:[label('Electrical'),striped(elec.length?elec:[['Control','—']])]},{width:'*',margin:[24,0,0,0],stack:[label('Installation'),striped(inst)]}]}));
   content.push({text:`Product code ${m.code}${m.details?' · '+m.details:''}`,fontSize:7,color:C.muted,margin:[0,24,0,0]});
-  const doc={pageSize:'A4',pageMargins:[34,72,34,78],info:{title:`${f.family} ${m.code} datasheet`,author:'Phosforma',subject:sub},
-    defaultStyle:{font:'Roboto',fontSize:9,color:C.ink},
-    background:(p,size)=>({canvas:[{type:'rect',x:0,y:0,w:size.width,h:72,color:C.band},{type:'rect',x:0,y:size.height-62,w:size.width,h:62,color:C.band},{type:'rect',x:0,y:size.height-62,w:size.width,h:1.2,color:C.accent}]}),
-    header:()=>({margin:[34,22,34,0],columns:[{width:'*',stack:[{text:[{text:f.family+' / ',fontSize:12},{text:m.code,fontSize:12,bold:true},{text:sub?'  -  '+sub:'',fontSize:10,color:C.muted}]},{text:(m.details||m.code).toUpperCase(),fontSize:6.5,color:C.muted,margin:[0,4,0,0]}]},{width:92,image:logo,fit:[92,20],alignment:'right'}]}),
-    footer:(p,n)=>({margin:[34,18,34,0],columns:[{width:150,stack:[{text:'Phosforma',bold:true,fontSize:7.5},{text:'Architectural lighting\nphosforma.com.au',fontSize:7,color:C.muted,lineHeight:1.2}]},{width:'*',stack:[{text:'02 9326 7438 · info@phosforma.com.au',fontSize:7,color:C.muted},{text:'Sydney · Melbourne · Brisbane · Perth · Adelaide',fontSize:7,color:C.muted,margin:[0,2,0,0]}]},{width:40,text:`${p}/${n}`,fontSize:8,alignment:'right',margin:[0,12,0,0]}]}),
+  const doc={pageSize:'A4',pageMargins:[34,74,34,70],info:{title:`${f.family} ${m.code} datasheet`,author:'Phosforma',subject:sub},
+    defaultStyle:{font:'Helvetica',fontSize:9,color:C.ink},
+    header:()=>({margin:[34,24,34,0],stack:[{columns:[{width:'*',stack:[{text:[{text:f.family+' / ',fontSize:12},{text:m.code,fontSize:12,bold:true},{text:sub?'  -  '+sub:'',fontSize:9.5,color:C.muted}]},{text:(m.details||m.code),fontSize:6.5,color:C.muted,margin:[0,4,0,0]}]},{width:92,image:logo,fit:[92,20],alignment:'right'}]},{canvas:[{type:'line',x1:0,y1:10,x2:W,y2:10,lineWidth:.6,lineColor:C.ink}]}]}),
+    footer:(p,n)=>({margin:[34,14,34,0],stack:[{canvas:[{type:'line',x1:0,y1:0,x2:W,y2:0,lineWidth:.6,lineColor:C.ink}]},{columns:[{width:150,stack:[{canvas:[{type:'rect',x:0,y:0,w:10,h:1.4,color:C.accent}],margin:[0,0,0,4]},{text:'Phosforma PTY Limited',bold:true,fontSize:7.5}]},{width:'*',text:'info@phosforma.com.au\nphosforma.com.au',fontSize:7,color:C.muted,lineHeight:1.25,margin:[0,8,0,0]},{width:60,text:`— ${p}/${n}`,fontSize:7.5,color:C.muted,alignment:'right',margin:[0,8,0,0]}],margin:[0,10,0,0]}]}),
     content};
   pm.createPdf(doc).download(`${m.code.replace(/[^\w.-]+/g,'_')}.pdf`);
   }catch(e){console.error(e);toast('Sorry, the PDF could not be made. Use the datasheet page and print to PDF instead.');}
@@ -1170,7 +1175,7 @@ function viewDatasheet(f,m){
     <h2>Description</h2><p class="sh-p">${esc(f.description)}</p>
     ${specLines.length?`<h2>Technical details</h2><ul class="sh-list">${specLines.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:''}
     ${f.dimensions?`<h2>Dimensions</h2><div class="sh-dims"><phos-drawing src="${esc(f.dimensions)}" aria-label="${esc(f.family)} dimension drawing"></phos-drawing>${f.dimensions_note?`<p>${esc(f.dimensions_note)}</p>`:''}</div>`:''}
-    <footer class="sh-foot"><span>Phosforma · 02 9326 7438 · info@phosforma.com.au</span><span>${esc(today)} · Specifications subject to change</span></footer>
+    <footer class="sh-foot"><span>Phosforma PTY Limited · info@phosforma.com.au · phosforma.com.au</span><span>${esc(today)} · Specifications subject to change</span></footer>
   </article></div></div>`;
 }
 
