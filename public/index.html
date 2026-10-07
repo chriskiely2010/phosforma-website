@@ -957,7 +957,7 @@ async function pdfPhoto(src,scale){
   const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   x.drawImage(im,0,0,W,H);const p=x.getImageData(3,3,1,1).data;x.fillStyle=`rgb(${p[0]},${p[1]},${p[2]})`;
   if(scale&&scale<1){x.fillRect(0,0,W,H);const w=W*scale,h=H*scale;x.drawImage(im,(W-w)/2,(H-h)/2,w,h);}
-  return {url:c.toDataURL('image/jpeg',.9),ratio:H/W};
+  return {url:c.toDataURL('image/jpeg',.9),ratio:H/W,bg:'#'+[p[0],p[1],p[2]].map(n=>n.toString(16).padStart(2,'0')).join('')};
 }
 async function pdfLogo(){
   const s=document.querySelector('.logo svg').cloneNode(true);s.setAttribute('width','1000');s.setAttribute('height','216');s.setAttribute('xmlns','http://www.w3.org/2000/svg');s.setAttribute('fill','#10181f');
@@ -1006,7 +1006,7 @@ async function datasheetPDF(code){
       {width:170,stack:[photo?{image:photo.url,width:170,height:Math.min(170,170*photo.ratio)}:{canvas:[{type:'rect',x:0,y:0,w:170,h:170,color:'#e9e9ea'}]}]},
       {width:210,margin:[48,8,0,0],stack:[label('Finish'),box(m.finish||split(f.finishes)[0]||'—','STANDARD',finColor(m.finish||f.finishes)),label('Brand'),box(f.brand||'—','PARTNER',null)]},
       {width:'*',text:''}
-    ]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>C.band,paddingLeft:()=>34,paddingRight:()=>34,paddingTop:()=>22,paddingBottom:()=>22},margin:[-34,0,-34,0]};
+    ]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>(photo&&photo.bg)||C.band,paddingLeft:()=>34,paddingRight:()=>34,paddingTop:()=>22,paddingBottom:()=>22},margin:[-34,0,-34,0]};
   const specLines=String(f.specification||'').split(/\.\s+(?=[A-Z0-9Ø])/).map(s=>s.replace(/\.$/,'').trim()).filter(Boolean);
   const striped=(rows,w)=>({table:{widths:['*','auto'],body:rows.map(([a,b])=>[{text:a,bold:b!=='',fontSize:8},{text:String(b),fontSize:8,alignment:'right'}])},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:i=>i%2===0?C.stripe:null,paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>6,paddingBottom:()=>6},width:w||'*'});
   const half=(content)=>({columns:[{width:'50%',stack:[content]},{width:'*',text:''}]});
