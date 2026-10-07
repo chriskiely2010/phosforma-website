@@ -1131,7 +1131,7 @@ async function datasheetPDF(code){
       {width:'50%',margin:[0,0,24,0],stack:[label('Polar curve'),{svg:polarSVG(curve,C),width:W/2-24}]},
       cone?{width:'*',margin:[24,0,0,0],stack:[label('Beam cone'),{svg:coneSVG(curve,C),width:W/2-24}]}:{width:'*',text:''}]},
       {text:[...(cone?[{text:'Beam angle',bold:true},{text:` - ${Math.round(b.beam)}°   `,color:C.muted}]:[]),{text:'Peak intensity',bold:true},{text:` - ${Math.round(b.peak)} cd   `,color:C.muted},{text:'Luminaire lumens',bold:true},{text:` - ${curve.lm} lm`,color:C.muted}],fontSize:8,margin:[0,10,0,0]}));}
-  if(elec.length||inst.length)content.push(sect(curve?undefined:'before',H2('Electrical data & installation'),{columns:[{width:'50%',margin:[0,0,24,0],stack:[label('Electrical'),striped(elec.length?elec:[['Control','—']])]},{width:'*',margin:[24,0,0,0],stack:[label('Installation'),striped(inst)]}]}));
+  // Electrical data & installation section removed (Chris, 7 Oct)
   const doc={pageSize:'A4',pageMargins:[34,58,34,70],info:{title:`${f.family} ${m.code} datasheet`,author:'Phosforma',subject:sub},
     defaultStyle:{font:'Helvetica',fontSize:9,color:C.ink},
     header:()=>({margin:[34,20,34,0],stack:[{columns:[{width:'*',text:[{text:f.family+' / ',fontSize:12},{text:m.code,fontSize:12,bold:true}],margin:[0,6,0,0]},{width:92,image:logo,fit:[92,20],alignment:'right'}]}]}),
