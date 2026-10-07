@@ -1001,6 +1001,45 @@ async function pdfDrawing(src){
 const IP1={0:'not protected against solids',1:'protected against solids larger than 50 mm',2:'protected against solids larger than 12 mm',3:'protected against solids larger than 2.5 mm',4:'protected against solids larger than 1 mm',5:'dust protected',6:'dust tight'};
 const IP2={0:'not protected against liquids',1:'protected against dripping water',2:'protected against dripping water when tilted',3:'protected against spraying water',4:'protected against splashing water',5:'protected against water jets',6:'protected against powerful water jets',7:'protected against temporary immersion',8:'protected against continuous immersion',9:'protected against high-pressure, high-temperature water'};
 function ipText(ip){return String(ip||'').split(/[\/,;]| or /).map(s=>s.trim()).filter(Boolean).map(s=>{const m=s.match(/IP\s*(\d)(\d)/i);return m?`${s.replace(/\s+/g,'')} (${IP1[m[1]]||''}, ${IP2[m[2]]||''})`:s;}).join(' · ');}
+/* photometric diagrams for the PDF datasheet: polar curve and vertical beam cone, drawn as SVG in Phosforma style */
+let _phot;
+const loadPhot=()=>_phot||(_phot=fetch('/files/photometry/photometry.json').then(r=>r.ok?r.json():null).catch(()=>null));
+function photBeam(c){const I=c.c0,pk=Math.max(...I),i0=I.indexOf(pk);let g=0;
+  for(let i=i0;i<I.length-1;i++){if(I[i+1]<=pk/2){g=c.g[i]+(c.g[i+1]-c.g[i])*(I[i]-pk/2)/(I[i]-I[i+1]);break;}}return {peak:pk,i0:I[0],beam:2*g};}
+const niceStep=m=>{const r=m/5,p=Math.pow(10,Math.floor(Math.log10(r))),f=r/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p;};
+function polarSVG(c,C){
+  const W=250,H=140,cx=W/2,cy=10,R=112,pk=Math.max(...c.c0,...c.c90,...c.c180,...c.c270),st=niceStep(pk),top=st*Math.ceil(pk/st),sc=R/top;
+  const P=(g,v,side)=>{const a=g*Math.PI/180;return [(cx+side*Math.sin(a)*v*sc).toFixed(1),(cy+Math.cos(a)*v*sc).toFixed(1)];};
+  const line=(arr,side)=>c.g.map((g,i)=>g<=90?P(g,arr[i],side):null).filter(Boolean);
+  const pathOf=(r,l)=>{const a=l.slice().reverse().concat(r);return 'M'+a.map(p=>p.join(',')).join('L');};
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H+28}" viewBox="0 0 ${W} ${H+28}" font-family="Helvetica">`;
+  for(let k=1;k*st<=top+1e-6;k++){const r=k*st*sc;s+=`<path d="M${cx-r},${cy} A${r},${r} 0 0 0 ${cx+r},${cy}" fill="none" stroke="${C.line}" stroke-width="0.5"/>`;
+    const [lx,ly]=P(84,k*st,1);s+=`<text x="${lx}" y="${(+ly-2).toFixed(1)}" font-size="6" fill="${C.muted}" text-anchor="middle">${Math.round(k*st)}</text>`;}
+  for(const a of [15,30,45,60,75,90])for(const sd of [-1,1]){const [x,y]=P(a,top,sd);s+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${C.line}" stroke-width="0.5"/>`;
+    if(a%30===0&&a<90){const [tx,ty]=P(a,top*1.1,sd);s+=`<text x="${tx}" y="${(+ty+(a===90?-3:2)).toFixed(1)}" font-size="6.5" fill="${C.muted}" text-anchor="middle">${a}°</text>`;}}
+  s+=`<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy+R}" stroke="${C.line}" stroke-width="0.5"/><text x="${cx}" y="${cy+R+9}" font-size="6.5" fill="${C.muted}" text-anchor="middle">0°</text>`;
+  s+=`<path d="${pathOf(line(c.c0,1),line(c.c180,-1))}" fill="${C.ink}" fill-opacity="0.07" stroke="${C.ink}" stroke-width="1.1"/>`;
+  s+=`<path d="${pathOf(line(c.c90,1),line(c.c270,-1))}" fill="none" stroke="${C.muted}" stroke-width="0.9" stroke-dasharray="3 2"/>`;
+  const ly=H+20;s+=`<line x1="20" y1="${ly-2}" x2="36" y2="${ly-2}" stroke="${C.ink}" stroke-width="1.1"/><text x="40" y="${ly}" font-size="6.5" fill="${C.muted}">C0-C180</text>`;
+  s+=`<line x1="90" y1="${ly-2}" x2="106" y2="${ly-2}" stroke="${C.muted}" stroke-width="0.9" stroke-dasharray="3 2"/><text x="110" y="${ly}" font-size="6.5" fill="${C.muted}">C90-C270</text><text x="${W-20}" y="${ly}" font-size="6.5" fill="${C.muted}" text-anchor="end">cd</text>`;
+  return s+'</svg>';
+}
+function coneSVG(c,C){
+  const b=photBeam(c),half=b.beam/2*Math.PI/180,W=250,H=210,cx=110,y0=18,u=36;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Helvetica">`;
+  const wAt=d=>2*d*Math.tan(half);
+  const xr=cx+wAt(5)/2*u,xl=cx-wAt(5)/2*u,yb=y0+5*u;
+  s+=`<path d="M${cx},${y0} L${xr.toFixed(1)},${yb} L${xl.toFixed(1)},${yb} Z" fill="${C.ink}" fill-opacity="0.07" stroke="${C.ink}" stroke-width="0.8"/>`;
+  s+=`<rect x="${cx-5}" y="${y0-12}" width="10" height="12" fill="${C.ink}"/>`;
+  s+=`<text x="${cx}" y="${y0+22}" font-size="7" fill="${C.ink}" text-anchor="middle" font-weight="bold">${Math.round(b.beam)}°</text>`;
+  s+=`<text x="0" y="8" font-size="6.5" fill="${C.muted}">Distance</text><text x="${W}" y="8" font-size="6.5" fill="${C.muted}" text-anchor="end">Illuminance · beam Ø</text>`;
+  for(let d=1;d<=5;d++){const y=y0+d*u,rx=wAt(d)/2*u;
+    s+=`<ellipse cx="${cx}" cy="${y}" rx="${rx.toFixed(1)}" ry="${Math.max(1.5,rx*0.12).toFixed(1)}" fill="none" stroke="${C.ink}" stroke-width="0.6"/>`;
+    s+=`<line x1="20" y1="${y}" x2="${(cx-rx-3).toFixed(1)}" y2="${y}" stroke="${C.line}" stroke-width="0.5" stroke-dasharray="1.5 1.5"/>`;
+    s+=`<text x="0" y="${y+2}" font-size="7" fill="${C.ink}">${d} m</text>`;
+    s+=`<text x="${W}" y="${y-1}" font-size="7" fill="${C.ink}" text-anchor="end" font-weight="bold">${Math.round(b.i0/(d*d))} lx</text><text x="${W}" y="${y+7}" font-size="6.5" fill="${C.muted}" text-anchor="end">Ø ${wAt(d).toFixed(1)} m</text>`;}
+  return s+'</svg>';
+}
 async function datasheetPDF(code){
   const hit=findCode(code);if(!hit)return;const {f,m}=hit;
   toast('Preparing the datasheet PDF…');
@@ -1011,7 +1050,8 @@ async function datasheetPDF(code){
   const img=m.image||f.imgs[0];
   const dimSrc=(m.size&&f.imgs.find(p=>new RegExp('dimensions-'+m.size.toLowerCase().replace(/\s+/g,'-')+'\\.','i').test(p)))||f.dimensions;
   const dimNote=(m.size&&String(f.dimensions_note||'').split(' · ').find(t=>t.startsWith(m.size+' Ø')))||f.dimensions_note;
-  const [logo,photo,dwg,blogo]=await Promise.all([pdfLogo(),img&&/\.(jpe?g|png|webp)(\?|$)/i.test(img)?pdfPhoto(img,m.image?m.scale:0).catch(()=>null):null,dimSrc?pdfDrawing(dimSrc).catch(()=>null):null,pdfBrandLogo(f.brand).catch(()=>null)]);
+  const [logo,photo,dwg,blogo,phot]=await Promise.all([pdfLogo(),img&&/\.(jpe?g|png|webp)(\?|$)/i.test(img)?pdfPhoto(img,m.image?m.scale:0).catch(()=>null):null,dimSrc?pdfDrawing(dimSrc).catch(()=>null):null,pdfBrandLogo(f.brand).catch(()=>null),loadPhot()]);
+  const curve=phot&&phot.codes[m.code]?phot.curves[phot.codes[m.code]]:null;
   const v=k=>mval(f,m,k);
   const today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'numeric'});
   const sub=[m.name,m.finish].filter(Boolean).join(' · ');
@@ -1064,8 +1104,11 @@ async function datasheetPDF(code){
     ]},{width:'*',margin:[24,0,0,0],stack:dimCol}]}];
   const sect=(pb,...items)=>({stack:items,unbreakable:true,pageBreak:pb});
 
-  if(photo2.length)content.push(sect('before',H2('Photometric data'),label('Details'),half(striped(photo2))));
-  if(elec.length||inst.length)content.push(sect(undefined,H2('Electrical data & installation'),{columns:[{width:'50%',margin:[0,0,24,0],stack:[label('Electrical'),striped(elec.length?elec:[['Control','—']])]},{width:'*',margin:[24,0,0,0],stack:[label('Installation'),striped(inst)]}]}));
+  if(curve){const b=photBeam(curve);content.push(sect('before',H2('Photometric data',18),{columns:[
+      {width:'50%',margin:[0,0,24,0],stack:[label('Polar curve'),{svg:polarSVG(curve,C),width:W/2-24}]},
+      {width:'*',margin:[24,0,0,0],stack:[label('Beam cone'),{svg:coneSVG(curve,C),width:W/2-24}]}]},
+      {text:[{text:'Beam angle',bold:true},{text:` - ${Math.round(b.beam)}°   `,color:C.muted},{text:'Peak intensity',bold:true},{text:` - ${Math.round(b.peak)} cd   `,color:C.muted},{text:'Luminaire lumens',bold:true},{text:` - ${curve.lm} lm`,color:C.muted}],fontSize:8,margin:[0,10,0,0]}));}
+  if(elec.length||inst.length)content.push(sect(curve?undefined:'before',H2('Electrical data & installation'),{columns:[{width:'50%',margin:[0,0,24,0],stack:[label('Electrical'),striped(elec.length?elec:[['Control','—']])]},{width:'*',margin:[24,0,0,0],stack:[label('Installation'),striped(inst)]}]}));
   const doc={pageSize:'A4',pageMargins:[34,58,34,70],info:{title:`${f.family} ${m.code} datasheet`,author:'Phosforma',subject:sub},
     defaultStyle:{font:'Helvetica',fontSize:9,color:C.ink},
     header:()=>({margin:[34,20,34,0],stack:[{columns:[{width:'*',text:[{text:f.family+' / ',fontSize:12},{text:m.code,fontSize:12,bold:true}],margin:[0,6,0,0]},{width:92,image:logo,fit:[92,20],alignment:'right'}]}]}),

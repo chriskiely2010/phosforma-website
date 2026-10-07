@@ -28,9 +28,9 @@ for root in ['images', 'files']:
                 os.makedirs(os.path.join(pub, r), exist_ok=True); shutil.copy(p, os.path.join(pub, p)); n += 1
 if os.path.exists('vendor'): shutil.copytree('vendor', os.path.join(pub, 'vendor'))
 shutil.rmtree(tools, ignore_errors=True); os.makedirs(tools)
-for f in ['build_csv.py', 'true_scale.py', 'make_public.py', 'tile_sizes.csv', 'Phosforma_products_template.csv', 'README.txt', 'delta_ugr.json', 'load_batches.py', 'prerender.py']:
+for f in ['build_csv.py', 'true_scale.py', 'make_public.py', 'tile_sizes.csv', 'Phosforma_products_template.csv', 'README.txt', 'delta_ugr.json', 'load_batches.py', 'prerender.py', 'photometry.py']:
     if os.path.exists(f): shutil.copy(f, os.path.join(tools, f))
-for d in ['data', 'originals', 'archive']:
+for d in ['data', 'originals', 'archive', 'photometry_src']:
     if os.path.exists(d): shutil.copytree(d, os.path.join(tools, d))
 print(n, 'site files copied to public/,', n2, 'PDFs to r2/', '(R2 live)' if R2_LIVE else '(R2 not live yet)')
 
