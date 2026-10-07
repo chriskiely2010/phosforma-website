@@ -997,7 +997,6 @@ async function datasheetPDF(code){
   const today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'numeric'});
   const sub=[m.name,m.finish].filter(Boolean).join(' · ');
   const W=595.28-68;
-  const dash=()=>({canvas:[{type:'rect',x:0,y:0,w:10,h:1.4,color:C.accent}],margin:[0,0,0,5]});
   const label=t=>({text:t,fontSize:7.5,color:C.muted,margin:[0,0,0,8]});
   const H2=t=>({text:t,fontSize:20,bold:true,color:C.ink,margin:[0,22,0,12]});
   const box=(name,tag,swatch)=>({table:{widths:[14,'*','auto'],body:[[swatch?{canvas:[{type:'ellipse',x:5,y:6,r1:4.5,r2:4.5,color:swatch,lineColor:'#9a9a9c',lineWidth:.4}]}:'',{text:name,fontSize:8.5},{text:tag,fontSize:6.5,color:C.muted,characterSpacing:.4,margin:[0,1,0,0]}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,fillColor:()=>'#ffffff',paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>6,paddingBottom:()=>6},margin:[0,0,0,14]});
@@ -1034,7 +1033,7 @@ async function datasheetPDF(code){
   const doc={pageSize:'A4',pageMargins:[34,74,34,70],info:{title:`${f.family} ${m.code} datasheet`,author:'Phosforma',subject:sub},
     defaultStyle:{font:'Helvetica',fontSize:9,color:C.ink},
     header:()=>({margin:[34,24,34,0],stack:[{columns:[{width:'*',text:[{text:f.family+' / ',fontSize:12},{text:m.code,fontSize:12,bold:true}],margin:[0,6,0,0]},{width:92,image:logo,fit:[92,20],alignment:'right'}]}]}),
-    footer:(p,n)=>({margin:[34,14,34,0],stack:[{canvas:[{type:'line',x1:0,y1:0,x2:W,y2:0,lineWidth:.6,lineColor:C.ink}]},{columns:[{width:150,stack:[{canvas:[{type:'rect',x:0,y:0,w:10,h:1.4,color:C.accent}],margin:[0,0,0,4]},{text:'Phosforma PTY Limited',bold:true,fontSize:7.5}]},{width:'*',text:'info@phosforma.com.au\nphosforma.com.au',fontSize:7,color:C.muted,lineHeight:1.25,margin:[0,8,0,0]},{width:60,text:`— ${p}/${n}`,fontSize:7.5,color:C.muted,alignment:'right',margin:[0,8,0,0]}],margin:[0,10,0,0]}]}),
+    footer:(p,n)=>({margin:[34,14,34,0],stack:[{canvas:[{type:'line',x1:0,y1:0,x2:W,y2:0,lineWidth:.6,lineColor:C.ink}]},{columns:[{width:150,stack:[{text:'Phosforma PTY Limited',bold:true,fontSize:7.5}]},{width:'*',text:'info@phosforma.com.au\nphosforma.com.au',fontSize:7,color:C.muted,lineHeight:1.25,margin:[0,8,0,0]},{width:60,text:`— ${p}/${n}`,fontSize:7.5,color:C.muted,alignment:'right',margin:[0,8,0,0]}],margin:[0,10,0,0]}]}),
     content};
   pm.createPdf(doc).download(`${m.code.replace(/[^\w.-]+/g,'_')}.pdf`);
   }catch(e){console.error(e);toast('Sorry, the PDF could not be made. Use the datasheet page and print to PDF instead.');}
