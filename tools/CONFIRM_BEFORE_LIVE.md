@@ -43,5 +43,6 @@ Rule (Chris, 7 Oct): a Phosforma datasheet describes ONE code. Nothing on it may
 25. Page names as Macrolux writes them (mt1_27, ml_20 LED, mt2_27/i); versions sharing a profile code share one page.
 26. 23 shared accessories on one "Macrolux profile accessories" page; single pieces only (packs, corner cuts, corner modules, MD_45 H profile, driver brackets, LED primer, 24V cables left out).
 27. Section renders added (Chris's 45 renders, 7 Oct): one render per profile for every finish (renders are one colour), prismatic render on DP diffuser codes; end caps/brackets/kits and the accessories page keep the line drawing. Still no dimensions or drawings, so the Phosforma PDF has no Dimensions section. Datasheet link = Macrolux's per-profile brochure.
-28. Mounting not stated by Macrolux for 14 profiles (ma2_10, ma_12, mb_15, md_12, mt0_12, mt1_12, mx1_12, mx2_12, mt2_27, mt3_27, mx2_27/i, ala, hiss, mc_90).
+28. Category: Macrolux pages moved to their own category "Profiles for Flexible Linear" (Interior), after Flexible Linear in the menu.
+28a. Mounting not stated by Macrolux for 14 profiles (ma2_10, ma_12, mb_15, md_12, mt0_12, mt1_12, mx1_12, mx2_12, mt2_27, mt3_27, mx2_27/i, ala, hiss, mc_90).
 29. mt3_27 opal only; New badge on all 37 pages; left out: LED-only profiles, groove 140 / Groove square, groove 70.

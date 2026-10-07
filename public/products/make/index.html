@@ -906,7 +906,7 @@ const FEATURED=[{title:'Daytona',image:'images/feat-daytona.jpg',link:'#all'},{t
 // Home page slider: add a line per slide (image, heading, link)
 const HOME_SLIDES=[{image:'images/home-daytona.jpg',title:'Daytona',link:'#all',position:'center'},{image:'images/home-maya.jpg',title:'Maya System',link:'#all',position:'center'}];
 const SHOW_DIMS=false; // set to true to show the Dimensions panel beside the Overview
-const ORDER={Interior:['Recessed Downlight','Surface Downlights | Spotlights','Track Mounted','Ceiling Suspended | Pendants','Wall Mounted','Profiles & Systems','Flexible Linear'],Exterior:['Surface Downlights | Spotlights','Ceiling Suspended | Pendants','Wall Mounted','Floodlight','Bollard','Inground Uplights','Inground Linear']};
+const ORDER={Interior:['Recessed Downlight','Surface Downlights | Spotlights','Track Mounted','Ceiling Suspended | Pendants','Wall Mounted','Profiles & Systems','Flexible Linear','Profiles for Flexible Linear'],Exterior:['Surface Downlights | Spotlights','Ceiling Suspended | Pendants','Wall Mounted','Floodlight','Bollard','Inground Uplights','Inground Linear']};
 const INTRO={
   'Recessed Downlight':'Downlights that sit flush in the ceiling: fixed and adjustable, round, square and linear, with deep-set sources for low glare.',
   'Surface Downlights | Spotlights':'Surface-mounted downlights and spots for ceilings that cannot take recessed luminaires.',
@@ -915,7 +915,7 @@ const INTRO={
   'Wall Mounted':'Wall lights for direct and direct/indirect light along corridors, stairs and facades.',
   'Profiles & Systems':'Linear profiles and continuous-line systems, suspended, surface or recessed.',
   'Floodlight':'Floodlights and projectors for facades, trees, signs and landscape, from compact spots to high-output heads.',
-  'Bollard':'Bollards for paths, plazas and landscape.','Flexible Linear':'Flexible LED strip for coves, joinery, shelving and continuous lines of light.','Inground Uplights':'Walk-over inground uplights for facades, trees and architectural features.','Inground Linear':'Walk-over and drive-over lines of light for paths, plazas and facades.'};
+  'Bollard':'Bollards for paths, plazas and landscape.','Profiles for Flexible Linear':'Aluminium profiles, diffusers and end caps for building continuous lines of light with flexible LED strip, supplied empty and cut to length.','Flexible Linear':'Flexible LED strip for coves, joinery, shelving and continuous lines of light.','Inground Uplights':'Walk-over inground uplights for facades, trees and architectural features.','Inground Linear':'Walk-over and drive-over lines of light for paths, plazas and facades.'};
 const cats=()=>{const m=new Map();CATALOG.forEach(f=>{const k=f.environment+'|'+f.category;m.set(k,(m.get(k)||0)+1)});return m;};
 const catSlug=(env,cat)=>slug(env+'-'+cat);
 const findCat=s=>{for(const f of CATALOG){if(catSlug(f.environment,f.category)===s)return{env:f.environment,cat:f.category};}return null;};
