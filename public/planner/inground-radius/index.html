@@ -486,13 +486,16 @@ const PMAT={
 };
 const IPARTS={body:[[-15,15,-37,-17]],steel:[[-16.5,-15,-100,1.2],[15,16.5,-100,1.2],[-36.5,36.5,-102,-100]]};
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+function leadPts(root,back,t){return [root,root.clone().add(V3(0,-0.02,0)).addScaledVector(t,0.03),back.clone().addScaledVector(t,-0.02),back];}
 function tube(points,r){return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),24,r,8,false),PMAT.cable);}
 function connector(male){ // T1X: Ø23 body, Ø14 nose; male 57 mm, female 66 mm (spec sheet)
   const g=new THREE.Group(),L=male?0.057:0.066;
-  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.0115,0.0115,L*0.62,20),PMAT.conn);body.position.y=-L*0.19;
-  const nose=new THREE.Mesh(new THREE.CylinderGeometry(0.007,0.007,L*0.38,16),male?PMAT.conn:PMAT.conn);nose.position.y=L*0.31;
-  const ring=new THREE.Mesh(new THREE.CylinderGeometry(0.0118,0.0118,0.004,20),PMAT.ring);ring.position.y=L*0.12;
-  g.add(body,nose,ring);g.userData.len=L;return g;}
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.0115,0.0115,L*0.62,20),PMAT.conn);body.position.y=L*0.19;   // coupling end (meets the other half)
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.007,0.0085,L*0.38,16),PMAT.conn);tail.position.y=-L*0.31;     // cable entry end
+  const ring=new THREE.Mesh(new THREE.CylinderGeometry(0.0118,0.0118,0.004,20),PMAT.ring);ring.position.y=-L*0.10;
+  const face=new THREE.Mesh(new THREE.CylinderGeometry(male?0.006:0.0085,male?0.006:0.0085,0.003,16),new THREE.MeshStandardMaterial({color:male?0xb08d57:0x0c0d0e,metalness:male?0.8:0,roughness:0.4}));face.position.y=L/2+0.0005;
+  const nose=tail;
+  g.add(body,nose,ring,face);g.userData.len=L;return g;}
 function aim(obj,dir){obj.quaternion.setFromUnitVectors(V3(0,1,0),dir.clone().normalize());}
 function buildParts(target,list){
   const group=new THREE.Group(),picks=[],pgs=[];const col=CCTCOL[S.cct]||CCTCOL.T930;
@@ -518,8 +521,8 @@ function buildParts(target,list){
     const lead=(pt,sg,male)=>{const L=male?0.057:0.066,t=T(pt).multiplyScalar(sg);
       const c=connector(male);const cp=P(pt,-sg*(L/2+0.002),0,-0.066);c.position.copy(cp);aim(c,t);ins.add(c);
       const back=cp.clone().addScaledVector(t,-L/2),root=P(pt,-sg*0.13,0,-0.037);
-      ins.add(tube([root,root.clone().add(V3(0,-0.02,0)).addScaledVector(t,0.03),back.clone().addScaledVector(t,-0.02),back],0.00265));
-      c.userData.dir=t.clone().multiplyScalar(0.05);extras.push(c);};
+      const cab=tube(leadPts(root,back,t),0.00265);ins.add(cab);
+      c.userData.dir=t.clone().multiplyScalar(-0.035);c.userData.cable={mesh:cab,root,back,t};extras.push(c);};
     if(!capB)lead(f.at(-1),1,true);
     if(!capA)lead(f[0],-1,false);
     // feed cable on the first insert of a run: down through the profile opening and out to the 24/48V driver
@@ -547,7 +550,8 @@ function buildStudio(){ // the whole design as built, lifted out of the ground, 
 function applyExplode(){if(!studioRun)return;const e=explode,ez=Math.min(1,e*1.6),el=Math.max(0,(e-0.25)/0.75);
   studioRun.pgs.forEach(pg=>{pg.position.copy(pg.userData.off).multiplyScalar(e);
     const ins=pg.userData.ins;ins.position.set(0,ins.userData.lift*ez,0);
-    pg.userData.extras.forEach(x=>{if(!x.userData.base)x.userData.base=x.position.clone();x.position.copy(x.userData.base).addScaledVector(x.userData.dir,el);});});
+    pg.userData.extras.forEach(x=>{if(!x.userData.base)x.userData.base=x.position.clone();x.position.copy(x.userData.base).addScaledVector(x.userData.dir,el);
+      const cb=x.userData.cable;if(cb&&cb.el!==el){cb.el=el;const b=cb.back.clone().addScaledVector(x.userData.dir,el);cb.mesh.geometry.dispose();cb.mesh.geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(leadPts(cb.root,b,cb.t)),24,0.00265,8,false);}});});
   studioLabels.forEach(l=>l.visible=e>0.4);showLabels();}
 function showLabels(){const st=activeScene===studio;labels.forEach(l=>l.element.style.display=st?'none':'');studioLabels.forEach(l=>l.element.style.display=st?'':'none');}
 /* ---------- day / night ---------- */
