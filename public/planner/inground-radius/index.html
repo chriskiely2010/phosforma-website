@@ -36,6 +36,12 @@ label.f{display:grid;gap:4px;font-size:11.5px;color:var(--muted)}
 input,select{font:inherit;font-size:13px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-width:0;width:100%}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lines{display:flex;flex-direction:column;gap:12px}
+.line{border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:8px;background:color-mix(in srgb,var(--chip) 45%,transparent)}
+.lhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lhead b{font-size:13px}.lhead .tag{margin-left:6px}
+.lstart{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.line .adds{margin-top:0}
 .steps{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
 .step{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;border:1px solid var(--line);border-radius:6px;padding:8px}
 .step .n{font:600 11px var(--sans);width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--panel);display:grid;place-items:center;margin-top:2px}
@@ -119,13 +125,11 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
     </section>
 
     <section>
-      <h2><span>Path</span><span>start → end</span></h2>
-      <ol class="steps" id="steps"></ol>
+      <h2><span>Lines</span><span>start → end</span></h2>
+      <div id="lines" class="lines"></div>
       <div class="adds">
-        <button class="btn" id="add-s">+ Straight</button>
-        <button class="btn" id="add-l">+ Turn left</button>
-        <button class="btn" id="add-r">+ Turn right</button>
-        <select id="preset" aria-label="Load an example path" style="width:auto;flex:1"><option value="">Load an example…</option></select>
+        <button class="btn" id="add-line">+ Add a separate line</button>
+        <select id="preset" aria-label="Load an example" style="width:auto;flex:1"><option value="">Load an example…</option></select>
       </div>
     </section>
 
@@ -214,20 +218,27 @@ const SEGDESC={S:'end cap at start, feed cable in',M:'no end caps, joins both si
 const codeOf=(p,seg,st,cct)=>{const [strip,ww]=st.id.split(' ');return `IngroundR ${seg} EOP H100 ${p.R} ${p.L} / ${strip} G5 ${ww} ${cct} / OR.T1x`;};
 
 /* ======================= state ======================= */
+const ONE=st=>[{x:0,y:0,dir:0,steps:st}];
 const PRESETS={
-  'S-bend walkway (10 m)':[{t:'S',len:2000},{t:'L',r:'R1975',a:45},{t:'S',len:500},{t:'R',r:'R1975',a:45},{t:'S',len:1000},{t:'L',r:'R1000',a:90},{t:'S',len:2000}],
-  'Straight line (6 m)':[{t:'S',len:6000}],
-  'Quarter circle R1000':[{t:'L',r:'R1000',a:90}],
-  'Full circle R1975':[{t:'L',r:'R1975',a:360}],
-  'Serpentine path (18 m)':[{t:'S',len:1000},{t:'L',r:'R2950',a:45},{t:'R',r:'R2950',a:90},{t:'L',r:'R2950',a:90},{t:'R',r:'R2950',a:90},{t:'L',r:'R2950',a:45},{t:'S',len:1000}],
-  'Planter surround with 90° corners':[{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000},{t:'L',r:'R515',a:90},{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000}],
+  'S-bend walkway (10 m)':ONE([{t:'S',len:2000},{t:'L',r:'R1975',a:45},{t:'S',len:500},{t:'R',r:'R1975',a:45},{t:'S',len:1000},{t:'L',r:'R1000',a:90},{t:'S',len:2000}]),
+  'Two parallel lines, 1.5 m apart':[{x:0,y:0,dir:0,steps:[{t:'S',len:6000}]},{x:0,y:-1500,dir:0,steps:[{t:'S',len:6000}]}],
+  'Path edges with a bend (two lines)':[{x:0,y:0,dir:0,steps:[{t:'S',len:3000},{t:'R',r:'R2950',a:45},{t:'S',len:2000}]},{x:0,y:-1500,dir:0,steps:[{t:'S',len:3000},{t:'R',r:'R1975',a:45},{t:'S',len:3000}]}],
+  'Straight line (6 m)':ONE([{t:'S',len:6000}]),
+  'Quarter circle R1000':ONE([{t:'L',r:'R1000',a:90}]),
+  'Full circle R1975':ONE([{t:'L',r:'R1975',a:360}]),
+  'Serpentine path (18 m)':ONE([{t:'S',len:1000},{t:'L',r:'R2950',a:45},{t:'R',r:'R2950',a:90},{t:'L',r:'R2950',a:90},{t:'R',r:'R2950',a:90},{t:'L',r:'R2950',a:45},{t:'S',len:1000}]),
+  'Planter surround with 90° corners':ONE([{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000},{t:'L',r:'R515',a:90},{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000}]),
 };
-let S={proj:'',client:'',strip:STRIPS[0].id,cct:'T930',steps:PRESETS['S-bend walkway (10 m)'].map(x=>({...x}))};
+const copyLines=l=>JSON.parse(JSON.stringify(l));
+let S={proj:'',client:'',strip:STRIPS[0].id,cct:'T930',lines:copyLines(PRESETS['S-bend walkway (10 m)'])};
 // share links carry the plan in the address (#p=…); otherwise the last plan in this browser
 const clean=()=>JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);
 function enc(){return 'p='+encodeURIComponent(clean());}
 try{const h=location.hash.match(/#p=(.+)$/);if(h)S={...S,...JSON.parse(decodeURIComponent(h[1]))};else{const ls=localStorage.getItem('irplan');if(ls)S={...S,...JSON.parse(ls)};}}catch(e){}
+if(S.steps){if(!S.lines||!S.lines.length)S.lines=ONE(S.steps);delete S.steps;} // plans saved before separate lines existed
 const save=()=>{try{localStorage.setItem('irplan',clean());}catch(e){}};
+const LET=i=>String.fromCharCode(65+i);
+const DIRS=[[0,'→ Right'],[90,'↑ Up'],[180,'← Left'],[270,'↓ Down']];
 
 /* ======================= path → pieces ======================= */
 function straightPieces(len){ // fewest pieces of 1005/505 closest to the requested length
@@ -238,34 +249,40 @@ function straightPieces(len){ // fewest pieces of 1005/505 closest to the reques
 }
 function resolve(){
   const st=STRIPS.find(s=>s.id===S.strip)||STRIPS[0];
-  const out=[]; // pieces
-  S.steps.forEach((s,si)=>{
-    if(s.t==='S'){s._list=straightPieces(+s.len||0);s._actual=s._list.reduce((a,p)=>a+PIECE[p].len,0);s._list.forEach(p=>out.push({p,dir:null,step:si}));}
-    else{const P=PIECE[s.r]||PIECE.R1000;const n=Math.max(1,Math.round((+s.a||0)/P.ang));s._n=n;s._actual=n*P.ang;for(let k=0;k<n;k++)out.push({p:s.r,dir:s.t,step:si});}
+  const all=[],runs=[],lines=[];
+  S.lines.forEach((ln,li)=>{
+    const out=[];
+    ln.steps.forEach((s,si)=>{
+      if(s.t==='S'){s._list=straightPieces(+s.len||0);s._actual=s._list.reduce((a,p)=>a+PIECE[p].len,0);s._list.forEach(p=>out.push({p,dir:null,step:si,line:li}));}
+      else{const P=PIECE[s.r]||PIECE.R1000;const n=Math.max(1,Math.round((+s.a||0)/P.ang));s._n=n;s._actual=n*P.ang;for(let k=0;k<n;k++)out.push({p:s.r,dir:s.t,step:si,line:li});}
+    });
+    if(!out.length)return;
+    // feeds: each line is fed on its own; a line longer than the strip's max run (one side) is split into runs
+    const lr=[];let cur=[],len=0;
+    out.forEach(q=>{const L=PIECE[q.p].len/1000;if(cur.length&&len+L>st.max){lr.push(cur);cur=[];len=0;}cur.push(q);len+=L;});
+    if(cur.length)lr.push(cur);
+    lr.forEach(r=>{const ri=runs.length;runs.push(r);r.forEach((q,k)=>{q.run=ri;q.seg=r.length===1?'I':k===0?'S':k===r.length-1?'E':'M';});});
+    // geometry from the line's start point (plan Y is up; scene z is down)
+    let x=+ln.x||0,z=-(+ln.y||0),h=-(+ln.dir||0)*Math.PI/180;
+    out.forEach((q,k)=>{q.d=PIECE[q.p];q.label=LET(li)+(k+1);const d=q.d;q.pts=[];
+      if(!d.ang){q.pts.push({x,z,h});x+=Math.cos(h)*d.len;z+=Math.sin(h)*d.len;q.pts.push({x,z,h});}
+      else{const th=d.ang*Math.PI/180,rc=d.len/th,s=q.dir==='L'?-1:1,n=Math.max(4,Math.ceil(d.ang/1.2));
+        const cx=x+Math.cos(h+s*Math.PI/2)*rc,cz=z+Math.sin(h+s*Math.PI/2)*rc,a0=Math.atan2(z-cz,x-cx);
+        for(let j=0;j<=n;j++){const a=a0+s*th*j/n;q.pts.push({x:cx+Math.cos(a)*rc,z:cz+Math.sin(a)*rc,h:h+s*th*j/n});}
+        x=q.pts[n].x;z=q.pts[n].z;h+=s*th;}
+      q.code=codeOf(d,q.seg,st,S.cct);const tv=TABLE[`${d.R} ${d.L}|${st.id} ${S.cct}`]||[0,0];q.w=tv[0];q.lm=tv[1];
+      q.mid=q.pts[Math.floor(q.pts.length/2)];});
+    const gap=Math.hypot(out.at(-1).pts.at(-1).x-out[0].pts[0].x,out.at(-1).pts.at(-1).z-out[0].pts[0].z);
+    lines.push({li,pieces:out,closed:gap<60&&out.length>3,runs:lr});
+    all.push(...out);
   });
-  // feeds: split into runs no longer than the strip's max run (from one side)
-  const runs=[];let cur=[],len=0;
-  out.forEach(q=>{const L=PIECE[q.p].len/1000;if(cur.length&&len+L>st.max){runs.push(cur);cur=[];len=0;}cur.push(q);len+=L;});
-  if(cur.length)runs.push(cur);
-  runs.forEach((r,ri)=>r.forEach((q,k)=>{q.run=ri;q.seg=r.length===1?'I':k===0?'S':k===r.length-1?'E':'M';}));
-  // geometry
-  let x=0,z=0,h=0;
-  out.forEach((q,i)=>{q.i=i;q.d=PIECE[q.p];const d=q.d;q.pts=[];
-    if(!d.ang){q.pts.push({x,z,h});x+=Math.cos(h)*d.len;z+=Math.sin(h)*d.len;q.pts.push({x,z,h});}
-    else{const th=d.ang*Math.PI/180,rc=d.len/th,s=q.dir==='L'?-1:1,n=Math.max(4,Math.ceil(d.ang/1.2));
-      const cx=x+Math.cos(h+s*Math.PI/2)*rc,cz=z+Math.sin(h+s*Math.PI/2)*rc,a0=Math.atan2(z-cz,x-cx);
-      for(let k=0;k<=n;k++){const a=a0+s*th*k/n;q.pts.push({x:cx+Math.cos(a)*rc,z:cz+Math.sin(a)*rc,h:h+s*th*k/n});}
-      x=q.pts[n].x;z=q.pts[n].z;h+=s*th;}
-    q.code=codeOf(d,q.seg,st,S.cct);const tv=TABLE[`${d.R} ${d.L}|${st.id} ${S.cct}`]||[0,0];q.w=tv[0];q.lm=tv[1];
-    q.mid=q.pts[Math.floor(q.pts.length/2)];});
+  all.forEach((q,i)=>q.i=i);
   // centre on the origin
-  const xs=out.flatMap(q=>q.pts.map(p=>p.x)),zs=out.flatMap(q=>q.pts.map(p=>p.z));
+  const xs=all.flatMap(q=>q.pts.map(p=>p.x)),zs=all.flatMap(q=>q.pts.map(p=>p.z));
   const b={x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)};
   const ox=(b.x0+b.x1)/2,oz=(b.z0+b.z1)/2;
-  out.forEach(q=>q.pts.forEach(p=>{p.x-=ox;p.z-=oz;}));
-  const ext={w:b.x1-b.x0,d:b.z1-b.z0};
-  const gap=Math.hypot(out.at(-1).pts.at(-1).x-out[0].pts[0].x,out.at(-1).pts.at(-1).z-out[0].pts[0].z);
-  return {st,pieces:out,runs,ext,closed:gap<60&&out.length>3};
+  all.forEach(q=>q.pts.forEach(p=>{p.x-=ox;p.z-=oz;}));
+  return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0}};
 }
 let R=null;
 
@@ -274,51 +291,67 @@ $('logo').innerHTML="<defs><clipPath id=\"lp\"><rect x=\"0\" y=\"0\" width=\"55.
 $('strip').innerHTML=STRIPS.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
 $('cct').innerHTML=CCTS.map(([c,l])=>`<option value="${c}">${l}</option>`).join('');
 $('preset').innerHTML+=Object.keys(PRESETS).map(k=>`<option>${k}</option>`).join('');
+function stepHTML(s,l,i){
+  const id=`${l}-${i}`,d=`data-l="${l}" data-i="${i}"`;
+  const ctl=`<div class="ctl"><button class="ib" data-a="up" ${d} aria-label="Move up" title="Move up">▲</button><button class="ib" data-a="dn" ${d} aria-label="Move down" title="Move down">▼</button><button class="ib" data-a="del" ${d} aria-label="Remove step" title="Remove step">✕</button></div>`;
+  if(s.t==='S') return `<li class="step"><span class="n">${i+1}</span><div class="body"><div class="fields s"><label class="f">Straight · length (mm)<input type="number" min="500" step="5" id="len-${id}" ${d} data-k="len" value="${s.len}"></label></div><div class="res" id="res-${id}"></div></div>${ctl}</li>`;
+  return `<li class="step"><span class="n">${i+1}</span><div class="body"><div class="fields">
+    <label class="f">Turn<select id="dir-${id}" ${d} data-k="t"><option value="L"${s.t==='L'?' selected':''}>Left</option><option value="R"${s.t==='R'?' selected':''}>Right</option></select></label>
+    <label class="f">Radius<select id="rad-${id}" ${d} data-k="r">${CURVES.map(c=>`<option value="${c}"${s.r===c?' selected':''}>R${PIECE[c].r}</option>`).join('')}</select></label>
+    <label class="f">Angle (°)<input type="number" min="0" step="any" id="ang-${id}" ${d} data-k="a" value="${s.a}"></label></div><div class="res" id="res-${id}"></div></div>${ctl}</li>`;
+}
 function renderSteps(){
-  $('steps').innerHTML=S.steps.map((s,i)=>{
-    const ctl=`<div class="ctl"><button class="ib" data-a="up" data-i="${i}" aria-label="Move up" title="Move up">▲</button><button class="ib" data-a="dn" data-i="${i}" aria-label="Move down" title="Move down">▼</button><button class="ib" data-a="del" data-i="${i}" aria-label="Remove" title="Remove">✕</button></div>`;
-    if(s.t==='S') return `<li class="step"><span class="n">${i+1}</span><div class="body"><div class="fields s"><label class="f">Straight · length (mm)<input type="number" min="500" step="5" id="len-${i}" data-i="${i}" data-k="len" value="${s.len}"></label></div><div class="res" id="res-${i}"></div></div>${ctl}</li>`;
-    return `<li class="step"><span class="n">${i+1}</span><div class="body"><div class="fields">
-      <label class="f">Turn<select id="dir-${i}" data-i="${i}" data-k="t"><option value="L"${s.t==='L'?' selected':''}>Left</option><option value="R"${s.t==='R'?' selected':''}>Right</option></select></label>
-      <label class="f">Radius<select id="rad-${i}" data-i="${i}" data-k="r">${CURVES.map(c=>`<option value="${c}"${s.r===c?' selected':''}>R${PIECE[c].r}</option>`).join('')}</select></label>
-      <label class="f">Angle (°)<input type="number" min="0" step="any" id="ang-${i}" data-i="${i}" data-k="a" value="${s.a}"></label></div><div class="res" id="res-${i}"></div></div>${ctl}</li>`;
-  }).join('');
+  $('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
+    <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div>${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px">Remove line</button>`:''}</div>
+    <div class="lstart">
+      <label class="f">Start X (mm)<input type="number" step="10" id="lx-${l}" data-l="${l}" data-lk="x" value="${ln.x}"${l===0?' title="Line A starts at the datum (0, 0)"':''}></label>
+      <label class="f">Start Y (mm)<input type="number" step="10" id="ly-${l}" data-l="${l}" data-lk="y" value="${ln.y}"></label>
+      <label class="f">Heading<select id="ld-${l}" data-l="${l}" data-lk="dir">${DIRS.map(([v,t])=>`<option value="${v}"${+ln.dir===v?' selected':''}>${t}</option>`).join('')}</select></label>
+    </div>
+    <ol class="steps">${ln.steps.map((s,i)=>stepHTML(s,l,i)).join('')}</ol>
+    <div class="adds"><button class="btn" data-add="S" data-l="${l}">+ Straight</button><button class="btn" data-add="L" data-l="${l}">+ Turn left</button><button class="btn" data-add="R" data-l="${l}">+ Turn right</button></div>
+  </div>`).join('');
 }
 function renderResults(){
-  S.steps.forEach((s,i)=>{const el=$('res-'+i);if(!el)return;
+  S.lines.forEach((ln,l)=>{ln.steps.forEach((s,i)=>{const el=$(`res-${l}-${i}`);if(!el||!s._list&&s.t==='S')return;
     if(s.t==='S'){const c={};s._list.forEach(p=>c[p]=(c[p]||0)+1);const txt=Object.entries(c).map(([p,n])=>`${n} × ${PIECE[p].len}`).join(' + ');
       const off=Math.abs(s._actual-s.len)>6*s._list.length;el.className='res'+(off?' off':'');el.innerHTML=`<b>${txt}</b> = ${s._actual} mm${off?` (asked for ${s.len} mm; nearest with 505/1005 straights)`:''}`;}
     else{const P=PIECE[s.r];const off=Math.abs(s._actual-s.a)>0.6;el.className='res'+(off?' off':'');
-      el.innerHTML=`<b>${s._n} × R${P.r}</b> = ${+s._actual.toFixed(1)}° ${s.t==='L'?'left':'right'}${off?` (asked for ${s.a}°; R${P.r} turns in ${P.ang}° steps)`:''}`;}
-  });
+      el.innerHTML=`<b>${s._n} × R${P.r}</b> = ${+s._actual.toFixed(1)}° ${s.t==='L'?'left':'right'}${off?` (asked for ${s.a}°; R${P.r} turns in ${P.ang}° steps)`:''}`;}});
+    const LL=R.lines.find(x=>x.li===l);const el=$('lsum-'+l);if(el&&LL)el.textContent=`${(LL.pieces.reduce((a,q)=>a+q.d.len,0)/1000).toFixed(2)} m · ${LL.pieces.length} pieces · ${LL.runs.length} feed${LL.runs.length>1?'s':''}`;});
 }
+// "A1–4, A9, B1–3"
+function labelsTxt(ps){const o=[];let a=null,b=null;const flush=()=>{if(a)o.push(a===b?a.label:`${a.label}–${b.label.slice(1)}`);};
+  ps.forEach(q=>{if(b&&q.line===b.line&&+q.label.slice(1)===+b.label.slice(1)+1){b=q;}else{flush();a=b=q;}});flush();return o.join(', ');}
 function renderSummary(){
   const {st,pieces,runs,ext}=R;
   const L=pieces.reduce((a,q)=>a+q.d.len,0),W=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0);
   const cctL=CCTS.find(c=>c[0]===S.cct)[1];
-  const runTxt=runs.map((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;return `Feed ${i+1}: ${l.toFixed(2)} m · ${w.toFixed(1)} W`;}).join('<br>');
-  $('sum').innerHTML=[['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',pieces.length],
+  const runTxt=runs.map((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;return `Feed ${i+1} (line ${LET(r[0].line)}): ${l.toFixed(2)} m · ${w.toFixed(1)} W`;}).join('<br>');
+  $('sum').innerHTML=[['Lines',R.lines.length],['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',pieces.length],
     ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',W.toFixed(1)+' W'],['Delivered light',Math.round(LM).toLocaleString('en-AU')+' lm'],
     ['Feeds',runs.length+` (max ${st.max} m per feed)`],['',runTxt],['Drivers',`${st.v}V DC, separate, one per feed`]].map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
   const w=[];
-  if(runs.length>1)w.push(`This line is longer than one ${st.label} feed allows (${st.max} m), so it is split into ${runs.length} runs, each with its own start piece and feed. Where two runs meet, end caps sit back to back.`);
-  if(R.closed)w.push('The path closes on itself. The first and last pieces meet with their end caps together.');
+  R.lines.forEach(LL=>{if(LL.runs.length>1)w.push(`Line ${LET(LL.li)} is longer than one ${st.label} feed allows (${st.max} m), so it is split into ${LL.runs.length} runs, each with its own start piece and feed. Where two runs meet, end caps sit back to back.`);
+    if(LL.closed)w.push(`Line ${LET(LL.li)} closes on itself. Its first and last pieces meet with their end caps together.`);});
   $('warn').innerHTML=w.join('<br><br>');$('warn').hidden=!w.length;
-  const groups={};pieces.forEach(q=>{(groups[q.code]=groups[q.code]||{q:0,list:[],p:q}).q++;groups[q.code].list.push(q.i+1);});
+  const groups={};pieces.forEach(q=>{(groups[q.code]=groups[q.code]||{q:0,list:[],p:q}).q++;groups[q.code].list.push(q);});
   R.groups=groups;
-  $('bom').innerHTML=Object.entries(groups).map(([code,g])=>`<tr data-code="${code}"><td class="q">${g.q}×</td><td><code>${code}</code><small>${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W · pieces ${rangeTxt(g.list)}</small></td></tr>`).join('');
+  $('bom').innerHTML=Object.entries(groups).map(([code,g])=>`<tr data-code="${code}"><td class="q">${g.q}×</td><td><code>${code}</code><small>${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W · pieces ${labelsTxt(g.list)}</small></td></tr>`).join('');
 }
-function rangeTxt(a){const o=[];let s=a[0],p=a[0];for(const v of a.slice(1).concat([null])){if(v===p+1){p=v;continue;}o.push(s===p?`${s}`:`${s}–${p}`);s=p=v;}return o.join(', ');}
 
-$('steps').addEventListener('input',e=>{const t=e.target;if(!t.dataset.k)return;const s=S.steps[+t.dataset.i];
+$('lines').addEventListener('input',e=>{const t=e.target,l=+t.dataset.l;if(Number.isNaN(l))return;const ln=S.lines[l];
+  if(t.dataset.lk){const v=t.dataset.lk==='dir'?+t.value:parseFloat(t.value);if(Number.isNaN(v))return;ln[t.dataset.lk]=v;update(false);return;}
+  if(!t.dataset.k)return;const s=ln.steps[+t.dataset.i];
   const v=t.dataset.k==='len'||t.dataset.k==='a'?parseFloat(t.value):t.value; if(t.type==='number'&&!(v>0))return; s[t.dataset.k]=v; update(false);});
-$('steps').addEventListener('click',e=>{const b=e.target.closest('.ib');if(!b)return;const i=+b.dataset.i,a=b.dataset.a;
-  if(a==='del'){if(S.steps.length>1)S.steps.splice(i,1);}else{const j=a==='up'?i-1:i+1;if(j<0||j>=S.steps.length)return;[S.steps[i],S.steps[j]]=[S.steps[j],S.steps[i]];}
+$('lines').addEventListener('click',e=>{
+  const rm=e.target.closest('[data-rmline]');if(rm){S.lines.splice(+rm.dataset.rmline,1);update(true,true);return;}
+  const ad=e.target.closest('[data-add]');if(ad){const ln=S.lines[+ad.dataset.l],t=ad.dataset.add;ln.steps.push(t==='S'?{t:'S',len:1000}:{t,r:'R1000',a:90});update(true);return;}
+  const b=e.target.closest('.ib');if(!b)return;const st=S.lines[+b.dataset.l].steps,i=+b.dataset.i,a=b.dataset.a;
+  if(a==='del'){if(st.length>1)st.splice(i,1);}else{const j=a==='up'?i-1:i+1;if(j<0||j>=st.length)return;[st[i],st[j]]=[st[j],st[i]];}
   update(true);});
-$('add-s').onclick=()=>{S.steps.push({t:'S',len:1000});update(true);};
-$('add-l').onclick=()=>{S.steps.push({t:'L',r:'R1000',a:90});update(true);};
-$('add-r').onclick=()=>{S.steps.push({t:'R',r:'R1000',a:90});update(true);};
-$('preset').onchange=e=>{const p=PRESETS[e.target.value];if(p){S.steps=p.map(x=>({...x}));update(true,true);}e.target.value='';};
+$('add-line').onclick=()=>{const b=R.raw;S.lines.push({x:Math.round(b.x0/10)*10,y:-Math.round((b.z1+1500)/10)*10,dir:0,steps:[{t:'S',len:3000}]});update(true,true);toast(`Line ${LET(S.lines.length-1)} added below the design. Set its start and heading.`);};
+$('preset').onchange=e=>{const p=PRESETS[e.target.value];if(p){S.lines=copyLines(p);update(true,true);}e.target.value='';};
 $('strip').onchange=e=>{S.strip=e.target.value;update(false);};
 $('cct').onchange=e=>{S.cct=e.target.value;update(false);};
 $('proj').oninput=e=>{S.proj=e.target.value;save();};
@@ -403,7 +436,7 @@ function buildSite(){
   // light spill on the paving
   const GW=2048,GH=Math.max(64,Math.round(GW*D/W)),gc=document.createElement('canvas');gc.width=GW;gc.height=GH;const x=gc.getContext('2d'),sx=GW/W;
   x.fillStyle='#000';x.fillRect(0,0,GW,GH);x.lineCap='round';x.lineJoin='round';
-  const path=()=>{x.beginPath();R.pieces.forEach((q,n)=>q.pts.forEach((p,k)=>{const X=(p.x/1000-B.x0)*sx,Y=(p.z/1000-B.z0)*sx;(n||k)?x.lineTo(X,Y):x.moveTo(X,Y);}));};
+  const path=()=>{x.beginPath();R.pieces.forEach((q,n)=>q.pts.forEach((p,k)=>{const X=(p.x/1000-B.x0)*sx,Y=(p.z/1000-B.z0)*sx;(k||(n&&R.pieces[n-1].line===q.line))?x.lineTo(X,Y):x.moveTo(X,Y);}));};
   for(const [w,b,a] of [[1.1,220,0.30],[0.45,70,0.55],[0.12,18,0.9]]){x.filter=`blur(${b*sx/1000}px)`;x.strokeStyle=`rgba(255,206,150,${a})`;x.lineWidth=w*sx*0.25;path();x.stroke();}
   x.filter='none';const glow=new THREE.CanvasTexture(gc);glow.channel=1;
   const g=new THREE.PlaneGeometry(W,D);g.rotateX(-Math.PI/2);g.translate((B.x0+B.x1)/2,0,(B.z0+B.z1)/2);
@@ -418,8 +451,8 @@ function buildSite(){
   run=buildRun(site,R.pieces);
   sun.shadow.camera.left=B.x0-1;sun.shadow.camera.right=B.x1+1;sun.shadow.camera.top=B.z1+1;sun.shadow.camera.bottom=B.z0-1;sun.target.position.set((B.x0+B.x1)/2,0,(B.z0+B.z1)/2);sun.position.set(sun.target.position.x-8,14,sun.target.position.z+6);sun.shadow.camera.updateProjectionMatrix();
   // labels: piece numbers, feed markers
-  R.pieces.forEach(q=>{const el=document.createElement('div');el.className='lbl';el.textContent=q.i+1;const o=new CSS2DObject(el);o.position.set(q.mid.x/1000,0.03,q.mid.z/1000);o.visible=numbersOn;scene.add(o);labels.push(o);
-    if(q.seg==='S'||q.seg==='I'){const f=document.createElement('div');f.className='lbl feed';f.textContent='Feed '+(q.run+1);const p0=q.pts[0];const fo=new CSS2DObject(f);fo.position.set(p0.x/1000-Math.cos(p0.h)*0.25,0.03,p0.z/1000-Math.sin(p0.h)*0.25);fo.visible=true;scene.add(fo);labels.push(fo);}});
+  R.pieces.forEach(q=>{const el=document.createElement('div');el.className='lbl';el.textContent=q.label;const o=new CSS2DObject(el);o.position.set(q.mid.x/1000,0.03,q.mid.z/1000);o.visible=numbersOn;scene.add(o);labels.push(o);
+    if(q.seg==='S'||q.seg==='I'){const f=document.createElement('div');f.className='lbl feed';f.textContent=LET(q.line)+' · Feed '+(q.run+1);const p0=q.pts[0];const fo=new CSS2DObject(f);fo.position.set(p0.x/1000-Math.cos(p0.h)*0.25,0.03,p0.z/1000-Math.sin(p0.h)*0.25);fo.visible=true;scene.add(fo);labels.push(fo);}});
   setMode(night);
 }
 
@@ -482,7 +515,7 @@ canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run){tip.hidd
   const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
   const q=ray.intersectObjects(run.picks,false)[0]?.object.userData.piece||null;if(q!==hovered){hovered=q;highlight(q);}
   if(q){tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';
-    tip.innerHTML=`<b>Piece ${q.i+1}</b> · Feed ${q.run+1} · ${SEGNAME[q.seg]} · ${q.d.name}${q.dir?(q.dir==='L'?' left':' right'):''}<br>${q.d.len} mm · ${q.w} W · ${q.lm} lm<code>${q.code}</code>`;}else tip.hidden=true;});
+    tip.innerHTML=`<b>Piece ${q.label}</b> · Feed ${q.run+1} · ${SEGNAME[q.seg]} · ${q.d.name}${q.dir?(q.dir==='L'?' left':' right'):''}<br>${q.d.len} mm · ${q.w} W · ${q.lm} lm<code>${q.code}</code>`;}else tip.hidden=true;});
 canvas.addEventListener('pointerleave',()=>{tip.hidden=true;hovered=null;highlight(null);});
 
 /* ======================= plan drawing (SVG, mm) ======================= */
@@ -497,24 +530,26 @@ function planSVG(o={}){
   // 1 m grid
   s+=`<g stroke="#eceded" stroke-width="${k*0.8}">`;for(let gx=Math.ceil(vb[0]/1000)*1000;gx<vb[0]+vb[2];gx+=1000)s+=`<line x1="${gx}" y1="${vb[1]}" x2="${gx}" y2="${vb[1]+vb[3]}"/>`;
   for(let gz=Math.ceil(vb[1]/1000)*1000;gz<vb[1]+vb[3];gz+=1000)s+=`<line x1="${vb[0]}" y1="${gz}" x2="${vb[0]+vb[2]}" y2="${gz}"/>`;s+='</g>';
+  // datum: Line A start = (0, 0); start points of other lines are measured from here
+  {const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
   // pieces, alternating tone so every joint reads
   ps.forEach((q,i)=>{s+=`<polyline fill="none" stroke="${i%2?grey:ink}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
   // joints and end caps
   ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
     const capped=i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
-  {const q=ps.at(-1),p=q.pts.at(-1),nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="#ff5000" stroke-width="${k*2.4}"/>`;}
+  R.runs.forEach(r=>{const q=r.at(-1),p=q.pts.at(-1),nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="#ff5000" stroke-width="${k*2.4}"/>`;});
   // piece numbers on the left-hand side of travel
   ps.forEach(q=>{const m=q.mid,off=sw*0.5+fs*1.15,cx=m.x+Math.sin(m.h)*off,cz=m.z-Math.cos(m.h)*off;
-    s+=`<circle cx="${cx}" cy="${cz}" r="${fs*0.8}" fill="#fff" stroke="${ink}" stroke-width="${k*0.9}"/><text x="${cx}" y="${cz}" font-size="${fs*0.85}" text-anchor="middle" dominant-baseline="central" fill="${ink}" font-weight="700">${q.i+1}</text>`;});
+    s+=`<rect x="${cx-fs*1.15}" y="${cz-fs*0.75}" width="${fs*2.3}" height="${fs*1.5}" rx="${fs*0.75}" fill="#fff" stroke="${ink}" stroke-width="${k*0.9}"/><text x="${cx}" y="${cz}" font-size="${fs*0.8}" text-anchor="middle" dominant-baseline="central" fill="${ink}" font-weight="700">${q.label}</text>`;});
   // feeds
   ps.filter(q=>q.seg==='S'||q.seg==='I').forEach(q=>{const p=q.pts[0],bx=p.x-Math.cos(p.h)*fs*3.2,bz=p.z-Math.sin(p.h)*fs*3.2;
     s+=`<line x1="${bx}" y1="${bz}" x2="${p.x-Math.cos(p.h)*sw}" y2="${p.z-Math.sin(p.h)*sw}" stroke="#ff5000" stroke-width="${k*1.6}" stroke-dasharray="${k*5} ${k*3}"/><circle cx="${bx}" cy="${bz}" r="${fs*0.45}" fill="#ff5000"/>`;
-    s+=`<text x="${bx}" y="${bz-fs*1.0}" font-size="${fs}" text-anchor="middle" fill="#ff5000" font-weight="700">FEED ${q.run+1}</text>`;});
+    s+=`<text x="${bx}" y="${bz-fs*1.0}" font-size="${fs}" text-anchor="middle" fill="#ff5000" font-weight="700">${LET(q.line)} · FEED ${q.run+1}</text>`;});
   // step callouts: radius + angle for turns, length for straights (right-hand side)
-  let idx=0;S.steps.forEach((st,si)=>{const mine=ps.filter(q=>q.step===si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
+  S.lines.forEach((ln,li)=>ln.steps.forEach((st,si)=>{const mine=ps.filter(q=>q.line===li&&q.step===si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
     const off=sw*0.5+fs*1.6,cx=m.x-Math.sin(m.h)*off,cz=m.z+Math.cos(m.h)*off;
     const t=st.t==='S'?`${st._actual} mm`:`R${PIECE[st.r].r} · ${+st._actual.toFixed(1)}° ${st.t==='L'?'left':'right'}`;
-    s+=`<text x="${cx}" y="${cz}" font-size="${fs*0.95}" text-anchor="middle" dominant-baseline="central" fill="${grey}" paint-order="stroke" stroke="#fff" stroke-width="${k*3}">${t}</text>`;});
+    s+=`<text x="${cx}" y="${cz}" font-size="${fs*0.95}" text-anchor="middle" dominant-baseline="central" fill="${grey}" paint-order="stroke" stroke="#fff" stroke-width="${k*3}">${t}</text>`;}));
   // overall dimensions
   const dimY=z1+pad*0.55,dimX=x1+pad*0.55,tk=fs*0.6;
   s+=`<g stroke="${ink}" stroke-width="${k*0.9}" fill="none"><line x1="${x0}" y1="${dimY}" x2="${x1}" y2="${dimY}"/><line x1="${x0}" y1="${dimY-tk}" x2="${x0}" y2="${dimY+tk}"/><line x1="${x1}" y1="${dimY-tk}" x2="${x1}" y2="${dimY+tk}"/>
@@ -553,7 +588,7 @@ $('pdf').onclick=async()=>{
     doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(119,119,121);doc.text(S.client?`Prepared for ${S.client}`:'Inground Radius run plan',M,M+30.5);
     const night1=await snapshot('aerial',true),day1=await snapshot('aerial',false);
     doc.addImage(night1,'JPEG',M,M+36,170,106.25);doc.addImage(day1,'JPEG',M+174,M+36+54.25,90,52);
-    const rows=[['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',String(pieces.length)],['LED strip',`${st.label} · ${cctL}`],['Load',Wt.toFixed(1)+' W'],['Delivered light',Math.round(LM)+' lm'],['Feeds / drivers',`${runs.length} × ${st.v}V DC (max ${st.max} m per feed)`]];
+    const rows=[['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Lines / pieces',`${R.lines.length} / ${pieces.length}`],['LED strip',`${st.label} · ${cctL}`],['Load',Wt.toFixed(1)+' W'],['Delivered light',Math.round(LM)+' lm'],['Feeds / drivers',`${runs.length} × ${st.v}V DC (max ${st.max} m per feed)`]];
     let y=M+40;doc.setFontSize(9);rows.forEach(([k,v])=>{doc.setTextColor(119,119,121);doc.text(k,M+174,y);doc.setTextColor(16,24,31);doc.text(v,PW-M,y,{align:'right'});doc.setDrawColor(223,224,226);doc.line(M+174,y+2,PW-M,y+2);y+=6.6;});
     doc.setFontSize(7.5);doc.setTextColor(119,119,121);doc.text('Night and daytime views. Visualisation only: light spill and paving are indicative.',M,M+36+106.25+5);
     // page 2: plan
@@ -566,10 +601,10 @@ $('pdf').onclick=async()=>{
     y=M+27;doc.setFontSize(8);doc.setTextColor(119,119,121);doc.text('Qty',M,y);doc.text('Order code',M+12,y);doc.text('Description',M+150,y);doc.text('Pieces',PW-M,y,{align:'right'});y+=2.5;doc.setDrawColor(16,24,31);doc.line(M,y,PW-M,y);y+=5;
     for(const [code,g] of Object.entries(R.groups)){if(y>PH-30){doc.addPage();head(title);y=M+24;}
       doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.text(String(g.q),M,y);doc.setFont('courier','normal');doc.setFontSize(7.6);doc.text(code,M+12,y);
-      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,M+150,y);doc.setTextColor(119,119,121);doc.text(rangeTxt(g.list).replace(/–/g,'-'),PW-M,y,{align:'right'});
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,M+150,y);doc.setTextColor(119,119,121);doc.text(labelsTxt(g.list).replace(/–/g,'-'),PW-M,y,{align:'right'});
       y+=3;doc.setDrawColor(223,224,226);doc.line(M,y,PW-M,y);y+=5;}
     y+=4;doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.setFontSize(10);doc.text('Feeds',M,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(8.5);
-    runs.forEach((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;doc.text(`Feed ${i+1}: pieces ${r[0].i+1}-${r.at(-1).i+1} · ${l.toFixed(2)} m · ${w.toFixed(1)} W · ${st.v}V DC driver (separate), fed at piece ${r[0].i+1}`,M,y);y+=5;});
+    runs.forEach((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;doc.text(`Feed ${i+1} (line ${LET(r[0].line)}): pieces ${r[0].label}-${r.at(-1).label} · ${l.toFixed(2)} m · ${w.toFixed(1)} W · ${st.v}V DC driver (separate), fed at piece ${r[0].label}`,M,y);y+=5;});
     y+=3;doc.setTextColor(119,119,121);doc.setFontSize(8);
     doc.text(doc.splitTextToSize('Start pieces carry an end cap at the start and take the feed cable; middle pieces join both sides; end pieces carry an end cap at the end. Pieces join with male/female T1X connectors inside the chamber. Curves can be laid turning left or right. Power and light output are Holectron\'s published values per piece. Drivers are sized and supplied separately by Phosforma.',PW-2*M),M,y);
     const N=doc.getNumberOfPages();for(let i=1;i<=N;i++){doc.setPage(i);foot(i,N);}
