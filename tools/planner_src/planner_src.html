@@ -166,11 +166,13 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
       </div>
       <div class="grp" id="expgrp" hidden><label class="exp" for="t-exp">Assembled<input type="range" id="t-exp" min="0" max="100" value="0" aria-label="Explode the model">Exploded</label></div>
       <div class="grp" id="modes" role="group" aria-label="Lighting">
-        <button id="m-night" aria-pressed="true">Night</button>
         <button id="m-day" aria-pressed="false">Day</button>
+        <button id="m-twi" aria-pressed="false">Twilight</button>
+        <button id="m-night" aria-pressed="true">Night</button>
         <button id="t-num" aria-pressed="true">Piece numbers</button>
       </div>
       <div class="grp cctb" id="cctb" role="group" aria-label="Colour temperature"><button data-cct="922" aria-pressed="false">2200K</button><button data-cct="T927" aria-pressed="false">2700K</button><button data-cct="T930" aria-pressed="false">3000K</button><button data-cct="T940" aria-pressed="false">4000K</button>
+        <label class="exp" for="dim" title="Dimmer">Dimmer<input type="range" id="dim" min="0" max="100" value="100" aria-label="Dimmer level"><span id="dimv" style="min-width:34px;text-align:right">100%</span></label>
       </div>
     </div>
     <div class="legend" id="legend">Drag to orbit · scroll to zoom · hover a piece for its code</div>
@@ -458,7 +460,7 @@ function buildSite(){
   // labels: piece numbers, feed markers
   R.pieces.forEach(q=>{const el=document.createElement('div');el.className='lbl';el.textContent=q.label;const o=new CSS2DObject(el);o.position.set(q.mid.x/1000,0.03,q.mid.z/1000);o.visible=numbersOn;scene.add(o);labels.push(o);
     if(q.seg==='S'||q.seg==='I'){const f=document.createElement('div');f.className='lbl feed';f.textContent=LET(q.line)+' · Feed '+(q.run+1);const p0=q.pts[0];const fo=new CSS2DObject(f);fo.position.set(p0.x/1000-Math.cos(p0.h)*0.25,0.03,p0.z/1000-Math.sin(p0.h)*0.25);fo.visible=true;scene.add(fo);labels.push(fo);}});
-  setMode(night);
+  setMode(mode);
 }
 
 /* ---------- lights ---------- */
@@ -492,17 +494,29 @@ function showLabels(){const st=activeScene===studio;labels.forEach(l=>l.element.
 /* ---------- day / night ---------- */
 const composer=new EffectComposer(renderer,new THREE.WebGLRenderTarget(16,16,{samples:4,type:THREE.HalfFloatType}));const rp=new RenderPass(scene,camera);composer.addPass(rp);
 const bloom=new UnrealBloomPass(new THREE.Vector2(512,512),0.5,0.35,0.5);composer.addPass(bloom);composer.addPass(new OutputPass());
-function skyTex(a,b){const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,a);g.addColorStop(1,b);x.fillStyle=g;x.fillRect(0,0,2,256);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
-const SKY={night:skyTex('#05080d','#1b2633'),day:skyTex('#9fb6cc','#e7edf2')};
-let night=true,numbersOn=true;
-function setMode(n){night=n;$('m-night').setAttribute('aria-pressed',n);$('m-day').setAttribute('aria-pressed',!n);
-  scene.background=n?SKY.night:SKY.day;scene.fog=new THREE.Fog(n?0x141c26:0xe2e8ee,30,120);
-  hemi.intensity=n?0.2:0.8;sun.intensity=n?0:2.6;sun.castShadow=!n;
-  run&&run.picks.forEach(o=>{o.material.emissiveIntensity=n?1.2:0;o.material.envMapIntensity=n?0.03:1;o.material.color.set(n?0x9a9893:0xeeece6);});
-  if(plazaMat)plazaMat.lightMapIntensity=n?1.5:0;groundMats.forEach(m=>m.envMapIntensity=n?0.015:0.45);}
-$('m-night').onclick=()=>setMode(true);$('m-day').onclick=()=>setMode(false);
+function skyTex(...stops){const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,256);stops.forEach((col,i)=>g.addColorStop(i/(stops.length-1),col));x.fillStyle=g;x.fillRect(0,0,2,256);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
+const SKY={night:skyTex('#05080d','#1b2633'),day:skyTex('#9fb6cc','#e7edf2'),twilight:skyTex('#121a33','#3b4a78','#8a6f86','#e59a63')};
+// Day: lights off. Twilight: dusk sky, low warm sun, lights on. Night: dark, lights on.
+let mode='night',night=true,dim=1,numbersOn=true;
+const MODE={
+  day:{fog:0xe2e8ee,hemi:[0xdfe8f2,0x5d5a52,0.8],sun:[0xfff4e6,2.6,[-8,14,6]],env:0.45,opal:0xeeece6,glow:0,bloom:0,exp:0.95},
+  twilight:{fog:0x7a6a84,hemi:[0x8e9cc8,0x3a332c,0.55],sun:[0xff9a5c,0.9,[-14,3,4]],env:0.18,opal:0xbab7b0,glow:1.1,bloom:0.32,exp:1.0},
+  night:{fog:0x141c26,hemi:[0x6a7f99,0x2a2824,0.2],sun:[0xffffff,0,[-8,14,6]],env:0.015,opal:0x9a9893,glow:1.5,bloom:0.5,exp:1.0},
+};
+function setMode(m){if(m===true)m='night';if(m===false)m='day';mode=m;night=m!=='day';const M=MODE[m];
+  ['day','twi','night'].forEach(k=>$('m-'+k).setAttribute('aria-pressed',(k==='twi'?'twilight':k)===m));
+  scene.background=SKY[m];scene.fog=new THREE.Fog(M.fog,m==='twilight'?14:30,m==='twilight'?70:120);
+  hemi.color.set(M.hemi[0]);hemi.groundColor.set(M.hemi[1]);hemi.intensity=M.hemi[2];
+  sun.color.set(M.sun[0]);sun.intensity=M.sun[1];sun.castShadow=M.sun[1]>0;
+  sun.position.set(sun.target.position.x+M.sun[2][0],M.sun[2][1],sun.target.position.z+M.sun[2][2]);
+  groundMats.forEach(g=>g.envMapIntensity=M.env);applyLight();}
+function applyLight(){const M=MODE[mode],k=night?dim:0;
+  run&&run.picks.forEach(o=>{o.material.emissiveIntensity=1.2*k;o.material.envMapIntensity=night?0.03:1;o.material.color.set(M.opal);});
+  if(plazaMat)plazaMat.lightMapIntensity=M.glow*k;}
+$('m-day').onclick=()=>setMode('day');$('m-twi').onclick=()=>setMode('twilight');$('m-night').onclick=()=>setMode('night');
+$('dim').oninput=e=>{dim=+e.target.value/100;$('dimv').textContent=e.target.value+'%';if(mode==='day'&&dim>0)setMode('night');else applyLight();};
 $('t-exp').oninput=e=>{explodeTo=+e.target.value/100;};
-document.querySelectorAll('[data-cct]').forEach(b=>b.onclick=()=>{S.cct=b.dataset.cct;if(!night)setMode(true);update(false);});
+document.querySelectorAll('[data-cct]').forEach(b=>b.onclick=()=>{S.cct=b.dataset.cct;if(!night)setMode('night');update(false);});
 $('t-num').onclick=()=>{numbersOn=!numbersOn;applyExplode();$('t-num').setAttribute('aria-pressed',numbersOn);labels.forEach(l=>{if(!l.element.classList.contains('feed'))l.visible=numbersOn;});};
 
 /* ---------- views ---------- */
@@ -528,7 +542,7 @@ for(const v of ['walk','aerial','detail','studio','plan'])$('v-'+v).onclick=()=>
 /* ---------- hover ---------- */
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=$('tip');let hovered=null;
 function highlight(q){document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
-  run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:(night?0x9a9893:0xeeece6));o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):(CCTCOL[S.cct]||CCTCOL.T930));});}
+  run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):(CCTCOL[S.cct]||CCTCOL.T930));});}
 canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run){tip.hidden=true;return;}
   const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
   const q=ray.intersectObjects(run.picks,false)[0]?.object.userData.piece||null;if(q!==hovered){hovered=q;highlight(q);}
@@ -585,11 +599,11 @@ function planSVG(o={}){
 function svgToPng(svg,w,h){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(img,0,0,w,h);res(c.toDataURL('image/png'));};img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});}
 function logoSVG(){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 19 125 27" width="1000" height="216">${__LOGO__.replace(/var\(--ink\)/g,'#10181f').replace(/var\(--muted\)/g,'#777779')}</svg>`;}
 async function snapshot(view,isNight){
-  const keep={view:current,night,cam:camera.position.clone(),tgt:controls.target.clone(),num:numbersOn,w:stage.clientWidth,h:stage.clientHeight};
-  labels.forEach(l=>l.visible=false);setMode(isNight);const V=viewFor(view);activeScene=V.s;rp.scene=activeScene;camera.position.set(...V.pos);controls.target.set(...V.tgt);controls.update();
+  const keep={view:current,mode,cam:camera.position.clone(),tgt:controls.target.clone(),num:numbersOn,w:stage.clientWidth,h:stage.clientHeight};
+  labels.forEach(l=>l.visible=false);setMode(isNight?'night':'day');const V=viewFor(view);activeScene=V.s;rp.scene=activeScene;camera.position.set(...V.pos);controls.target.set(...V.tgt);controls.update();
   const W=1600,H=1000;renderer.setPixelRatio(1);renderer.setSize(W,H,false);composer.setSize(W,H);camera.aspect=W/H;camera.updateProjectionMatrix();
   applyFrame();composer.render();const url=canvas.toDataURL('image/jpeg',0.9);
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));setMode(keep.night);numbersOn=keep.num;labels.forEach(l=>l.visible=l.element.classList.contains('feed')||numbersOn);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));setMode(keep.mode);numbersOn=keep.num;labels.forEach(l=>l.visible=l.element.classList.contains('feed')||numbersOn);
   resize();go(keep.view,true);if(keep.view!=='plan'){camera.position.copy(keep.cam);controls.target.copy(keep.tgt);}
   return url;}
 $('pdf').onclick=async()=>{
@@ -636,7 +650,7 @@ $('pdf').onclick=async()=>{
 function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);composer.setSize(w,h);labelR.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe(stage);resize();
 function applyFrame(){const st=activeScene===studio;const dist=camera.position.distanceTo(controls.target);
-  renderer.toneMappingExposure=st?0.82:night?1.0:0.95;bloom.strength=st?0.1:night?0.5*Math.min(1,Math.max(0.2,dist/4)):0;MAT.steel.envMapIntensity=st?0.45:night?0.12:0.6;}
+  const M=MODE[mode];renderer.toneMappingExposure=st?0.82:M.exp;bloom.strength=st?0.1:M.bloom*(0.25+0.75*dim)*Math.min(1,Math.max(0.2,dist/4));MAT.steel.envMapIntensity=st?0.45:mode==='night'?0.12:mode==='twilight'?0.3:0.6;}
 renderer.setAnimationLoop(t=>{
   if(current==='plan')return;
   if(anim){const k=Math.min(1,(t-anim.t0)/1100),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(anim.from.p,anim.to.p,e);controls.target.lerpVectors(anim.from.t,anim.to.t,e);if(k>=1)anim=0;}
