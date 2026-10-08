@@ -204,7 +204,7 @@ const PIECE={ // centre-line length (mm) and arc angle (deg), specification shee
   L500:{R:'R0000',L:'L0505',len:505,ang:0,name:'Straight 505'},
   R6100:{R:'R6100',L:'L0382',len:382,ang:3.6,name:'Curve R6100 3.6°',r:6100},
   R2950:{R:'R2950',L:'L0384',len:384,ang:7.5,name:'Curve R2950 7.5°',r:2950},
-  R1975:{R:'R1975',L:'L0385',len:385,ang:11.3,name:'Curve R1975 11.3°',r:1975},
+  R1975:{R:'R1975',L:'L0385',len:385,ang:11.25,name:'Curve R1975 11.25°',r:1975}, // catalogue prints 11.3°; 32 pieces make a full circle, so the true angle is 11.25°
   R1000:{R:'R1000',L:'L0387',len:387,ang:22.5,name:'Curve R1000 22.5°',r:1000},
   R515:{R:'R0515',L:'L0393',len:393,ang:45,name:'Curve R515 45°',r:515},
   R272:{R:'R0272',L:'L0404',len:404,ang:90,name:'Curve R272 90°',r:272},
@@ -322,8 +322,9 @@ function renderResults(){
   S.lines.forEach((ln,l)=>{ln.steps.forEach((s,i)=>{const el=$(`res-${l}-${i}`);if(!el||!s._list&&s.t==='S')return;
     if(s.t==='S'){const c={};s._list.forEach(p=>c[p]=(c[p]||0)+1);const txt=Object.entries(c).map(([p,n])=>`${n} × ${PIECE[p].len}`).join(' + ');
       const off=Math.abs(s._actual-s.len)>6*s._list.length;el.className='res'+(off?' off':'');el.innerHTML=`<b>${txt}</b> = ${s._actual} mm${off?` (asked for ${s.len} mm; nearest with 505/1005 straights)`:''}`;}
-    else{const P=PIECE[s.r];const off=Math.abs(s._actual-s.a)>0.6;el.className='res'+(off?' off':'');
-      el.innerHTML=`<b>${s._n} × R${P.r}</b> = ${+s._actual.toFixed(1)}° ${s.t==='L'?'left':'right'}${off?` (asked for ${s.a}°; R${P.r} turns in ${P.ang}° steps)`:''}`;}});
+    else{const P=PIECE[s.r];const off=Math.abs(s._actual-s.a)>0.01;el.className='res'+(off?' off':'');
+      const exact=CURVES.filter(c=>{const k=(+s.a)/PIECE[c].ang;return Math.abs(k-Math.round(k))<1e-6&&k>=1;}).map(c=>'R'+PIECE[c].r);
+      el.innerHTML=`<b>${s._n} × R${P.r}</b> = ${+s._actual.toFixed(2)}° ${s.t==='L'?'left':'right'}${off?` (asked for ${s.a}°; R${P.r} turns in ${P.ang}° steps.${exact.length?` Exact ${s.a}° with ${exact.join(', ')}.`:''})`:''}`;}});
     const LL=R.lines.find(x=>x.li===l);const el=$('lsum-'+l);if(el&&LL)el.textContent=`${(LL.pieces.reduce((a,q)=>a+q.d.len,0)/1000).toFixed(2)} m · ${LL.pieces.length} pieces · ${LL.runs.length} feed${LL.runs.length>1?'s':''}`;});
 }
 // "A1–4, A9, B1–3"
@@ -643,7 +644,7 @@ function planSVG(o={}){
   // step callouts: radius + angle for turns, length for straights (right-hand side)
   S.lines.forEach((ln,li)=>ln.steps.forEach((st,si)=>{const mine=ps.filter(q=>q.line===li&&q.step===si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
     const off=sw*0.5+fs*1.6,cx=m.x-Math.sin(m.h)*off,cz=m.z+Math.cos(m.h)*off;
-    const t=st.t==='S'?`${st._actual} mm`:`R${PIECE[st.r].r} · ${+st._actual.toFixed(1)}° ${st.t==='L'?'left':'right'}`;
+    const t=st.t==='S'?`${st._actual} mm`:`R${PIECE[st.r].r} · ${+st._actual.toFixed(2)}° ${st.t==='L'?'left':'right'}`;
     s+=`<text x="${cx}" y="${cz}" font-size="${fs*0.95}" text-anchor="middle" dominant-baseline="central" fill="${grey}" paint-order="stroke" stroke="#fff" stroke-width="${k*3}">${t}</text>`;}));
   // overall dimensions
   const dimY=z1+pad*0.55,dimX=x1+pad*0.55,tk=fs*0.6;
