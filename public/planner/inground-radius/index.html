@@ -76,6 +76,9 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .grp button[aria-pressed="true"]{background:#fff;color:#10181f}
 .grp button:focus-visible{outline:2px solid var(--accent)}
 .grp.dim{opacity:.45}
+.exp{display:flex;align-items:center;gap:10px;color:#e8ebee;font-size:12px;padding:4px 10px}
+.exp input{width:160px;accent-color:#ff5000;background:transparent;border:0;padding:0}
+.cctb button{min-width:0}
 .tip{position:absolute;pointer-events:none;background:#10181f;color:#fff;border-radius:5px;padding:8px 10px;font-size:12px;line-height:1.4;max-width:310px;transform:translate(12px,12px);z-index:4}
 .tip code{font-family:var(--mono);font-size:10.5px;color:#cfd5da;display:block;margin-top:3px}
 .lbl{font:600 11px var(--sans);color:#10181f;background:#fff;border-radius:9px;padding:1px 6px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -161,11 +164,13 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
         <button id="v-studio" aria-pressed="false">3D model</button>
         <button id="v-plan" aria-pressed="false">Plan drawing</button>
       </div>
-      <div class="grp" id="expgrp" hidden><button id="t-exp" aria-pressed="false">Explode</button></div>
+      <div class="grp" id="expgrp" hidden><label class="exp" for="t-exp">Assembled<input type="range" id="t-exp" min="0" max="100" value="0" aria-label="Explode the model">Exploded</label></div>
       <div class="grp" id="modes" role="group" aria-label="Lighting">
         <button id="m-night" aria-pressed="true">Night</button>
         <button id="m-day" aria-pressed="false">Day</button>
         <button id="t-num" aria-pressed="true">Piece numbers</button>
+      </div>
+      <div class="grp cctb" id="cctb" role="group" aria-label="Colour temperature"><button data-cct="922" aria-pressed="false">2200K</button><button data-cct="T927" aria-pressed="false">2700K</button><button data-cct="T930" aria-pressed="false">3000K</button><button data-cct="T940" aria-pressed="false">4000K</button>
       </div>
     </div>
     <div class="legend" id="legend">Drag to orbit · scroll to zoom · hover a piece for its code</div>
@@ -408,9 +413,10 @@ const MAT={steel:new THREE.MeshStandardMaterial({color:0xaeb3b8,metalness:1,roug
   carrier:new THREE.MeshStandardMaterial({color:0x8d9399,metalness:0.6,roughness:0.5}),
   strip:new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffd9a8,emissiveIntensity:1.5,roughness:0.6}),
   endcap:new THREE.MeshStandardMaterial({color:0xa9afb4,metalness:1,roughness:0.38})};
-const CCTCOL={'922':new THREE.Color(1.0,0.70,0.42),'T927':new THREE.Color(1.0,0.77,0.53),'T930':new THREE.Color(1.0,0.81,0.60),'T940':new THREE.Color(0.95,0.93,0.86)};
+const CCTHEX={'922':'#ff8a2a','T927':'#ffa95a','T930':'#ffbf78','T940':'#fff3e4'};
+const CCTCOL=Object.fromEntries(Object.entries(CCTHEX).map(([k,v])=>[k,new THREE.Color(v)]));
 function buildRun(target,list,opts={}){
-  const group=new THREE.Group(),picks=[],pgs=[];const col=CCTCOL[S.cct]||CCTCOL.T930;
+  const group=new THREE.Group(),picks=[],pgs=[];const col=CCTCOL[S.cct]||CCTCOL.T930;MAT.strip.emissive.copy(col);
   list.forEach((q,n)=>{const prev=list[n-1],next=list[n+1];const pg=new THREE.Group();pgs.push(pg);group.add(pg);
     const capA=!prev||prev.run!==q.run,capB=!next||next.run!==q.run;
     const f=frames(q.pts,capA?0:0.4,capB?0:0.4);
@@ -436,7 +442,7 @@ function buildSite(){
   const GW=2048,GH=Math.max(64,Math.round(GW*D/W)),gc=document.createElement('canvas');gc.width=GW;gc.height=GH;const x=gc.getContext('2d'),sx=GW/W;
   x.fillStyle='#000';x.fillRect(0,0,GW,GH);x.lineCap='round';x.lineJoin='round';
   const path=()=>{x.beginPath();R.pieces.forEach((q,n)=>q.pts.forEach((p,k)=>{const X=(p.x/1000-B.x0)*sx,Y=(p.z/1000-B.z0)*sx;(k||(n&&R.pieces[n-1].line===q.line))?x.lineTo(X,Y):x.moveTo(X,Y);}));};
-  for(const [w,b,a] of [[1.1,220,0.30],[0.45,70,0.55],[0.12,18,0.9]]){x.filter=`blur(${b*sx/1000}px)`;x.strokeStyle=`rgba(255,206,150,${a})`;x.lineWidth=w*sx*0.25;path();x.stroke();}
+  for(const [w,b,a] of [[1.1,220,0.30],[0.45,70,0.55],[0.12,18,0.9]]){x.filter=`blur(${b*sx/1000}px)`;const c=new THREE.Color(CCTHEX[S.cct]||CCTHEX.T930).convertLinearToSRGB();x.strokeStyle=`rgba(${c.r*255|0},${c.g*255|0},${c.b*255|0},${a})`;x.lineWidth=w*sx*0.25;path();x.stroke();}
   x.filter='none';const glow=new THREE.CanvasTexture(gc);glow.channel=1;
   const g=new THREE.PlaneGeometry(W,D);g.rotateX(-Math.PI/2);g.translate((B.x0+B.x1)/2,0,(B.z0+B.z1)/2);
   const uv=g.attributes.uv,p=g.attributes.position,uv1=[];for(let i=0;i<uv.count;i++){uv.setXY(i,p.getX(i)/4,-p.getZ(i)/4);uv1.push((p.getX(i)-B.x0)/W,1-(p.getZ(i)-B.z0)/D);}
@@ -473,7 +479,7 @@ function buildStudio(){ // the whole design as built: every piece lifted out of 
   const sz=Math.max(R.ext.w,R.ext.d,1000)/1000;
   studioRun.pgs.forEach((pg,i)=>{const q=R.pieces[i],mx=q.mid.x/1000,mz=q.mid.z/1000,L=Math.hypot(mx,mz)||1;
     // explode: pieces move apart from the centre of the design (along a straight line, out of a circle) and lift a little
-    pg.userData.off=new THREE.Vector3(mx*0.32+mx/L*0.12,0.05+0.03*(i%2),mz*0.32+mz/L*0.12);
+    pg.userData.off=new THREE.Vector3(mx*0.25,0.04,mz*0.25);
     const el=document.createElement('div');el.className='lbl';el.textContent=q.label;const o=new CSS2DObject(el);o.position.set(mx,0.03,mz);o.visible=false;pg.add(o);studioLabels.push(o);});
   sFloor.scale.setScalar(sz*6+4);studio.fog.near=sz*2+1.5;studio.fog.far=sz*5+4;
   const r=sz*0.85+0.6;Object.assign(sKey.shadow.camera,{left:-r,right:r,top:r,bottom:-r,near:0.1,far:sz*6+10});sKey.shadow.camera.updateProjectionMatrix();
@@ -485,17 +491,18 @@ function applyExplode(){if(!studioRun)return;studioRun.pgs.forEach(pg=>pg.positi
 function showLabels(){const st=activeScene===studio;labels.forEach(l=>l.element.style.display=st?'none':'');studioLabels.forEach(l=>l.element.style.display=st?'':'none');}
 /* ---------- day / night ---------- */
 const composer=new EffectComposer(renderer,new THREE.WebGLRenderTarget(16,16,{samples:4,type:THREE.HalfFloatType}));const rp=new RenderPass(scene,camera);composer.addPass(rp);
-const bloom=new UnrealBloomPass(new THREE.Vector2(512,512),0.5,0.3,0.86);composer.addPass(bloom);composer.addPass(new OutputPass());
+const bloom=new UnrealBloomPass(new THREE.Vector2(512,512),0.5,0.35,0.5);composer.addPass(bloom);composer.addPass(new OutputPass());
 function skyTex(a,b){const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,a);g.addColorStop(1,b);x.fillStyle=g;x.fillRect(0,0,2,256);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
 const SKY={night:skyTex('#05080d','#1b2633'),day:skyTex('#9fb6cc','#e7edf2')};
 let night=true,numbersOn=true;
 function setMode(n){night=n;$('m-night').setAttribute('aria-pressed',n);$('m-day').setAttribute('aria-pressed',!n);
   scene.background=n?SKY.night:SKY.day;scene.fog=new THREE.Fog(n?0x141c26:0xe2e8ee,30,120);
   hemi.intensity=n?0.2:0.8;sun.intensity=n?0:2.6;sun.castShadow=!n;
-  run&&run.picks.forEach(o=>o.material.emissiveIntensity=n?1.35:0);
+  run&&run.picks.forEach(o=>{o.material.emissiveIntensity=n?1.2:0;o.material.envMapIntensity=n?0.03:1;o.material.color.set(n?0x9a9893:0xeeece6);});
   if(plazaMat)plazaMat.lightMapIntensity=n?1.5:0;groundMats.forEach(m=>m.envMapIntensity=n?0.015:0.45);}
 $('m-night').onclick=()=>setMode(true);$('m-day').onclick=()=>setMode(false);
-$('t-exp').onclick=()=>{explodeTo=explodeTo?0:1;$('t-exp').setAttribute('aria-pressed',!!explodeTo);$('t-exp').textContent=explodeTo?'Assemble':'Explode';};
+$('t-exp').oninput=e=>{explodeTo=+e.target.value/100;};
+document.querySelectorAll('[data-cct]').forEach(b=>b.onclick=()=>{S.cct=b.dataset.cct;if(!night)setMode(true);update(false);});
 $('t-num').onclick=()=>{numbersOn=!numbersOn;applyExplode();$('t-num').setAttribute('aria-pressed',numbersOn);labels.forEach(l=>{if(!l.element.classList.contains('feed'))l.visible=numbersOn;});};
 
 /* ---------- views ---------- */
@@ -521,7 +528,7 @@ for(const v of ['walk','aerial','detail','studio','plan'])$('v-'+v).onclick=()=>
 /* ---------- hover ---------- */
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=$('tip');let hovered=null;
 function highlight(q){document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
-  run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:0xeeece6);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):(CCTCOL[S.cct]||CCTCOL.T930));});}
+  run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:(night?0x9a9893:0xeeece6));o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):(CCTCOL[S.cct]||CCTCOL.T930));});}
 canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run){tip.hidden=true;return;}
   const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
   const q=ray.intersectObjects(run.picks,false)[0]?.object.userData.piece||null;if(q!==hovered){hovered=q;highlight(q);}
@@ -633,14 +640,14 @@ function applyFrame(){const st=activeScene===studio;const dist=camera.position.d
 renderer.setAnimationLoop(t=>{
   if(current==='plan')return;
   if(anim){const k=Math.min(1,(t-anim.t0)/1100),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(anim.from.p,anim.to.p,e);controls.target.lerpVectors(anim.from.t,anim.to.t,e);if(k>=1)anim=0;}
-  const dt=Math.min(100,t-(window.__lt||t));window.__lt=t;if(explode!==explodeTo){const d=explodeTo-explode,stp=dt/650;explode=Math.abs(d)<=stp?explodeTo:explode+Math.sign(d)*stp;applyExplode();}
+  const dt=Math.min(100,t-(window.__lt||t));window.__lt=t;if(explode!==explodeTo){const d=explodeTo-explode,stp=Math.max(dt/650,Math.abs(d)*dt/120);explode=Math.abs(d)<=stp?explodeTo:explode+Math.sign(d)*stp;applyExplode();}
   controls.update();applyFrame();composer.render();labelR.render(activeScene,camera);});
 
 /* ======================= update ======================= */
 let rebuildT=0;
 function update(redrawSteps,reframe){
   R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();
-  $('strip').value=S.strip;$('cct').value=S.cct;$('proj').value=S.proj;$('client').value=S.client;
+  $('strip').value=S.strip;$('cct').value=S.cct;document.querySelectorAll('[data-cct]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cct===S.cct));$('proj').value=S.proj;$('client').value=S.client;
   clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
 }
 update(true);setTimeout(()=>go('aerial',true),0);
