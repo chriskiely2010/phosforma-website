@@ -473,23 +473,82 @@ const sFloor=new THREE.Mesh(new THREE.CircleGeometry(1,96).rotateX(-Math.PI/2),n
 studio.background=new THREE.Color(0xa9a9a9);studio.fog=new THREE.Fog(0xa9a9a9,1.6,4.5);
 const sKey=new THREE.DirectionalLight(0xffffff,1.7);sKey.castShadow=true;sKey.shadow.mapSize.set(4096,4096);sKey.shadow.bias=-0.0003;studio.add(sKey,sKey.target);
 studio.add(new THREE.HemisphereLight(0xffffff,0x8a8a8a,0.45));
-function buildStudio(){ // the whole design as built: every piece lifted out of the ground, full section, joined
+// Parts as in Holectron's installation guide: stainless profile (in the ground), LED insert (clicks in from above),
+// end caps screwed to the profile at run ends, T1X male/female leads joining inserts, feed cable out to the driver.
+const PMAT={
+  insert:new THREE.MeshStandardMaterial({color:0x3a3d41,metalness:0.5,roughness:0.45}),
+  cable:new THREE.MeshStandardMaterial({color:0x121314,roughness:0.55}),
+  conn:new THREE.MeshStandardMaterial({color:0x1d1f22,metalness:0.2,roughness:0.4}),
+  ring:new THREE.MeshStandardMaterial({color:0x2f9fb5,roughness:0.4}),   // seal ring colour on T1X connectors
+  driver:new THREE.MeshStandardMaterial({color:0x2a2d31,metalness:0.4,roughness:0.5}),
+  plate:new THREE.MeshStandardMaterial({color:0xb4b9be,metalness:1,roughness:0.3}),
+  screw:new THREE.MeshStandardMaterial({color:0x8d9399,metalness:1,roughness:0.35}),
+};
+const IPARTS={body:[[-15,15,-37,-17]],steel:[[-16.5,-15,-100,1.2],[15,16.5,-100,1.2],[-36.5,36.5,-102,-100]]};
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+function tube(points,r){return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),24,r,8,false),PMAT.cable);}
+function connector(male){ // T1X: Ø23 body, Ø14 nose; male 57 mm, female 66 mm (spec sheet)
+  const g=new THREE.Group(),L=male?0.057:0.066;
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.0115,0.0115,L*0.62,20),PMAT.conn);body.position.y=-L*0.19;
+  const nose=new THREE.Mesh(new THREE.CylinderGeometry(0.007,0.007,L*0.38,16),male?PMAT.conn:PMAT.conn);nose.position.y=L*0.31;
+  const ring=new THREE.Mesh(new THREE.CylinderGeometry(0.0118,0.0118,0.004,20),PMAT.ring);ring.position.y=L*0.12;
+  g.add(body,nose,ring);g.userData.len=L;return g;}
+function aim(obj,dir){obj.quaternion.setFromUnitVectors(V3(0,1,0),dir.clone().normalize());}
+function buildParts(target,list){
+  const group=new THREE.Group(),picks=[],pgs=[];const col=CCTCOL[S.cct]||CCTCOL.T930;
+  list.forEach((q,n)=>{const prev=list[n-1],next=list[n+1];
+    const pg=new THREE.Group(),prof=new THREE.Group(),ins=new THREE.Group();pg.add(prof,ins);group.add(pg);pgs.push(pg);
+    const capA=!prev||prev.run!==q.run,capB=!next||next.run!==q.run;
+    const f=frames(q.pts,capA?0:0.4,capB?0:0.4);
+    // profile
+    prof.add(new THREE.Mesh(sweep(IPARTS.steel,f,false,false),MAT.steel));
+    // LED insert: opal light face on an aluminium body
+    const om=new THREE.MeshStandardMaterial({color:0xeeece6,roughness:0.42,emissive:col.clone(),emissiveIntensity:2.0});
+    const opal=new THREE.Mesh(sweep(PARTS.opal,f,true,true),om);opal.userData.piece=q;picks.push(opal);
+    ins.add(opal,new THREE.Mesh(sweep(IPARTS.body,f,true,true),PMAT.insert));
+    const P=(pt,along,side,y)=>{const t=V3(Math.cos(pt.h),0,Math.sin(pt.h)),nn=V3(-Math.sin(pt.h),0,Math.cos(pt.h));return V3(pt.x/1000,y,pt.z/1000).addScaledVector(t,along).addScaledVector(nn,side);};
+    const T=pt=>V3(Math.cos(pt.h),0,Math.sin(pt.h));
+    const extras=[];
+    // end caps on the profile at the ends of a run (screwed plate, as step 1 of the guide)
+    for(const [on,pt,sg] of [[capA,f[0],-1],[capB,f.at(-1),1]]) if(on){
+      const cap=new THREE.Group();const plate=new THREE.Mesh(new THREE.BoxGeometry(0.003,0.1,0.034),PMAT.plate);cap.add(plate);
+      for(const [yy,zz] of [[0.03,0.009],[0.03,-0.009],[-0.02,0.009],[-0.02,-0.009]]){const sc=new THREE.Mesh(new THREE.CylinderGeometry(0.0025,0.0025,0.004,10).rotateZ(Math.PI/2),PMAT.screw);sc.position.set(sg*0.0025,yy,zz);cap.add(sc);}
+      cap.position.copy(P(pt,sg*0.0016,0,-0.05));cap.rotation.y=-pt.h;prof.add(cap);cap.userData.dir=T(pt).multiplyScalar(sg*0.14);extras.push(cap);}
+    // T1X leads: male at the end of this insert, female at the start of the next insert in the same run
+    const lead=(pt,sg,male)=>{const L=male?0.057:0.066,t=T(pt).multiplyScalar(sg);
+      const c=connector(male);const cp=P(pt,-sg*(L/2+0.002),0,-0.066);c.position.copy(cp);aim(c,t);ins.add(c);
+      const back=cp.clone().addScaledVector(t,-L/2),root=P(pt,-sg*0.13,0,-0.037);
+      ins.add(tube([root,root.clone().add(V3(0,-0.02,0)).addScaledVector(t,0.03),back.clone().addScaledVector(t,-0.02),back],0.00265));
+      c.userData.dir=t.clone().multiplyScalar(0.05);extras.push(c);};
+    if(!capB)lead(f.at(-1),1,true);
+    if(!capA)lead(f[0],-1,false);
+    // feed cable on the first insert of a run: down through the profile opening and out to the 24/48V driver
+    if(capA){const pt=f[0],sd=0.5;const a=P(pt,0.09,0,-0.037),b=P(pt,0.09,0,-0.085),c=P(pt,0.09,0.03,-0.09),d=P(pt,-0.15,sd*0.6,-0.096),e=P(pt,-0.3,sd,-0.093);
+      ins.add(tube([a,b,c,d,e],0.00345)); // feed cable leaves with the insert
+      const drv=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.038,0.062),PMAT.driver);drv.position.copy(e).addScaledVector(T(pt),-0.11);drv.position.y=-0.083;drv.rotation.y=-pt.h;
+      prof.add(drv);drv.userData.dir=V3(-Math.sin(pt.h),0,Math.cos(pt.h)).multiplyScalar(0.12);extras.push(drv);} // driver stays on the ground
+    pg.userData.prof=prof;pg.userData.ins=ins;pg.userData.extras=extras;
+  });
+  group.traverse(o=>{if(o.isMesh){o.receiveShadow=true;o.castShadow=true;}});target.add(group);return {group,picks,pgs};}
+function buildStudio(){ // the whole design as built, lifted out of the ground, every part modelled
   if(studioRun){disposeGroup(studioRun.group);studioRun.group.removeFromParent();}
   studioLabels.forEach(l=>l.removeFromParent());studioLabels=[];
-  studioRun=buildRun(studio,R.pieces,{full:true});studioRun.group.position.y=0.102;
-  studioRun.picks.forEach(o=>o.material.emissiveIntensity=2.0);studioRun.group.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+  studioRun=buildParts(studio,R.pieces);studioRun.group.position.y=0.102;
   const sz=Math.max(R.ext.w,R.ext.d,1000)/1000;
-  studioRun.pgs.forEach((pg,i)=>{const q=R.pieces[i],mx=q.mid.x/1000,mz=q.mid.z/1000,L=Math.hypot(mx,mz)||1;
-    // explode: pieces move apart from the centre of the design (along a straight line, out of a circle) and lift a little
-    pg.userData.off=new THREE.Vector3(mx*0.25,0.04,mz*0.25);
-    const el=document.createElement('div');el.className='lbl';el.textContent=q.label;const o=new CSS2DObject(el);o.position.set(mx,0.03,mz);o.visible=false;pg.add(o);studioLabels.push(o);});
+  studioRun.pgs.forEach((pg,i)=>{const q=R.pieces[i],mx=q.mid.x/1000,mz=q.mid.z/1000;
+    // explode: profiles move apart from the centre of the design; inserts rise out of their profiles with their leads
+    pg.userData.off=new THREE.Vector3(mx*0.25,0,mz*0.25);pg.userData.ins.userData.lift=0.17;
+    const el=document.createElement('div');el.className='lbl';el.textContent=q.label;const o=new CSS2DObject(el);o.position.set(mx,0.03,mz);o.visible=false;pg.userData.ins.add(o);studioLabels.push(o);});
   sFloor.scale.setScalar(sz*6+4);studio.fog.near=sz*2+1.5;studio.fog.far=sz*5+4;
   const r=sz*0.85+0.6;Object.assign(sKey.shadow.camera,{left:-r,right:r,top:r,bottom:-r,near:0.1,far:sz*6+10});sKey.shadow.camera.updateProjectionMatrix();
   sKey.position.set(sz*1.2+1,sz*2+2.5,sz*1.0+1.2);sKey.target.position.set(0,0,0);
   applyExplode();
 }
-function applyExplode(){if(!studioRun)return;studioRun.pgs.forEach(pg=>pg.position.copy(pg.userData.off).multiplyScalar(explode));
-  studioLabels.forEach(l=>l.visible=explode>0.4);showLabels();}
+function applyExplode(){if(!studioRun)return;const e=explode,ez=Math.min(1,e*1.6),el=Math.max(0,(e-0.25)/0.75);
+  studioRun.pgs.forEach(pg=>{pg.position.copy(pg.userData.off).multiplyScalar(e);
+    const ins=pg.userData.ins;ins.position.set(0,ins.userData.lift*ez,0);
+    pg.userData.extras.forEach(x=>{if(!x.userData.base)x.userData.base=x.position.clone();x.position.copy(x.userData.base).addScaledVector(x.userData.dir,el);});});
+  studioLabels.forEach(l=>l.visible=e>0.4);showLabels();}
 function showLabels(){const st=activeScene===studio;labels.forEach(l=>l.element.style.display=st?'none':'');studioLabels.forEach(l=>l.element.style.display=st?'':'none');}
 /* ---------- day / night ---------- */
 const composer=new EffectComposer(renderer,new THREE.WebGLRenderTarget(16,16,{samples:4,type:THREE.HalfFloatType}));const rp=new RenderPass(scene,camera);composer.addPass(rp);
@@ -527,7 +586,7 @@ function viewFor(name){
   if(name==='aerial')return {s:scene,pos:[-sz*0.75,sz*0.75+1.5,sz*0.85],tgt:[0,0,0]};
   if(name==='detail'){const c=ps.find(q=>q.d.ang)||ps[0],m=c.mid;return {s:scene,pos:[m.x/1000+0.32,0.2,m.z/1000+0.26],tgt:[m.x/1000,0,m.z/1000]};}
   if(R.pieces.length<=3){const q=R.pieces[0].pts[0];return {s:studio,pos:[q.x/1000-0.75,0.3,q.z/1000+0.45],tgt:[q.x/1000+0.2,0.07,q.z/1000-0.05]};}
-  return {s:studio,pos:[-sz*0.8-0.4,sz*0.55+0.45,sz*0.95+0.5],tgt:[0,0.05,0]};
+  return {s:studio,pos:[-sz*0.75-0.35,sz*0.32+0.35,sz*0.9+0.45],tgt:[0,0.1,0]};
 }
 function go(name,instant){
   current=name;['walk','aerial','detail','studio','plan'].forEach(v=>$('v-'+v).setAttribute('aria-pressed',v===name));
