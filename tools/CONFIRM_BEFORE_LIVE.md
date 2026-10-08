@@ -70,3 +70,4 @@ Rule (Chris, 7 Oct): a Phosforma datasheet describes ONE code. Nothing on it may
 45. Run planner: move piece rules, code table and PDF generation to Cloudflare server functions; minify the browser code; add copyright notice and terms of use to the planner and its PDF.
 46. Inground Radius R1975: catalogue prints 11.3°, but 32 pieces make 361.6° at 11.3°. Its length (385 mm) and radius give 11.26°, so the true angle is 11.25° (32 × 11.25° = 360°). Planner now uses 11.25°. Confirm with Holectron. All other radii divide 360° exactly (R6100 100 pcs, R2950 48, R1000 16, R515 8, R272 4).
 47. Installation guide labels R515 as 383 mm; the specification sheet and order code say 393 mm (L0393). Planner uses 393 mm.
+48. R1975 shown as 11.25° across the website (product rows, dimensions note, code pages, Phosforma datasheets) and the planner, 8 Oct 2026. Holectron's own datasheets and catalogue still print 11.3°.
