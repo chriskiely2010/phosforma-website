@@ -64,3 +64,7 @@ Rule (Chris, 7 Oct): a Phosforma datasheet describes ONE code. Nothing on it may
 41. ANSWERED (Chris): section modelled from the spec sheet is fine.
 42. Planner offers white strips only (FL56 24V, FL112 48V; 2200/2700/3000/4000K). RGB / RGBW / Pixel versions not in the planner yet.
 43. Driver line in the planner/PDF says "one per feed, sized and supplied separately by Phosforma"; no driver codes listed.
+
+## Protection before launch (8 Oct 2026)
+44. Chris: make the GitHub repo private (repo → Settings → Danger Zone → Change visibility). It is public as of 8 Oct 2026.
+45. Run planner: move piece rules, code table and PDF generation to Cloudflare server functions; minify the browser code; add copyright notice and terms of use to the planner and its PDF.
