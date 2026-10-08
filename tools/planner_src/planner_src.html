@@ -660,50 +660,115 @@ function planSVG(o={}){
 }
 
 /* ======================= PDF ======================= */
-function svgToPng(svg,w,h){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(img,0,0,w,h);res(c.toDataURL('image/png'));};img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});}
+function svgToPng(svg,w,h,clear){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');if(!clear){x.fillStyle='#fff';x.fillRect(0,0,w,h);}x.drawImage(img,0,0,w,h);res(c.toDataURL('image/png'));};img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});}
 function logoSVG(){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 19 125 27" width="1000" height="216">${__LOGO__.replace(/var\(--ink\)/g,'#10181f').replace(/var\(--muted\)/g,'#777779')}</svg>`;}
-async function snapshot(view,isNight){
-  const keep={view:current,mode,cam:camera.position.clone(),tgt:controls.target.clone(),num:numbersOn,w:stage.clientWidth,h:stage.clientHeight};
-  labels.forEach(l=>l.visible=false);setMode(isNight?'night':'day');const V=viewFor(view);activeScene=V.s;rp.scene=activeScene;camera.position.set(...V.pos);controls.target.set(...V.tgt);controls.update();
-  const W=1600,H=1000;renderer.setPixelRatio(1);renderer.setSize(W,H,false);composer.setSize(W,H);camera.aspect=W/H;camera.updateProjectionMatrix();
+// Render one view to an image for the PDF. o = {view, mode:'day'|'twilight'|'night', w, h, explode}
+async function snapshot(o){
+  const keep={view:current,mode,cam:camera.position.clone(),tgt:controls.target.clone(),num:numbersOn,ex:explode,exTo:explodeTo};
+  labels.forEach(l=>l.visible=false);setMode(o.mode||'night');
+  const V=viewFor(o.view);activeScene=V.s;rp.scene=activeScene;
+  const W=o.w||1600,H=o.h||1000,asp=W/H;
+  const pos=new THREE.Vector3(...V.pos),tgt=new THREE.Vector3(...V.tgt);
+  if(o.view!=='walk'&&o.view!=='detail'&&asp<1.4)pos.sub(tgt).multiplyScalar(Math.pow(1.4/asp,0.85)).add(tgt); // portrait images: step back so the design fits
+  camera.position.copy(pos);controls.target.copy(tgt);controls.update();
+  if(o.explode!==undefined){explode=explodeTo=o.explode;applyExplode();}
+  renderer.setPixelRatio(1);renderer.setSize(W,H,false);composer.setSize(W,H);camera.aspect=asp;camera.updateProjectionMatrix();
   applyFrame();composer.render();const url=canvas.toDataURL('image/jpeg',0.9);
+  explode=keep.ex;explodeTo=keep.exTo;applyExplode();
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));setMode(keep.mode);numbersOn=keep.num;labels.forEach(l=>l.visible=l.element.classList.contains('feed')||numbersOn);
   resize();go(keep.view,true);if(keep.view!=='plan'){camera.position.copy(keep.cam);controls.target.copy(keep.tgt);}
   return url;}
+function logoPNG(white){const svg=logoSVG().replace(/#10181f/g,white?'#ffffff':'#10181f').replace(/#777779/g,white?'#b9bcbf':'#777779');return svgToPng(svg,1000,216,true);}
 $('pdf').onclick=async()=>{
   const btn=$('pdf');btn.textContent='Preparing PDF…';btn.disabled=true;
   try{
-    const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});const PW=297,PH=210,M=14;
-    const logo=await svgToPng(logoSVG(),1000,216);
-    const title=S.proj||'Inground Radius run';const sub=['Holectron Inground Radius','planning drawing',new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})].join(' · ');
-    const head=(t)=>{doc.addImage(logo,'PNG',M,M-2,34,7.3);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(16,24,31);doc.text(t,PW-M,M+2,{align:'right'});doc.setFont('helvetica','normal');doc.setTextColor(119,119,121);doc.text(sub,PW-M,M+6.5,{align:'right'});};
-    const foot=(n,N)=>{doc.setFontSize(7.5);doc.setTextColor(119,119,121);doc.text('info@phosforma.com.au',M,PH-8);doc.text('Planning drawing, subject to Phosforma confirmation. Phosforma reserves the right to update the technical specifications.',PW/2,PH-8,{align:'center'});doc.text(`${n}/${N}`,PW-M,PH-8,{align:'right'});};
+    const {jsPDF}=window.jspdf;
+    // A4 portrait pages laid out as a book: single cover, two-page spreads, single back page
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});const PW=210,PH=297,M=14;
+    doc.setDisplayMode('fullpage','tworight');
+    const INK=[16,24,31],GREY=[119,119,121],LINE=[223,224,226],ORANGE=[255,80,0];
+    const logoK=await logoPNG(false),logoW=await logoPNG(true);
     const {st,pieces,runs,ext}=R;const L=pieces.reduce((a,q)=>a+q.d.len,0),Wt=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0),cctL=CCTS.find(c=>c[0]===S.cct)[1];
-    // page 1: overview
-    head(title);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(16,24,31);doc.text(title,M,M+24);
-    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(119,119,121);doc.text(S.client?`Prepared for ${S.client}`:'Inground Radius run plan',M,M+30.5);
-    const night1=await snapshot('aerial',true),day1=await snapshot('aerial',false);
-    doc.addImage(night1,'JPEG',M,M+36,170,106.25);doc.addImage(day1,'JPEG',M+174,M+36+54.25,90,52);
-    const rows=[['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Lines / pieces',`${R.lines.length} / ${pieces.length}`],['LED strip',`${st.label} · ${cctL}`],['Load',Wt.toFixed(1)+' W'],['Delivered light',Math.round(LM)+' lm'],['Feeds / drivers',`${runs.length} × ${st.v}V DC (max ${st.max} m per feed)`]];
-    let y=M+40;doc.setFontSize(9);rows.forEach(([k,v])=>{doc.setTextColor(119,119,121);doc.text(k,M+174,y);doc.setTextColor(16,24,31);doc.text(v,PW-M,y,{align:'right'});doc.setDrawColor(223,224,226);doc.line(M+174,y+2,PW-M,y+2);y+=6.6;});
-    doc.setFontSize(7.5);doc.setTextColor(119,119,121);doc.text('Night and daytime views. Visualisation only: light spill and paving are indicative.',M,M+36+106.25+5);
-    // page 2: plan
-    doc.addPage();head(title);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(16,24,31);doc.text('Plan',M,M+18);
-    const svg=planSVG();const vbm=svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);const boxW=PW-2*M,boxH=PH-M-22-14,sc=Math.min(boxW/vbm[2],boxH/vbm[3]);
-    const pw=vbm[2]*sc,ph=vbm[3]*sc;const png=await svgToPng(svg,Math.round(pw*12),Math.round(ph*12));doc.addImage(png,'PNG',M+(boxW-pw)/2,M+22,pw,ph);
-    doc.setFontSize(7.5);doc.setTextColor(119,119,121);doc.text(`Scale approx. 1:${Math.round(1/sc)} at A4. Dimensions on the centre line, in mm. Curve radii on the outer edge. End caps and feeds in orange.`,M,PH-14);
-    // page 3: order list
-    doc.addPage();head(title);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(16,24,31);doc.text('Order list',M,M+18);
-    y=M+27;doc.setFontSize(8);doc.setTextColor(119,119,121);doc.text('Qty',M,y);doc.text('Order code',M+12,y);doc.text('Description',M+150,y);doc.text('Pieces',PW-M,y,{align:'right'});y+=2.5;doc.setDrawColor(16,24,31);doc.line(M,y,PW-M,y);y+=5;
-    for(const [code,g] of Object.entries(R.groups)){if(y>PH-30){doc.addPage();head(title);y=M+24;}
-      doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.text(String(g.q),M,y);doc.setFont('helvetica','normal');doc.setFontSize(7.8);doc.text(code,M+12,y);
-      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,M+150,y);doc.setTextColor(119,119,121);doc.text(labelsTxt(g.list).replace(/–/g,'-'),PW-M,y,{align:'right'});
-      y+=3;doc.setDrawColor(223,224,226);doc.line(M,y,PW-M,y);y+=5;}
-    y+=4;doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.setFontSize(10);doc.text('Feeds',M,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(8.5);
-    runs.forEach((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;doc.text(`Feed ${i+1} (line ${LET(r[0].line)}): pieces ${r[0].label}-${r.at(-1).label} · ${l.toFixed(2)} m · ${w.toFixed(1)} W · ${st.v}V DC driver (separate), fed at piece ${r[0].label}`,M,y);y+=5;});
-    y+=3;doc.setTextColor(119,119,121);doc.setFontSize(8);
-    doc.text(doc.splitTextToSize('Start pieces carry an end cap at the start and take the feed cable; middle pieces join both sides; end pieces carry an end cap at the end. Pieces join with male/female T1X connectors inside the chamber. Curves can be laid turning left or right. Power and light output are Holectron\'s published values per piece. Drivers are sized and supplied separately by Phosforma.',PW-2*M),M,y);
-    const N=doc.getNumberOfPages();for(let i=1;i<=N;i++){doc.setPage(i);foot(i,N);}
+    const title=S.proj||'Inground Radius run';const date=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+    const txt=(t,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.s||9);doc.setTextColor(...(o.c||INK));doc.text(String(t).replace(/–/g,'-'),x,y,o.a?{align:o.a}:undefined);};
+    const label=(t,x,y,c)=>txt(t.toUpperCase(),x,y,{s:7.5,b:true,c:c||GREY});
+    let pageNo=0;const inner=[]; // inner page numbers (covers excluded)
+    const foot=(left)=>{pageNo++;inner.push(doc.getNumberOfPages());};
+    const footers=()=>{inner.forEach(pg=>{doc.setPage(pg);const left=pg%2===0;const n=pg-1;
+      txt(n,left?M:PW-M,PH-8,{s:7.5,c:GREY,a:left?'left':'right'});
+      txt(left?'info@phosforma.com.au':'Planning drawing, subject to Phosforma confirmation.',left?M+8:PW-M-8,PH-8,{s:7,c:GREY,a:left?'left':'right'});});};
+    const img=(data,x,y,w,h)=>doc.addImage(data,'JPEG',x,y,w,h,undefined,'FAST');
+
+    // ---- renders
+    const coverImg=await snapshot({view:'aerial',mode:'night',w:1240,h:1754});
+    const twiFull=await snapshot({view:'walk',mode:'twilight',w:1240,h:1754});
+    const dayImg=await snapshot({view:'aerial',mode:'day',w:1600,h:760});
+    const twiImg=await snapshot({view:'walk',mode:'night',w:1600,h:760});
+    const modelA=await snapshot({view:'studio',mode:'day',w:1600,h:1000,explode:0});
+    const modelE=await snapshot({view:'studio',mode:'day',w:1600,h:1000,explode:1});
+
+    // ---- 1 cover
+    img(coverImg,0,0,PW,PH);
+    doc.setGState(new doc.GState({opacity:0.55}));doc.setFillColor(5,8,13);doc.rect(0,PH-112,PW,112,'F');doc.rect(0,0,PW,34,'F');doc.setGState(new doc.GState({opacity:1}));
+    doc.addImage(logoW,'PNG',M,M-1,40,8.6);
+    txt('INGROUND RADIUS · RUN PLAN',PW-M,M+5,{s:7.5,b:true,c:[220,222,224],a:'right'});
+    txt('Draw the line.',M,PH-78,{s:30,b:true,c:[255,255,255]});
+    txt("We'll give it form.",M,PH-65,{s:30,b:true,c:[255,140,80]});
+    doc.setDrawColor(255,255,255);doc.setLineWidth(0.2);doc.line(M,PH-50,PW-M,PH-50);
+    txt(title,M,PH-40,{s:13,b:true,c:[255,255,255]});
+    txt(S.client?`Prepared for ${S.client}`:'Holectron Inground Radius',M,PH-33,{s:9,c:[210,212,214]});
+    txt(date,M,PH-26,{s:9,c:[210,212,214]});
+    txt('phosforma.com.au',PW-M,PH-26,{s:9,c:[210,212,214],a:'right'});
+
+    // ---- spread 1: overview
+    doc.addPage();img(twiFull,0,0,PW,PH); // left page full bleed
+    doc.addPage();foot();
+    label('Overview',M,M+4);txt(title,M,M+16,{s:20,b:true});txt(S.client?`Prepared for ${S.client} · ${date}`:date,M,M+23,{s:9,c:GREY});
+    const rows=[['Lines',String(R.lines.length)],['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',String(pieces.length)],
+      ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',Wt.toFixed(1)+' W'],['Delivered light',Math.round(LM)+' lm'],['Feeds / drivers',`${runs.length} × ${st.v}V DC, max ${st.max} m per feed`]];
+    let y=M+36;rows.forEach(([k,v])=>{txt(k,M,y,{s:9,c:GREY});txt(v,PW-M,y,{s:9,a:'right'});doc.setDrawColor(...LINE);doc.setLineWidth(0.2);doc.line(M,y+2.2,PW-M,y+2.2);y+=7;});
+    y+=6;const iw=PW-2*M,ih=iw*760/1600;
+    img(twiImg,M,y,iw,ih);txt('Night, along the line',M,y+ih+4.5,{s:7.5,c:GREY});y+=ih+11;
+    img(dayImg,M,y,iw,ih);txt('Daytime, from above. Twilight view opposite. Visualisation only.',M,y+ih+4.5,{s:7.5,c:GREY});
+
+    // ---- spread 2: plan across both pages
+    const svg=planSVG();const vb=svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
+    const bx=M,by=M+16,bw=2*PW-2*M,bh=PH-by-20,sc=Math.min(bw/vb[2],bh/vb[3]),pw=vb[2]*sc,ph=vb[3]*sc;
+    const plan=await svgToPng(svg,Math.round(pw*9),Math.round(ph*9));const px=bx+(bw-pw)/2,py=by+(bh-ph)/2;
+    doc.addPage();foot();label('Plan',M,M+4);txt('Plan drawing',M,M+11,{s:13,b:true});doc.addImage(plan,'PNG',px,py,pw,ph,undefined,'FAST');
+    doc.addPage();foot();doc.addImage(plan,'PNG',px-PW,py,pw,ph,undefined,'FAST');
+    txt(`Scale approx. 1:${Math.round(1/sc)} across the spread at A4. Dimensions on the centre line, in mm. Curve radii on the outer edge. End caps and feeds in orange.`,PW-M,M+4,{s:7.5,c:GREY,a:'right'});
+
+    // ---- spread 3: 3D model (left) and order list (right)
+    doc.addPage();foot();label('Parts',M,M+4);txt('3D model',M,M+11,{s:13,b:true});
+    const mh=iw*1000/1600;img(modelA,M,M+18,iw,mh);txt('Assembled: stainless profiles with LED inserts, end caps and feed.',M,M+18+mh+4.5,{s:7.5,c:GREY});
+    img(modelE,M,M+28+mh,iw,mh);txt('Exploded: inserts lifted from their profiles, T1X leads separated, end caps and driver pulled clear.',M,M+28+2*mh+4.5,{s:7.5,c:GREY});
+    doc.addPage();foot();label('Order list',M,M+4);txt('Order list',M,M+11,{s:13,b:true});
+    y=M+20;txt('QTY',M,y,{s:7,b:true,c:GREY});txt('ORDER CODE / DESCRIPTION',M+10,y,{s:7,b:true,c:GREY});txt('PIECES',PW-M,y,{s:7,b:true,c:GREY,a:'right'});
+    y+=2;doc.setDrawColor(...INK);doc.setLineWidth(0.3);doc.line(M,y,PW-M,y);y+=5;
+    for(const [code,g] of Object.entries(R.groups)){
+      if(y>PH-40){doc.addPage();foot();y=M+12;}
+      txt(g.q,M,y,{s:9,b:true});txt(code,M+10,y,{s:7.6});
+      txt(`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,M+10,y+4,{s:7,c:GREY});
+      const pcs=doc.splitTextToSize(labelsTxt(g.list).replace(/–/g,'-'),36);txt(pcs[0]+(pcs.length>1?'…':''),PW-M,y,{s:7,c:GREY,a:'right'});
+      y+=6.5;doc.setDrawColor(...LINE);doc.setLineWidth(0.2);doc.line(M,y,PW-M,y);y+=4.5;}
+    y+=3;if(y>PH-60){doc.addPage();foot();y=M+12;}
+    txt('Feeds',M,y,{s:10,b:true});y+=6;
+    runs.forEach((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;
+      txt(`Feed ${i+1} · line ${LET(r[0].line)}: pieces ${r[0].label}-${r.at(-1).label} · ${l.toFixed(2)} m · ${w.toFixed(1)} W · ${st.v}V DC driver`,M,y,{s:8});y+=4.8;});
+    y+=3;doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...GREY);
+    doc.text(doc.splitTextToSize('Start pieces carry an end cap at the start and take the feed cable; middle pieces join both sides; end pieces carry an end cap at the end. LED inserts click into the stainless profiles and join with male/female T1X connectors in the chamber. Curves can be laid turning left or right. Power and light output are Holectron\'s published values per piece. Drivers are sized and supplied separately by Phosforma.',PW-2*M),M,y);
+    // keep the back cover on its own (left-hand) page
+    if(doc.getNumberOfPages()%2===0){doc.addPage();foot();}
+
+    // ---- back page
+    doc.addPage();doc.setFillColor(...INK);doc.rect(0,0,PW,PH,'F');
+    doc.addImage(logoW,'PNG',(PW-56)/2,PH/2-30,56,12.1);
+    txt('Draw the line.',PW/2,PH/2+2,{s:13,b:true,c:[255,255,255],a:'center'});txt("We'll give it form.",PW/2,PH/2+9,{s:13,b:true,c:[255,140,80],a:'center'});
+    txt('info@phosforma.com.au · phosforma.com.au',PW/2,PH-34,{s:9,c:[210,212,214],a:'center'});
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(150,153,156);
+    doc.text(doc.splitTextToSize('Planning drawing, subject to Phosforma confirmation. Phosforma reserves the right to update the technical specifications. Visualisations are indicative.',PW-60),PW/2,PH-26,{align:'center'});
+    footers();
     doc.save(`${(S.proj||'Inground Radius run').replace(/[^\w\- ]+/g,'').trim()||'Inground Radius run'} - Phosforma.pdf`);
     toast('PDF downloaded');
   }catch(e){console.error(e);toast('The PDF could not be made: '+e.message);}
