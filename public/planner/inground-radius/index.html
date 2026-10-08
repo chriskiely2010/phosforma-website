@@ -5,14 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Inground Radius Run Planner · Phosforma</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: spec panel docked left (path editor, options, order list), full-height 3D / plan stage right; stacks on phones */
 :root{
   --bg:#f3f4f4; --panel:#ffffff; --ink:#10181f; --muted:#6c6e72; --line:#dfe0e2; --chip:#eef0f1; --field:#f6f7f7;
   --accent:#ff5000; --warn:#b54708; --warnbg:#fff4e5; --stage:#cfd3d6;
-  --sans:"Helvetica Neue",Helvetica,Arial,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --sans:"Helvetica Neue",Helvetica,Arial,sans-serif; --mono:"Helvetica Neue",Helvetica,Arial,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1217;--panel:#141a20;--ink:#e9ecee;--muted:#98a0a8;--line:#28313a;--chip:#1d252d;--field:#1a2128;--warn:#f6b26b;--warnbg:#2b1d0e;--stage:#1a2027;color-scheme:dark}}
@@ -65,7 +63,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 table{width:100%;border-collapse:collapse;font-size:12px}
 td{padding:6px 0;border-top:1px solid var(--line);vertical-align:top}
 td.q{width:30px;font-variant-numeric:tabular-nums;font-weight:600}
-td code{font-family:var(--mono);font-size:10.5px;line-height:1.45;display:block;word-break:break-word}
+td code{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.01em;line-height:1.45;display:block;word-break:break-word}
 td small{color:var(--muted);font-size:11px}
 tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .actions{display:flex;flex-wrap:wrap;gap:8px}
@@ -600,7 +598,7 @@ $('pdf').onclick=async()=>{
     doc.addPage();head(title);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(16,24,31);doc.text('Order list',M,M+18);
     y=M+27;doc.setFontSize(8);doc.setTextColor(119,119,121);doc.text('Qty',M,y);doc.text('Order code',M+12,y);doc.text('Description',M+150,y);doc.text('Pieces',PW-M,y,{align:'right'});y+=2.5;doc.setDrawColor(16,24,31);doc.line(M,y,PW-M,y);y+=5;
     for(const [code,g] of Object.entries(R.groups)){if(y>PH-30){doc.addPage();head(title);y=M+24;}
-      doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.text(String(g.q),M,y);doc.setFont('courier','normal');doc.setFontSize(7.6);doc.text(code,M+12,y);
+      doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.text(String(g.q),M,y);doc.setFont('helvetica','normal');doc.setFontSize(7.8);doc.text(code,M+12,y);
       doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,M+150,y);doc.setTextColor(119,119,121);doc.text(labelsTxt(g.list).replace(/–/g,'-'),PW-M,y,{align:'right'});
       y+=3;doc.setDrawColor(223,224,226);doc.line(M,y,PW-M,y);y+=5;}
     y+=4;doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.setFontSize(10);doc.text('Feeds',M,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(8.5);
