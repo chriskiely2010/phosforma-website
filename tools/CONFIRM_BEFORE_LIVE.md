@@ -56,9 +56,11 @@ Rule (Chris, 7 Oct): a Phosforma datasheet describes ONE code. Nothing on it may
 35. LDT: Electron only publishes white non-dimmable files (same optics for every colour/control); Linibox C files are Electron's C files (identical to W apart from the name); 17-27C-90-AS header says CRI 80 but has CRI90 lumens.
 36. Photometric fix (applies to all brands): LDT lamp flux is now read as the set total, which corrected Electron (4 LEDs) and 2 other supplier files.
 
-## Inground Radius run planner (concept, 8 Oct 2026 — not on the site yet)
-37. Can a curve piece be laid turning left or right with the same order code (sample assumes yes)?
-38. Wire exit position and the T1X joint between Start/Middle/End pieces (sample shows a 0.8 mm joint, no visible connector).
-39. Maximum run per feed for FL112 48V 9.6 W/m (sample's 10.16 m / 96 W is shown as one feed at the start piece); driver sizing rule.
-40. Straights: only 505 / 1005 mm, or any length 0.5–3 m as the spec sheet's key benefits say?
-41. Section modelled from the spec sheet drawing (33 mm opal at grade, 1.5 mm stainless walls, 102 mm deep, 73 mm base); illustrative, not Holectron CAD.
+## Inground Radius run planner (8 Oct 2026, on the test site at /planner/inground-radius/)
+37. ANSWERED (Chris): curves can be laid either way with the same code.
+38. ANSWERED (Chris): pieces connect in the chamber with male/female T1X connectors.
+39. ANSWERED (Chris): max run is set by the strip. Planner uses Holectron's MAX RUN chart (one side): FL112 48V 4.8 W/m 28.5 m, 9.6 W/m 22.5 m; FL56 24V 2.4 W/m 18.5 m, 4.8 W/m 13 m, 9.6 W/m 7.5 m. Longer lines are split into separate runs (end caps back to back, one feed each). Confirm that is how Holectron wants long lines handled (vs feeding from both ends).
+40. ANSWERED (Chris): straights only 505 / 1005 mm, as in the configurator.
+41. ANSWERED (Chris): section modelled from the spec sheet is fine.
+42. Planner offers white strips only (FL56 24V, FL112 48V; 2200/2700/3000/4000K). RGB / RGBW / Pixel versions not in the planner yet.
+43. Driver line in the planner/PDF says "one per feed, sized and supplied separately by Phosforma"; no driver codes listed.

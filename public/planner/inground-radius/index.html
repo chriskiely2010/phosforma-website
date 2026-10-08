@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Inground Radius Run Planner · Phosforma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: spec panel docked left (path editor, options, order list), full-height 3D / plan stage right; stacks on phones */
+:root{
+  --bg:#f3f4f4; --panel:#ffffff; --ink:#10181f; --muted:#6c6e72; --line:#dfe0e2; --chip:#eef0f1; --field:#f6f7f7;
+  --accent:#ff5000; --warn:#b54708; --warnbg:#fff4e5; --stage:#cfd3d6;
+  --sans:"Helvetica Neue",Helvetica,Arial,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1217;--panel:#141a20;--ink:#e9ecee;--muted:#98a0a8;--line:#28313a;--chip:#1d252d;--field:#1a2128;--warn:#f6b26b;--warnbg:#2b1d0e;--stage:#1a2027;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1217;--panel:#141a20;--ink:#e9ecee;--muted:#98a0a8;--line:#28313a;--chip:#1d252d;--field:#1a2128;--warn:#f6b26b;--warnbg:#2b1d0e;--stage:#1a2027;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.4 var(--sans);overflow:hidden}
+[hidden]{display:none!important}
+.app{height:100%;display:flex}
+.panel{width:400px;flex:0 0 400px;height:100%;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding-block:20px 28px;padding-inline:22px;display:flex;flex-direction:column;gap:20px;z-index:2}
+.stage{position:relative;flex:1;min-width:0;background:var(--stage)}
+#c{display:block;width:100%;height:100%}
+.brand{display:flex;align-items:center;justify-content:space-between}
+.brand a{display:flex}.brand svg{height:19px;width:auto}
+.tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:23px;line-height:1.1;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+h2{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline}
+section{min-width:0}
+label.f{display:grid;gap:4px;font-size:11.5px;color:var(--muted)}
+input,select{font:inherit;font-size:13px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-width:0;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.steps{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.step{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;border:1px solid var(--line);border-radius:6px;padding:8px}
+.step .n{font:600 11px var(--sans);width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--panel);display:grid;place-items:center;margin-top:2px}
+.step .body{display:grid;gap:6px;min-width:0}
+.step .fields{display:grid;gap:6px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.step .fields.s{grid-template-columns:minmax(0,1fr)}
+.step .res{font-size:11.5px;color:var(--muted)}
+.step .res b{color:var(--ink);font-weight:600}
+.step .res.off{color:var(--warn)}
+.step .ctl{display:flex;flex-direction:column;gap:2px}
+.ib{all:unset;cursor:pointer;width:22px;height:20px;display:grid;place-items:center;border-radius:3px;color:var(--muted);font-size:12px}
+.ib:hover{background:var(--chip);color:var(--ink)}
+.adds{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.btn{all:unset;cursor:pointer;font-size:12.5px;padding:7px 11px;border-radius:4px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.btn:hover{border-color:var(--ink)}
+.btn.solid{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn.solid:hover{opacity:.9}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin:0}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.warn{background:var(--warnbg);color:var(--warn);border-radius:5px;padding:8px 10px;font-size:12px;line-height:1.45}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td{padding:6px 0;border-top:1px solid var(--line);vertical-align:top}
+td.q{width:30px;font-variant-numeric:tabular-nums;font-weight:600}
+td code{font-family:var(--mono);font-size:10.5px;line-height:1.45;display:block;word-break:break-word}
+td small{color:var(--muted);font-size:11px}
+tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.note{font-size:11.5px;line-height:1.5;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#10181f;color:#fff;font-size:13px;padding:8px 14px;border-radius:6px;z-index:9}
+.toolbar{position:absolute;top:14px;left:14px;right:14px;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;pointer-events:none;z-index:3}
+.grp{display:flex;background:rgba(16,24,31,.72);backdrop-filter:blur(8px);border-radius:6px;padding:3px;pointer-events:auto}
+.grp button{all:unset;cursor:pointer;color:#e8ebee;font-size:12.5px;padding:7px 11px;border-radius:4px}
+.grp button:hover{background:rgba(255,255,255,.1)}
+.grp button[aria-pressed="true"]{background:#fff;color:#10181f}
+.grp button:focus-visible{outline:2px solid var(--accent)}
+.grp.dim{opacity:.45}
+.tip{position:absolute;pointer-events:none;background:#10181f;color:#fff;border-radius:5px;padding:8px 10px;font-size:12px;line-height:1.4;max-width:310px;transform:translate(12px,12px);z-index:4}
+.tip code{font-family:var(--mono);font-size:10.5px;color:#cfd5da;display:block;margin-top:3px}
+.lbl{font:600 11px var(--sans);color:#10181f;background:#fff;border-radius:9px;padding:1px 6px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.lbl.feed{background:#ff5000;color:#fff}
+.legend{position:absolute;left:14px;bottom:14px;color:#fff;font-size:11.5px;background:rgba(16,24,31,.6);border-radius:5px;padding:6px 9px;pointer-events:none}
+.plan{position:absolute;inset:0;background:#fff;overflow:auto;z-index:2}
+.plan svg{display:block;width:100%;height:100%}
+@media (max-width:820px){
+  body{overflow:auto}
+  .app{flex-direction:column-reverse;height:auto}
+  .panel{width:100%;flex:none;height:auto;border-right:0;border-top:1px solid var(--line);padding-inline:16px}
+  .stage{flex:none;height:62vh}
+  .toolbar{left:8px;right:8px;top:8px}
+  .grp button{padding:6px 8px;font-size:11.5px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel" aria-label="Run planner">
+    <div class="brand">
+      <a href="/" aria-label="Phosforma home"><svg viewBox="0 19 125 27" id="logo" role="img" aria-label="Phosforma"></svg></a>
+      <span class="tag">Run planner</span>
+    </div>
+    <div>
+      <h1>Inground Radius run planner</h1>
+      <p class="lede">Set out a line of Holectron Inground Radius from straights and turns. The planner picks the catalogue pieces, splits feeds by maximum run, and gives you the drawings and order list.</p>
+    </div>
+
+    <section>
+      <h2>Project</h2>
+      <div class="row2">
+        <label class="f">Project name<input id="proj" placeholder="e.g. Forecourt path"></label>
+        <label class="f">Prepared for<input id="client" placeholder="Name or company"></label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Light</h2>
+      <div class="row2">
+        <label class="f">LED strip<select id="strip"></select></label>
+        <label class="f">Colour temperature<select id="cct"></select></label>
+      </div>
+    </section>
+
+    <section>
+      <h2><span>Path</span><span>start → end</span></h2>
+      <ol class="steps" id="steps"></ol>
+      <div class="adds">
+        <button class="btn" id="add-s">+ Straight</button>
+        <button class="btn" id="add-l">+ Turn left</button>
+        <button class="btn" id="add-r">+ Turn right</button>
+        <select id="preset" aria-label="Load an example path" style="width:auto;flex:1"><option value="">Load an example…</option></select>
+      </div>
+    </section>
+
+    <section>
+      <h2>Run</h2>
+      <dl class="kv" id="sum"></dl>
+      <div class="warn" id="warn" hidden></div>
+    </section>
+
+    <section>
+      <h2>Order list</h2>
+      <table id="bom"></table>
+    </section>
+
+    <div class="actions">
+      <button class="btn solid" id="pdf">Download PDF</button>
+      <button class="btn" id="copy">Copy order list</button>
+      <button class="btn" id="share">Copy link to this plan</button>
+    </div>
+    <p class="note">Pieces, codes, power and light output are Holectron's published values. Curves are laid either way; pieces join with male/female connectors in the chamber. The model follows the specification sheet section and is a planning drawing, subject to Phosforma confirmation.</p>
+  </aside>
+
+  <main class="stage">
+    <canvas id="c" aria-label="3D view of the run"></canvas>
+    <div class="plan" id="plan" hidden></div>
+    <div class="toolbar">
+      <div class="grp" role="group" aria-label="View">
+        <button id="v-walk" aria-pressed="false">Walkway</button>
+        <button id="v-aerial" aria-pressed="true">Aerial</button>
+        <button id="v-detail" aria-pressed="false">Detail</button>
+        <button id="v-studio" aria-pressed="false">Section</button>
+        <button id="v-plan" aria-pressed="false">Plan drawing</button>
+      </div>
+      <div class="grp" id="modes" role="group" aria-label="Lighting">
+        <button id="m-night" aria-pressed="true">Night</button>
+        <button id="m-day" aria-pressed="false">Day</button>
+        <button id="t-num" aria-pressed="true">Piece numbers</button>
+      </div>
+    </div>
+    <div class="legend" id="legend">Drag to orbit · scroll to zoom · hover a piece for its code</div>
+    <div class="tip" id="tip" hidden></div>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {CSS2DRenderer,CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
+
+const $=id=>document.getElementById(id);
+/* ======================= catalogue ======================= */
+// [power W, delivered lm] per piece / strip / CCT, from Holectron's configurator (Phosforma products sheet)
+const TABLE={"R0000 L0505|FL56/Nx 02W 922":[1.2,53.0],"R0000 L0505|FL56/Nx 02W T927":[1.2,81.0],"R0000 L0505|FL56/Nx 02W T930":[1.2,85.0],"R0000 L0505|FL56/Nx 02W T940":[1.2,88.0],"R0000 L0505|FL56/Nx 04W 922":[2.4,104.0],"R0000 L0505|FL56/Nx 04W T927":[2.4,160.0],"R0000 L0505|FL56/Nx 04W T930":[2.4,168.0],"R0000 L0505|FL56/Nx 04W T940":[2.4,175.0],"R0000 L0505|FL56/Nx 09W 922":[4.8,204.0],"R0000 L0505|FL56/Nx 09W T927":[4.8,314.0],"R0000 L0505|FL56/Nx 09W T930":[4.8,330.0],"R0000 L0505|FL56/Nx 09W T940":[4.8,343.0],"R0000 L0505|FL112/Nx.48V 04W 922":[2.4,107.0],"R0000 L0505|FL112/Nx.48V 04W T927":[2.4,161.0],"R0000 L0505|FL112/Nx.48V 04W T930":[2.4,170.0],"R0000 L0505|FL112/Nx.48V 04W T940":[2.4,176.0],"R0000 L0505|FL112/Nx.48V 09W 922":[4.8,209.0],"R0000 L0505|FL112/Nx.48V 09W T927":[4.8,320.0],"R0000 L0505|FL112/Nx.48V 09W T930":[4.8,336.0],"R0000 L0505|FL112/Nx.48V 09W T940":[4.8,349.0],"R0000 L1005|FL56/Nx 02W 922":[2.4,106.0],"R0000 L1005|FL56/Nx 02W T927":[2.4,161.0],"R0000 L1005|FL56/Nx 02W T930":[2.4,169.0],"R0000 L1005|FL56/Nx 02W T940":[2.4,176.0],"R0000 L1005|FL56/Nx 04W 922":[4.8,209.0],"R0000 L1005|FL56/Nx 04W T927":[4.8,320.0],"R0000 L1005|FL56/Nx 04W T930":[4.8,336.0],"R0000 L1005|FL56/Nx 04W T940":[4.8,349.0],"R0000 L1005|FL56/Nx 09W 922":[9.6,407.0],"R0000 L1005|FL56/Nx 09W T927":[9.6,627.0],"R0000 L1005|FL56/Nx 09W T930":[9.6,660.0],"R0000 L1005|FL56/Nx 09W T940":[9.6,686.0],"R0000 L1005|FL112/Nx.48V 04W 922":[4.8,214.0],"R0000 L1005|FL112/Nx.48V 04W T927":[4.8,322.0],"R0000 L1005|FL112/Nx.48V 04W T930":[4.8,339.0],"R0000 L1005|FL112/Nx.48V 04W T940":[4.8,352.0],"R0000 L1005|FL112/Nx.48V 09W 922":[9.6,418.0],"R0000 L1005|FL112/Nx.48V 09W T927":[9.6,639.0],"R0000 L1005|FL112/Nx.48V 09W T930":[9.6,672.0],"R0000 L1005|FL112/Nx.48V 09W T940":[9.6,698.0],"R0272 L0404|FL56/Nx 02W 922":[0.9,40.0],"R0272 L0404|FL56/Nx 02W T927":[0.9,60.0],"R0272 L0404|FL56/Nx 02W T930":[0.9,63.0],"R0272 L0404|FL56/Nx 02W T940":[0.9,66.0],"R0272 L0404|FL56/Nx 04W 922":[1.8,78.0],"R0272 L0404|FL56/Nx 04W T927":[1.8,120.0],"R0272 L0404|FL56/Nx 04W T930":[1.8,126.0],"R0272 L0404|FL56/Nx 04W T940":[1.8,131.0],"R0272 L0404|FL56/Nx 09W 922":[3.6,153.0],"R0272 L0404|FL56/Nx 09W T927":[3.6,235.0],"R0272 L0404|FL56/Nx 09W T930":[3.6,247.0],"R0272 L0404|FL56/Nx 09W T940":[3.6,257.0],"R0272 L0404|FL112/Nx.48V 04W 922":[1.8,80.0],"R0272 L0404|FL112/Nx.48V 04W T927":[1.8,121.0],"R0272 L0404|FL112/Nx.48V 04W T930":[1.8,127.0],"R0272 L0404|FL112/Nx.48V 04W T940":[1.8,132.0],"R0272 L0404|FL112/Nx.48V 09W 922":[3.6,157.0],"R0272 L0404|FL112/Nx.48V 09W T927":[3.6,240.0],"R0272 L0404|FL112/Nx.48V 09W T930":[3.6,252.0],"R0272 L0404|FL112/Nx.48V 09W T940":[3.6,262.0],"R0515 L0393|FL56/Nx 02W 922":[0.9,40.0],"R0515 L0393|FL56/Nx 02W T927":[0.9,60.0],"R0515 L0393|FL56/Nx 02W T930":[0.9,63.0],"R0515 L0393|FL56/Nx 02W T940":[0.9,66.0],"R0515 L0393|FL56/Nx 04W 922":[1.8,78.0],"R0515 L0393|FL56/Nx 04W T927":[1.8,120.0],"R0515 L0393|FL56/Nx 04W T930":[1.8,126.0],"R0515 L0393|FL56/Nx 04W T940":[1.8,131.0],"R0515 L0393|FL56/Nx 09W 922":[3.6,153.0],"R0515 L0393|FL56/Nx 09W T927":[3.6,235.0],"R0515 L0393|FL56/Nx 09W T930":[3.6,247.0],"R0515 L0393|FL56/Nx 09W T940":[3.6,257.0],"R0515 L0393|FL112/Nx.48V 04W 922":[1.8,80.0],"R0515 L0393|FL112/Nx.48V 04W T927":[1.8,121.0],"R0515 L0393|FL112/Nx.48V 04W T930":[1.8,127.0],"R0515 L0393|FL112/Nx.48V 04W T940":[1.8,132.0],"R0515 L0393|FL112/Nx.48V 09W 922":[3.6,157.0],"R0515 L0393|FL112/Nx.48V 09W T927":[3.6,240.0],"R0515 L0393|FL112/Nx.48V 09W T930":[3.6,252.0],"R0515 L0393|FL112/Nx.48V 09W T940":[3.6,262.0],"R1000 L0387|FL56/Nx 02W 922":[0.9,40.0],"R1000 L0387|FL56/Nx 02W T927":[0.9,60.0],"R1000 L0387|FL56/Nx 02W T930":[0.9,63.0],"R1000 L0387|FL56/Nx 02W T940":[0.9,66.0],"R1000 L0387|FL56/Nx 04W 922":[1.8,78.0],"R1000 L0387|FL56/Nx 04W T927":[1.8,120.0],"R1000 L0387|FL56/Nx 04W T930":[1.8,126.0],"R1000 L0387|FL56/Nx 04W T940":[1.8,131.0],"R1000 L0387|FL56/Nx 09W 922":[3.6,153.0],"R1000 L0387|FL56/Nx 09W T927":[3.6,235.0],"R1000 L0387|FL56/Nx 09W T930":[3.6,247.0],"R1000 L0387|FL56/Nx 09W T940":[3.6,257.0],"R1000 L0387|FL112/Nx.48V 04W 922":[1.8,80.0],"R1000 L0387|FL112/Nx.48V 04W T927":[1.8,121.0],"R1000 L0387|FL112/Nx.48V 04W T930":[1.8,127.0],"R1000 L0387|FL112/Nx.48V 04W T940":[1.8,132.0],"R1000 L0387|FL112/Nx.48V 09W 922":[3.6,157.0],"R1000 L0387|FL112/Nx.48V 09W T927":[3.6,240.0],"R1000 L0387|FL112/Nx.48V 09W T930":[3.6,252.0],"R1000 L0387|FL112/Nx.48V 09W T940":[3.6,262.0],"R1975 L0385|FL56/Nx 02W 922":[0.9,40.0],"R1975 L0385|FL56/Nx 02W T927":[0.9,60.0],"R1975 L0385|FL56/Nx 02W T930":[0.9,63.0],"R1975 L0385|FL56/Nx 02W T940":[0.9,66.0],"R1975 L0385|FL56/Nx 04W 922":[1.8,78.0],"R1975 L0385|FL56/Nx 04W T927":[1.8,120.0],"R1975 L0385|FL56/Nx 04W T930":[1.8,126.0],"R1975 L0385|FL56/Nx 04W T940":[1.8,131.0],"R1975 L0385|FL56/Nx 09W 922":[3.6,153.0],"R1975 L0385|FL56/Nx 09W T927":[3.6,235.0],"R1975 L0385|FL56/Nx 09W T930":[3.6,247.0],"R1975 L0385|FL56/Nx 09W T940":[3.6,257.0],"R1975 L0385|FL112/Nx.48V 04W 922":[1.8,80.0],"R1975 L0385|FL112/Nx.48V 04W T927":[1.8,121.0],"R1975 L0385|FL112/Nx.48V 04W T930":[1.8,127.0],"R1975 L0385|FL112/Nx.48V 04W T940":[1.8,132.0],"R1975 L0385|FL112/Nx.48V 09W 922":[3.6,157.0],"R1975 L0385|FL112/Nx.48V 09W T927":[3.6,240.0],"R1975 L0385|FL112/Nx.48V 09W T930":[3.6,252.0],"R1975 L0385|FL112/Nx.48V 09W T940":[3.6,262.0],"R2950 L0384|FL56/Nx 02W 922":[0.9,40.0],"R2950 L0384|FL56/Nx 02W T927":[0.9,60.0],"R2950 L0384|FL56/Nx 02W T930":[0.9,63.0],"R2950 L0384|FL56/Nx 02W T940":[0.9,66.0],"R2950 L0384|FL56/Nx 04W 922":[1.8,78.0],"R2950 L0384|FL56/Nx 04W T927":[1.8,120.0],"R2950 L0384|FL56/Nx 04W T930":[1.8,126.0],"R2950 L0384|FL56/Nx 04W T940":[1.8,131.0],"R2950 L0384|FL56/Nx 09W 922":[3.6,153.0],"R2950 L0384|FL56/Nx 09W T927":[3.6,235.0],"R2950 L0384|FL56/Nx 09W T930":[3.6,247.0],"R2950 L0384|FL56/Nx 09W T940":[3.6,257.0],"R2950 L0384|FL112/Nx.48V 04W 922":[1.8,80.0],"R2950 L0384|FL112/Nx.48V 04W T927":[1.8,121.0],"R2950 L0384|FL112/Nx.48V 04W T930":[1.8,127.0],"R2950 L0384|FL112/Nx.48V 04W T940":[1.8,132.0],"R2950 L0384|FL112/Nx.48V 09W 922":[3.6,157.0],"R2950 L0384|FL112/Nx.48V 09W T927":[3.6,240.0],"R2950 L0384|FL112/Nx.48V 09W T930":[3.6,252.0],"R2950 L0384|FL112/Nx.48V 09W T940":[3.6,262.0],"R6100 L0382|FL56/Nx 02W 922":[0.9,40.0],"R6100 L0382|FL56/Nx 02W T927":[0.9,60.0],"R6100 L0382|FL56/Nx 02W T930":[0.9,63.0],"R6100 L0382|FL56/Nx 02W T940":[0.9,66.0],"R6100 L0382|FL56/Nx 04W 922":[1.8,78.0],"R6100 L0382|FL56/Nx 04W T927":[1.8,120.0],"R6100 L0382|FL56/Nx 04W T930":[1.8,126.0],"R6100 L0382|FL56/Nx 04W T940":[1.8,131.0],"R6100 L0382|FL56/Nx 09W 922":[3.6,153.0],"R6100 L0382|FL56/Nx 09W T927":[3.6,235.0],"R6100 L0382|FL56/Nx 09W T930":[3.6,247.0],"R6100 L0382|FL56/Nx 09W T940":[3.6,257.0],"R6100 L0382|FL112/Nx.48V 04W 922":[1.8,80.0],"R6100 L0382|FL112/Nx.48V 04W T927":[1.8,121.0],"R6100 L0382|FL112/Nx.48V 04W T930":[1.8,127.0],"R6100 L0382|FL112/Nx.48V 04W T940":[1.8,132.0],"R6100 L0382|FL112/Nx.48V 09W 922":[3.6,157.0],"R6100 L0382|FL112/Nx.48V 09W T927":[3.6,240.0],"R6100 L0382|FL112/Nx.48V 09W T930":[3.6,252.0],"R6100 L0382|FL112/Nx.48V 09W T940":[3.6,262.0]};
+const PIECE={ // centre-line length (mm) and arc angle (deg), specification sheet
+  L1000:{R:'R0000',L:'L1005',len:1005,ang:0,name:'Straight 1005'},
+  L500:{R:'R0000',L:'L0505',len:505,ang:0,name:'Straight 505'},
+  R6100:{R:'R6100',L:'L0382',len:382,ang:3.6,name:'Curve R6100 3.6°',r:6100},
+  R2950:{R:'R2950',L:'L0384',len:384,ang:7.5,name:'Curve R2950 7.5°',r:2950},
+  R1975:{R:'R1975',L:'L0385',len:385,ang:11.3,name:'Curve R1975 11.3°',r:1975},
+  R1000:{R:'R1000',L:'L0387',len:387,ang:22.5,name:'Curve R1000 22.5°',r:1000},
+  R515:{R:'R0515',L:'L0393',len:393,ang:45,name:'Curve R515 45°',r:515},
+  R272:{R:'R0272',L:'L0404',len:404,ang:90,name:'Curve R272 90°',r:272},
+};
+const CURVES=['R272','R515','R1000','R1975','R2950','R6100'];
+// white strips offered in the Inground Radius; max run from one side (Holectron spec sheet, MAX RUN chart)
+const STRIPS=[
+  {id:'FL112/Nx.48V 09W',label:'FL112 48V · 9.6 W/m',v:48,wm:9.6,max:22.5},
+  {id:'FL112/Nx.48V 04W',label:'FL112 48V · 4.8 W/m',v:48,wm:4.8,max:28.5},
+  {id:'FL56/Nx 09W',label:'FL56 24V · 9.6 W/m',v:24,wm:9.6,max:7.5},
+  {id:'FL56/Nx 04W',label:'FL56 24V · 4.8 W/m',v:24,wm:4.8,max:13},
+  {id:'FL56/Nx 02W',label:'FL56 24V · 2.4 W/m',v:24,wm:2.4,max:18.5},
+];
+const CCTS=[['922','2200K'],['T927','2700K'],['T930','3000K'],['T940','4000K']];
+const SEGNAME={S:'Start',M:'Middle',E:'End',I:'Individual',F:'Full'};
+const SEGDESC={S:'end cap at start, feed cable in',M:'no end caps, joins both sides',E:'end cap at end',I:'two end caps, single feed'};
+const codeOf=(p,seg,st,cct)=>{const [strip,ww]=st.id.split(' ');return `IngroundR ${seg} EOP H100 ${p.R} ${p.L} / ${strip} G5 ${ww} ${cct} / OR.T1x`;};
+
+/* ======================= state ======================= */
+const PRESETS={
+  'S-bend walkway (10 m)':[{t:'S',len:2000},{t:'L',r:'R1975',a:45},{t:'S',len:500},{t:'R',r:'R1975',a:45},{t:'S',len:1000},{t:'L',r:'R1000',a:90},{t:'S',len:2000}],
+  'Straight line (6 m)':[{t:'S',len:6000}],
+  'Quarter circle R1000':[{t:'L',r:'R1000',a:90}],
+  'Full circle R1975':[{t:'L',r:'R1975',a:360}],
+  'Serpentine path (18 m)':[{t:'S',len:1000},{t:'L',r:'R2950',a:45},{t:'R',r:'R2950',a:90},{t:'L',r:'R2950',a:90},{t:'R',r:'R2950',a:90},{t:'L',r:'R2950',a:45},{t:'S',len:1000}],
+  'Planter surround with 90° corners':[{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000},{t:'L',r:'R515',a:90},{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000}],
+};
+let S={proj:'',client:'',strip:STRIPS[0].id,cct:'T930',steps:PRESETS['S-bend walkway (10 m)'].map(x=>({...x}))};
+// share links carry the plan in the address (#p=…); otherwise the last plan in this browser
+const clean=()=>JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);
+function enc(){return 'p='+encodeURIComponent(clean());}
+try{const h=location.hash.match(/#p=(.+)$/);if(h)S={...S,...JSON.parse(decodeURIComponent(h[1]))};else{const ls=localStorage.getItem('irplan');if(ls)S={...S,...JSON.parse(ls)};}}catch(e){}
+const save=()=>{try{localStorage.setItem('irplan',clean());}catch(e){}};
+
+/* ======================= path → pieces ======================= */
+function straightPieces(len){ // fewest pieces of 1005/505 closest to the requested length
+  let best=null;
+  for(let a=0;a<=Math.ceil(len/1005)+1;a++)for(let b=0;b<=2;b++){if(!a&&!b)continue;const L=a*1005+b*505,d=Math.abs(L-len),n=a+b;
+    if(!best||d<best.d-1||(Math.abs(d-best.d)<=1&&n<best.n))best={a,b,L,d,n};}
+  return best?[...Array(best.a).fill('L1000'),...Array(best.b).fill('L500')]:['L500'];
+}
+function resolve(){
+  const st=STRIPS.find(s=>s.id===S.strip)||STRIPS[0];
+  const out=[]; // pieces
+  S.steps.forEach((s,si)=>{
+    if(s.t==='S'){s._list=straightPieces(+s.len||0);s._actual=s._list.reduce((a,p)=>a+PIECE[p].len,0);s._list.forEach(p=>out.push({p,dir:null,step:si}));}
+    else{const P=PIECE[s.r]||PIECE.R1000;const n=Math.max(1,Math.round((+s.a||0)/P.ang));s._n=n;s._actual=n*P.ang;for(let k=0;k<n;k++)out.push({p:s.r,dir:s.t,step:si});}
+  });
+  // feeds: split into runs no longer than the strip's max run (from one side)
+  const runs=[];let cur=[],len=0;
+  out.forEach(q=>{const L=PIECE[q.p].len/1000;if(cur.length&&len+L>st.max){runs.push(cur);cur=[];len=0;}cur.push(q);len+=L;});
+  if(cur.length)runs.push(cur);
+  runs.forEach((r,ri)=>r.forEach((q,k)=>{q.run=ri;q.seg=r.length===1?'I':k===0?'S':k===r.length-1?'E':'M';}));
+  // geometry
+  let x=0,z=0,h=0;
+  out.forEach((q,i)=>{q.i=i;q.d=PIECE[q.p];const d=q.d;q.pts=[];
+    if(!d.ang){q.pts.push({x,z,h});x+=Math.cos(h)*d.len;z+=Math.sin(h)*d.len;q.pts.push({x,z,h});}
+    else{const th=d.ang*Math.PI/180,rc=d.len/th,s=q.dir==='L'?-1:1,n=Math.max(4,Math.ceil(d.ang/1.2));
+      const cx=x+Math.cos(h+s*Math.PI/2)*rc,cz=z+Math.sin(h+s*Math.PI/2)*rc,a0=Math.atan2(z-cz,x-cx);
+      for(let k=0;k<=n;k++){const a=a0+s*th*k/n;q.pts.push({x:cx+Math.cos(a)*rc,z:cz+Math.sin(a)*rc,h:h+s*th*k/n});}
+      x=q.pts[n].x;z=q.pts[n].z;h+=s*th;}
+    q.code=codeOf(d,q.seg,st,S.cct);const tv=TABLE[`${d.R} ${d.L}|${st.id} ${S.cct}`]||[0,0];q.w=tv[0];q.lm=tv[1];
+    q.mid=q.pts[Math.floor(q.pts.length/2)];});
+  // centre on the origin
+  const xs=out.flatMap(q=>q.pts.map(p=>p.x)),zs=out.flatMap(q=>q.pts.map(p=>p.z));
+  const b={x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)};
+  const ox=(b.x0+b.x1)/2,oz=(b.z0+b.z1)/2;
+  out.forEach(q=>q.pts.forEach(p=>{p.x-=ox;p.z-=oz;}));
+  const ext={w:b.x1-b.x0,d:b.z1-b.z0};
+  const gap=Math.hypot(out.at(-1).pts.at(-1).x-out[0].pts[0].x,out.at(-1).pts.at(-1).z-out[0].pts[0].z);
+  return {st,pieces:out,runs,ext,closed:gap<60&&out.length>3};
+}
+let R=null;
+
+/* ======================= panel ======================= */
+$('logo').innerHTML="<defs><clipPath id=\"lp\"><rect x=\"0\" y=\"0\" width=\"55.25\" height=\"60\"/></clipPath><clipPath id=\"lf\"><rect x=\"55.25\" y=\"0\" width=\"80\" height=\"60\"/></clipPath></defs><g clip-path=\"url(#lp)\" fill=\"var(--ink)\"><path d=\"M11.5,29a5.61,5.61,0,0,0-1.9-1.34,6.15,6.15,0,0,0-2.5-.49,5.77,5.77,0,0,0-2.4.5,3.89,3.890,0,0,0-1.77,1.61H2.88V27.44H0V45.21H3V38H3.11a4.3,4.3,0,0,0,.58.62,4.61,4.61,0,0,0,.86.59,5.23,5.23,0,0,0,1.16.45,5.9,5.9,0,0,0,1.52.18,5.72,5.72,0,0,0,2.38-.49A5.530,5.530,0,0,0,11.460,38a6.170,6.170,0,0,0,1.2-2,7.06,7.06,0,0,0,.43-2.48,7.47,7.47,0,0,0-.4-2.48A5.74,5.74,0,0,0,11.5,29ZM9.82,34.82A3.4,3.4,0,0,1,9.11,36a3.48,3.48,0,0,1-2.62,1.1A3.48,3.48,0,0,1,3.88,36a3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,3.88,31a3.48,3.48,0,0,1,2.62-1.1A3.48,3.48,0,0,1,9.11,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,9.82,34.82ZM26,28.59a3.89,3.89,0,0,0-1.38-1.05,4.78,4.78,0,0,0-2.06-.4,4,4,0,0,0-2.31.62A3.52,3.52,0,0,0,19,29.12H19V20.51h-3v19h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.910,2.910,0,0,1,1.28-.25,1.93,1.93,0,0,1,1.24.36,2.17,2.17,0,0,1,.67.9,4,4,0,0,1,.27,1.15Q24,32.89,24,33.39v6.1h3V31.88a6.88,6.88,0,0,0-.23-1.78A4,4,0,0,0,26,28.59Zm15.09.28A6.19,6.19,0,0,0,39,27.59a7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.07,6.07,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.18,6.18,0,0,0,2.1-1.28,6.07,6.070,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,41.11,28.87Zm-1.35,5.95A3.4,3.4,0,0,1,39,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,33.81,31,3.6,3.6,0,0,1,39,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,39.75,34.82ZM53,33a6.25,6.25,0,0,0-1.58-.58l-1.58-.36a5.28,5.28,0,0,1-1.21-.43.84.84,0,0,1-.48-.8,1,1,0,0,1,.58-1,2.55,2.55,0,0,1,1.19-.3,2.78,2.78,0,0,1,2.38,1.23l2-1.81a3.93,3.93,0,0,0-1.92-1.42,7.2,7.2,0,0,0-4.2-.19,4.77,4.77,0,0,0-1.57.7,3.65,3.65,0,0,0-1.1,1.22A3.5,3.5,0,0,0,45.15,31a3,3,0,0,0,.48,1.81,3.3,3.3,0,0,0,1.21,1,6.13,6.13,0,0,0,1.58.53q.85.16,1.58.35a4.29,4.29,0,0,1,1.21.49,1.12,1.12,0,0,1,.29,1.54,1.55,1.55,0,0,1-.49.44,2.23,2.23,0,0,1-.66.25,3.27,3.27,0,0,1-.68.08A3,3,0,0,1,48,37.12,5.67,5.67,0,0,1,46.79,36l-2,1.88a4.94,4.94,0,0,0,2.12,1.46,8.09,8.09,0,0,0,2.6.4,8.9,8.9,0,0,0,1.87-.2,5.4,5.4,0,0,0,1.68-.65,3.66,3.66,0,0,0,1.21-1.19,3.34,3.34,0,0,0,.47-1.82,3.17,3.17,0,0,0-.48-1.86A3.46,3.46,0,0,0,53,33Zm7.36-12.4A3.15,3.15,0,0,0,59,21.72a4.42,4.42,0,0,0-.67,1.75,13.28,13.28,0,0,0-.18,2.27v1.71h-2.5V30h2.5v9.49h3V30H64V27.44H61.2V25.26a6.86,6.86,0,0,1,.06-1,2,2,0,0,1,.28-.79A1.54,1.54,0,0,1,62.14,23a2.17,2.17,0,0,1,1-.2,3.92,3.92,0,0,1,.63,0l.63.13.2-2.56a9.86,9.86,0,0,0-1.92-.18A5.77,5.77,0,0,0,60.39,20.6Zm16.26,8.27a6.19,6.19,0,0,0-2.1-1.28,7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.06,6.06,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.19,6.19,0,0,0,2.1-1.28,6.07,6.07,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,76.65,28.87ZM75.3,34.82A3.4,3.4,0,0,1,74.59,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.94,3.94,0,0,1,0-2.71A3.4,3.4,0,0,1,69.36,31a3.6,3.6,0,0,1,5.23,0,3.41,3.41,0,0,1,.71,1.15A3.94,3.94,0,0,1,75.3,34.82Zm12.78-7.68a4,4,0,0,0-2.15.58,3.79,3.79,0,0,0-1.44,1.63H84.44V27.44h-3v12h3V33a3.75,3.75,0,0,1,.11-.75,3,3,0,0,1,.46-1,3.11,3.11,0,0,1,1-.89A3.28,3.28,0,0,1,87.7,30a4.32,4.32,0,0,1,.72.06q.37.06.75.16V27.31l-.54-.13A2.92,2.92,0,0,0,88.08,27.14Zm21.32,1.51a3.58,3.58,0,0,0-1.35-1.1,4.7,4.7,0,0,0-2-.4,4.83,4.83,0,0,0-2.35.54A4.27,4.27,0,0,0,102,29.37a3.69,3.69,0,0,0-3.79-2.23,4,4,0,0,0-2.41.67,4.08,4.08,0,0,0-1.3,1.52H94.45V27.44H91.56v12h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.91,2.91,0,0,1,1.28-.25,1.83,1.83,0,0,1,1.59.67,3,3,0,0,1,.48,1.79v7.18h3V33a4.75,4.75,0,0,1,.14-1.14,2.87,2.87,0,0,1,.45-1,2.34,2.34,0,0,1,.81-.7,2.52,2.52,0,0,1,1.2-.26,2.39,2.39,0,0,1,1.11.23,1.8,1.8,0,0,1,.68.61,2.55,2.55,0,0,1,.35.9,5.54,5.54,0,0,1,.1,1.07v6.83h3V32.31a8.59,8.59,0,0,0-.23-2A4.54,4.54,0,0,0,109.4,28.64ZM124,31.57a6.53,6.53,0,0,0-.16-1.17,4.83,4.83,0,0,0-.46-1.19,3.29,3.29,0,0,0-.9-1,4.81,4.81,0,0,0-1.47-.74,7.08,7.08,0,0,0-2.17-.29,8.76,8.76,0,0,0-2.79.45,5.89,5.89,0,0,0-2.36,1.48l1.59,1.58a4.55,4.55,0,0,1,1.44-.92,4.72,4.72,0,0,1,1.79-.34,3.33,3.33,0,0,1,2,.56,2,2,0,0,1,.78,1.69V32h-.76q-.76,0-1.62,0a14.64,14.64,0,0,0-1.71.18,9.52,9.52,0,0,0-1.63.41,4.82,4.82,0,0,0-1.38.74,3.43,3.43,0,0,0-.95,1.15,3.62,3.62,0,0,0-.35,1.67,3.19,3.19,0,0,0,.38,1.58,3.49,3.49,0,0,0,1,1.13,4.44,4.44,0,0,0,1.42.68,6,6,0,0,0,1.630.23,5.27,5.27,0,0,0,2.22-.46,3.9,3.9,0,0,0,1.67-1.49h.08v1.66H124V32.56Q124,32.13,124,31.57Zm-2.88,3.2a2.72,2.72,0,0,1-.75,2,3.17,3.17,0,0,1-2.31.74,3.32,3.32,0,0,1-.76-.09,2.08,2.08,0,0,1-.68-.29,1.71,1.71,0,0,1-.49-.49,1.27,1.27,0,0,1-.19-.72,1.2,1.2,0,0,1,.48-1,3.4,3.4,0,0,1,1.18-.55,7.5,7.5,0,0,1,1.48-.24q.78,0,1.42,0h.63v.68Z\"/></g><g clip-path=\"url(#lf)\" fill=\"var(--muted)\"><path d=\"M11.5,29a5.61,5.61,0,0,0-1.9-1.34,6.15,6.15,0,0,0-2.5-.49,5.77,5.77,0,0,0-2.4.5,3.89,3.890,0,0,0-1.77,1.61H2.88V27.44H0V45.21H3V38H3.11a4.3,4.3,0,0,0,.58.62,4.61,4.61,0,0,0,.86.59,5.23,5.23,0,0,0,1.16.45,5.9,5.9,0,0,0,1.52.18,5.72,5.72,0,0,0,2.38-.49A5.530,5.530,0,0,0,11.460,38a6.170,6.170,0,0,0,1.2-2,7.06,7.06,0,0,0,.43-2.48,7.47,7.47,0,0,0-.4-2.48A5.74,5.74,0,0,0,11.5,29ZM9.82,34.82A3.4,3.4,0,0,1,9.11,36a3.48,3.48,0,0,1-2.62,1.1A3.48,3.48,0,0,1,3.88,36a3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,3.88,31a3.48,3.48,0,0,1,2.62-1.1A3.48,3.48,0,0,1,9.11,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,9.82,34.82ZM26,28.59a3.89,3.89,0,0,0-1.38-1.05,4.78,4.78,0,0,0-2.06-.4,4,4,0,0,0-2.31.62A3.52,3.52,0,0,0,19,29.12H19V20.51h-3v19h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.910,2.910,0,0,1,1.28-.25,1.93,1.93,0,0,1,1.24.36,2.17,2.17,0,0,1,.67.9,4,4,0,0,1,.27,1.15Q24,32.89,24,33.39v6.1h3V31.88a6.88,6.88,0,0,0-.23-1.78A4,4,0,0,0,26,28.59Zm15.09.28A6.19,6.19,0,0,0,39,27.59a7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.07,6.07,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.18,6.18,0,0,0,2.1-1.28,6.07,6.070,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,41.11,28.87Zm-1.35,5.95A3.4,3.4,0,0,1,39,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,33.81,31,3.6,3.6,0,0,1,39,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,39.75,34.82ZM53,33a6.25,6.25,0,0,0-1.58-.58l-1.58-.36a5.28,5.28,0,0,1-1.21-.43.84.84,0,0,1-.48-.8,1,1,0,0,1,.58-1,2.55,2.55,0,0,1,1.19-.3,2.78,2.78,0,0,1,2.38,1.23l2-1.81a3.93,3.93,0,0,0-1.92-1.42,7.2,7.2,0,0,0-4.2-.19,4.77,4.77,0,0,0-1.57.7,3.65,3.65,0,0,0-1.1,1.22A3.5,3.5,0,0,0,45.15,31a3,3,0,0,0,.48,1.81,3.3,3.3,0,0,0,1.21,1,6.13,6.13,0,0,0,1.58.53q.85.16,1.58.35a4.29,4.29,0,0,1,1.21.49,1.12,1.12,0,0,1,.29,1.54,1.55,1.55,0,0,1-.49.44,2.23,2.23,0,0,1-.66.25,3.27,3.27,0,0,1-.68.08A3,3,0,0,1,48,37.12,5.67,5.67,0,0,1,46.79,36l-2,1.88a4.94,4.94,0,0,0,2.12,1.46,8.09,8.09,0,0,0,2.6.4,8.9,8.9,0,0,0,1.87-.2,5.4,5.4,0,0,0,1.68-.65,3.66,3.66,0,0,0,1.21-1.19,3.34,3.34,0,0,0,.47-1.82,3.17,3.17,0,0,0-.48-1.86A3.46,3.46,0,0,0,53,33Zm7.36-12.4A3.15,3.15,0,0,0,59,21.72a4.42,4.42,0,0,0-.67,1.75,13.28,13.28,0,0,0-.18,2.27v1.71h-2.5V30h2.5v9.49h3V30H64V27.44H61.2V25.26a6.86,6.86,0,0,1,.06-1,2,2,0,0,1,.28-.79A1.54,1.54,0,0,1,62.14,23a2.17,2.17,0,0,1,1-.2,3.92,3.92,0,0,1,.63,0l.63.13.2-2.56a9.86,9.86,0,0,0-1.92-.18A5.77,5.77,0,0,0,60.39,20.6Zm16.26,8.27a6.19,6.19,0,0,0-2.1-1.28,7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.06,6.06,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.19,6.19,0,0,0,2.1-1.28,6.07,6.07,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,76.65,28.87ZM75.3,34.82A3.4,3.4,0,0,1,74.59,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.94,3.94,0,0,1,0-2.71A3.4,3.4,0,0,1,69.36,31a3.6,3.6,0,0,1,5.23,0,3.41,3.41,0,0,1,.71,1.15A3.94,3.94,0,0,1,75.3,34.82Zm12.78-7.68a4,4,0,0,0-2.15.58,3.79,3.79,0,0,0-1.44,1.63H84.44V27.44h-3v12h3V33a3.75,3.75,0,0,1,.11-.75,3,3,0,0,1,.46-1,3.11,3.11,0,0,1,1-.89A3.28,3.28,0,0,1,87.7,30a4.32,4.32,0,0,1,.72.06q.37.06.75.16V27.31l-.54-.13A2.92,2.92,0,0,0,88.08,27.14Zm21.32,1.51a3.58,3.58,0,0,0-1.35-1.1,4.7,4.7,0,0,0-2-.4,4.83,4.83,0,0,0-2.35.54A4.27,4.27,0,0,0,102,29.37a3.69,3.69,0,0,0-3.79-2.23,4,4,0,0,0-2.41.67,4.08,4.08,0,0,0-1.3,1.52H94.45V27.44H91.56v12h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.91,2.91,0,0,1,1.28-.25,1.83,1.83,0,0,1,1.59.67,3,3,0,0,1,.48,1.79v7.18h3V33a4.75,4.75,0,0,1,.14-1.14,2.87,2.87,0,0,1,.45-1,2.34,2.34,0,0,1,.81-.7,2.52,2.52,0,0,1,1.2-.26,2.39,2.39,0,0,1,1.11.23,1.8,1.8,0,0,1,.68.61,2.55,2.55,0,0,1,.35.9,5.54,5.54,0,0,1,.1,1.07v6.83h3V32.31a8.59,8.59,0,0,0-.23-2A4.54,4.54,0,0,0,109.4,28.64ZM124,31.57a6.53,6.53,0,0,0-.16-1.17,4.83,4.83,0,0,0-.46-1.19,3.29,3.29,0,0,0-.9-1,4.81,4.81,0,0,0-1.47-.74,7.08,7.08,0,0,0-2.17-.29,8.76,8.76,0,0,0-2.79.45,5.89,5.89,0,0,0-2.36,1.48l1.59,1.58a4.55,4.55,0,0,1,1.44-.92,4.72,4.72,0,0,1,1.79-.34,3.33,3.33,0,0,1,2,.56,2,2,0,0,1,.78,1.69V32h-.76q-.76,0-1.62,0a14.64,14.64,0,0,0-1.71.18,9.52,9.52,0,0,0-1.63.41,4.82,4.82,0,0,0-1.38.74,3.43,3.43,0,0,0-.95,1.15,3.62,3.62,0,0,0-.35,1.67,3.19,3.19,0,0,0,.38,1.58,3.49,3.49,0,0,0,1,1.13,4.44,4.44,0,0,0,1.42.68,6,6,0,0,0,1.630.23,5.27,5.27,0,0,0,2.22-.46,3.9,3.9,0,0,0,1.67-1.49h.08v1.66H124V32.56Q124,32.13,124,31.57Zm-2.88,3.2a2.72,2.72,0,0,1-.75,2,3.17,3.17,0,0,1-2.31.74,3.32,3.32,0,0,1-.76-.09,2.08,2.08,0,0,1-.68-.29,1.71,1.71,0,0,1-.49-.49,1.27,1.27,0,0,1-.19-.72,1.2,1.2,0,0,1,.48-1,3.4,3.4,0,0,1,1.18-.55,7.5,7.5,0,0,1,1.48-.24q.78,0,1.42,0h.63v.68Z\"/></g>";
+$('strip').innerHTML=STRIPS.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
+$('cct').innerHTML=CCTS.map(([c,l])=>`<option value="${c}">${l}</option>`).join('');
+$('preset').innerHTML+=Object.keys(PRESETS).map(k=>`<option>${k}</option>`).join('');
+function renderSteps(){
+  $('steps').innerHTML=S.steps.map((s,i)=>{
+    const ctl=`<div class="ctl"><button class="ib" data-a="up" data-i="${i}" aria-label="Move up" title="Move up">▲</button><button class="ib" data-a="dn" data-i="${i}" aria-label="Move down" title="Move down">▼</button><button class="ib" data-a="del" data-i="${i}" aria-label="Remove" title="Remove">✕</button></div>`;
+    if(s.t==='S') return `<li class="step"><span class="n">${i+1}</span><div class="body"><div class="fields s"><label class="f">Straight · length (mm)<input type="number" min="500" step="5" id="len-${i}" data-i="${i}" data-k="len" value="${s.len}"></label></div><div class="res" id="res-${i}"></div></div>${ctl}</li>`;
+    return `<li class="step"><span class="n">${i+1}</span><div class="body"><div class="fields">
+      <label class="f">Turn<select id="dir-${i}" data-i="${i}" data-k="t"><option value="L"${s.t==='L'?' selected':''}>Left</option><option value="R"${s.t==='R'?' selected':''}>Right</option></select></label>
+      <label class="f">Radius<select id="rad-${i}" data-i="${i}" data-k="r">${CURVES.map(c=>`<option value="${c}"${s.r===c?' selected':''}>R${PIECE[c].r}</option>`).join('')}</select></label>
+      <label class="f">Angle (°)<input type="number" min="0" step="any" id="ang-${i}" data-i="${i}" data-k="a" value="${s.a}"></label></div><div class="res" id="res-${i}"></div></div>${ctl}</li>`;
+  }).join('');
+}
+function renderResults(){
+  S.steps.forEach((s,i)=>{const el=$('res-'+i);if(!el)return;
+    if(s.t==='S'){const c={};s._list.forEach(p=>c[p]=(c[p]||0)+1);const txt=Object.entries(c).map(([p,n])=>`${n} × ${PIECE[p].len}`).join(' + ');
+      const off=Math.abs(s._actual-s.len)>6*s._list.length;el.className='res'+(off?' off':'');el.innerHTML=`<b>${txt}</b> = ${s._actual} mm${off?` (asked for ${s.len} mm; nearest with 505/1005 straights)`:''}`;}
+    else{const P=PIECE[s.r];const off=Math.abs(s._actual-s.a)>0.6;el.className='res'+(off?' off':'');
+      el.innerHTML=`<b>${s._n} × R${P.r}</b> = ${+s._actual.toFixed(1)}° ${s.t==='L'?'left':'right'}${off?` (asked for ${s.a}°; R${P.r} turns in ${P.ang}° steps)`:''}`;}
+  });
+}
+function renderSummary(){
+  const {st,pieces,runs,ext}=R;
+  const L=pieces.reduce((a,q)=>a+q.d.len,0),W=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0);
+  const cctL=CCTS.find(c=>c[0]===S.cct)[1];
+  const runTxt=runs.map((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;return `Feed ${i+1}: ${l.toFixed(2)} m · ${w.toFixed(1)} W`;}).join('<br>');
+  $('sum').innerHTML=[['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',pieces.length],
+    ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',W.toFixed(1)+' W'],['Delivered light',Math.round(LM).toLocaleString('en-AU')+' lm'],
+    ['Feeds',runs.length+` (max ${st.max} m per feed)`],['',runTxt],['Drivers',`${st.v}V DC, separate, one per feed`]].map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const w=[];
+  if(runs.length>1)w.push(`This line is longer than one ${st.label} feed allows (${st.max} m), so it is split into ${runs.length} runs, each with its own start piece and feed. Where two runs meet, end caps sit back to back.`);
+  if(R.closed)w.push('The path closes on itself. The first and last pieces meet with their end caps together.');
+  $('warn').innerHTML=w.join('<br><br>');$('warn').hidden=!w.length;
+  const groups={};pieces.forEach(q=>{(groups[q.code]=groups[q.code]||{q:0,list:[],p:q}).q++;groups[q.code].list.push(q.i+1);});
+  R.groups=groups;
+  $('bom').innerHTML=Object.entries(groups).map(([code,g])=>`<tr data-code="${code}"><td class="q">${g.q}×</td><td><code>${code}</code><small>${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W · pieces ${rangeTxt(g.list)}</small></td></tr>`).join('');
+}
+function rangeTxt(a){const o=[];let s=a[0],p=a[0];for(const v of a.slice(1).concat([null])){if(v===p+1){p=v;continue;}o.push(s===p?`${s}`:`${s}–${p}`);s=p=v;}return o.join(', ');}
+
+$('steps').addEventListener('input',e=>{const t=e.target;if(!t.dataset.k)return;const s=S.steps[+t.dataset.i];
+  const v=t.dataset.k==='len'||t.dataset.k==='a'?parseFloat(t.value):t.value; if(t.type==='number'&&!(v>0))return; s[t.dataset.k]=v; update(false);});
+$('steps').addEventListener('click',e=>{const b=e.target.closest('.ib');if(!b)return;const i=+b.dataset.i,a=b.dataset.a;
+  if(a==='del'){if(S.steps.length>1)S.steps.splice(i,1);}else{const j=a==='up'?i-1:i+1;if(j<0||j>=S.steps.length)return;[S.steps[i],S.steps[j]]=[S.steps[j],S.steps[i]];}
+  update(true);});
+$('add-s').onclick=()=>{S.steps.push({t:'S',len:1000});update(true);};
+$('add-l').onclick=()=>{S.steps.push({t:'L',r:'R1000',a:90});update(true);};
+$('add-r').onclick=()=>{S.steps.push({t:'R',r:'R1000',a:90});update(true);};
+$('preset').onchange=e=>{const p=PRESETS[e.target.value];if(p){S.steps=p.map(x=>({...x}));update(true,true);}e.target.value='';};
+$('strip').onchange=e=>{S.strip=e.target.value;update(false);};
+$('cct').onchange=e=>{S.cct=e.target.value;update(false);};
+$('proj').oninput=e=>{S.proj=e.target.value;save();};
+$('client').oninput=e=>{S.client=e.target.value;save();};
+function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200);}
+async function copyText(t,msg){try{await navigator.clipboard.writeText(t);toast(msg);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();try{document.execCommand('copy');toast(msg);}catch(_){toast('Select and copy the text manually');}ta.remove();}}
+$('copy').onclick=()=>copyText(Object.entries(R.groups).map(([c,g])=>`${g.q}\t${c}`).join('\n'),'Order list copied');
+$('share').onclick=()=>copyText(location.origin+location.pathname+'#'+enc(),'Link copied');
+
+/* ======================= renderer ======================= */
+const canvas=$('c'),stage=canvas.parentElement;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,logarithmicDepthBuffer:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene(),studio=new THREE.Scene();
+const envTex=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(renderer),0.04).texture;
+scene.environment=envTex;studio.environment=envTex;
+const camera=new THREE.PerspectiveCamera(42,1,0.05,600);
+const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.495;controls.minDistance=0.15;controls.maxDistance=120;
+const labelR=new CSS2DRenderer();labelR.domElement.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:1';stage.appendChild(labelR.domElement);
+
+/* ---------- textures ---------- */
+function rng(s){return()=>(s=Math.imul(s^s>>>15,1|s)+0x6D2B79F5|0,((s^s>>>14)>>>0)/4294967296);}
+function paverTextures(){const N=2048,mm=4000/N,r=rng(7),col=new Uint8ClampedArray(N*N*4),hgt=new Float32Array(N*N);const pw=200/mm,ph=100/mm,g=3/mm,tone={};
+  for(let y=0;y<N;y++){const row=Math.floor(y/ph),off=(row%2)*pw/2,yy=y-row*ph;
+    for(let x=0;x<N;x++){const xx=(x+off)%pw,ci=Math.floor((x+off)/pw),key=row*999+ci;let t=tone[key];if(t===undefined)t=tone[key]=0.86+r()*0.16;
+      const e=Math.min(Math.min(xx,pw-xx),Math.min(yy,ph-yy)),grout=e<g/2,bev=Math.min(1,(e-g/2)/(4/mm));
+      const n=(Math.sin(x*12.9898+y*78.233)*43758.5453)%1,sp=(n<0?-n:n)*0.1-0.05,v=grout?0.55:(t+sp*0.6)*(0.93+0.07*bev),i=(y*N+x)*4;
+      col[i]=Math.min(255,v*118);col[i+1]=Math.min(255,v*116);col[i+2]=Math.min(255,v*112);col[i+3]=255;hgt[y*N+x]=grout?0:bev;}}
+  const mk=d=>{const c=document.createElement('canvas');c.width=c.height=N;c.getContext('2d').putImageData(new ImageData(d,N,N),0,0);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;};
+  const nrm=new Uint8ClampedArray(N*N*4);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const l=hgt[y*N+((x-1+N)%N)],rr=hgt[y*N+((x+1)%N)],u=hgt[((y-1+N)%N)*N+x],d=hgt[((y+1)%N)*N+x];
+    const nx=(l-rr)*2.2,ny=(u-d)*2.2,L=Math.hypot(nx,ny,1),i=(y*N+x)*4;nrm[i]=(nx/L*.5+.5)*255;nrm[i+1]=(ny/L*.5+.5)*255;nrm[i+2]=(1/L*.5+.5)*255;nrm[i+3]=255;}
+  const map=mk(col);map.colorSpace=THREE.SRGBColorSpace;return {map,normal:mk(nrm)};}
+function grassTexture(){const N=512,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d'),r=rng(3);x.fillStyle='#3f5a2c';x.fillRect(0,0,N,N);
+  for(let i=0;i<26000;i++){const g=60+r()*70;x.fillStyle=`rgba(${30+r()*40|0},${g|0},${20+r()*25|0},.55)`;x.fillRect(r()*N,r()*N,1.2,2.6);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;t.repeat.set(40,40);return t;}
+const pav=paverTextures(),grass=grassTexture();
+
+/* ---------- product geometry ---------- */
+const PARTS={opal:[[-15,15,-17,1.0]],steel:[[-16.5,-15,-100,1.2],[15,16.5,-100,1.2],[-36.5,36.5,-102,-100]],
+  carrier:[[-15,15,-39,-37],[-15,-13.5,-37,-17],[13.5,15,-37,-17]],strip:[[-5,5,-37,-36.4]]};
+function frames(pts,t0,t1){const o=pts.map(p=>({...p}));const adv=(a,b,t)=>{const dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz)||1;a.x+=dx/L*t;a.z+=dz/L*t;};adv(o[0],o[1],t0);adv(o[o.length-1],o[o.length-2],t1);return o;}
+function sweep(rects,pts,cap0,cap1,S=0.001){const pos=[],nor=[],idx=[];
+  const P=(f,sx,sy)=>{const nx=-Math.sin(f.h),nz=Math.cos(f.h);return [(f.x+nx*sx)*S,sy*S,(f.z+nz*sx)*S];};
+  const quad=(a,b,c,d,n)=>{const o=pos.length/3;pos.push(...a,...b,...c,...d);for(let k=0;k<4;k++)nor.push(...n);idx.push(o,o+2,o+1,o,o+3,o+2);};
+  for(const [x0,x1,y0,y1] of rects){
+    for(const [ax,ay,bx,by,t] of [[x0,y1,x1,y1,'u'],[x1,y0,x0,y0,'d'],[x1,y1,x1,y0,'r'],[x0,y0,x0,y1,'l']])
+      for(let k=0;k<pts.length-1;k++){const f=pts[k],g=pts[k+1];const nf=t==='u'?[0,1,0]:t==='d'?[0,-1,0]:t==='r'?[-Math.sin(f.h),0,Math.cos(f.h)]:[Math.sin(f.h),0,-Math.cos(f.h)];quad(P(f,ax,ay),P(g,ax,ay),P(g,bx,by),P(f,bx,by),nf);}
+    const capQ=(f,sg)=>{const n=[Math.cos(f.h)*sg,0,Math.sin(f.h)*sg],a=P(f,x0,y0),b=P(f,x1,y0),c=P(f,x1,y1),d=P(f,x0,y1);sg>0?quad(a,d,c,b,n):quad(a,b,c,d,n);};
+    if(cap0)capQ(pts[0],-1);if(cap1)capQ(pts[pts.length-1],1);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setIndex(idx);return g;}
+const MAT={steel:new THREE.MeshStandardMaterial({color:0xaeb3b8,metalness:1,roughness:0.28,envMapIntensity:0.6}),
+  carrier:new THREE.MeshStandardMaterial({color:0x8d9399,metalness:0.6,roughness:0.5}),
+  strip:new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffd9a8,emissiveIntensity:1.5,roughness:0.6}),
+  endcap:new THREE.MeshStandardMaterial({color:0xa9afb4,metalness:1,roughness:0.38})};
+const CCTCOL={'922':new THREE.Color(1.0,0.70,0.42),'T927':new THREE.Color(1.0,0.77,0.53),'T930':new THREE.Color(1.0,0.81,0.60),'T940':new THREE.Color(0.95,0.93,0.86)};
+function buildRun(target,list,opts={}){
+  const group=new THREE.Group(),picks=[];const col=CCTCOL[S.cct]||CCTCOL.T930;
+  list.forEach((q,n)=>{const prev=list[n-1],next=list[n+1];
+    const capA=!opts.full&&(!prev||prev.run!==q.run),capB=!opts.full&&(!next||next.run!==q.run);
+    const f=frames(q.pts,capA?0:0.4,capB?0:0.4);
+    const om=new THREE.MeshStandardMaterial({color:0xeeece6,roughness:0.42,emissive:col.clone(),emissiveIntensity:0});
+    const opal=new THREE.Mesh(sweep(PARTS.opal,f,capA,capB),om);opal.userData.piece=q;picks.push(opal);
+    group.add(opal,new THREE.Mesh(sweep(PARTS.steel,f,false,false),MAT.steel));
+    if(opts.full)group.add(new THREE.Mesh(sweep(PARTS.carrier,f,false,false),MAT.carrier),new THREE.Mesh(sweep(PARTS.strip,f,false,false),MAT.strip));
+    for(const [on,p,sg] of [[capA,f[0],1],[capB,f[f.length-1],-1]]) if(on){const c=new THREE.Mesh(new THREE.BoxGeometry(0.002,0.0373,0.033),MAT.endcap);
+      c.position.set(p.x/1000-sg*Math.cos(p.h)*0.001,-0.0173,p.z/1000-sg*Math.sin(p.h)*0.001);c.rotation.y=-p.h;group.add(c);}
+  });
+  group.traverse(o=>{if(o.isMesh)o.receiveShadow=true;});target.add(group);return {group,picks};}
+
+/* ---------- site (rebuilt with the path) ---------- */
+const site=new THREE.Group();scene.add(site);
+let run=null,groundMats=[],plazaMat=null,labels=[],B=null;
+function disposeGroup(g){g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&!Object.values(MAT).includes(o.material)&&o.material.map!==pav.map&&o.material.map!==grass)o.material.dispose();});}
+function buildSite(){
+  disposeGroup(site);site.clear();labels.forEach(l=>l.removeFromParent());labels=[];groundMats=[];
+  const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000));
+  const m=2.5;B={x0:Math.floor(Math.min(...xs)-m),x1:Math.ceil(Math.max(...xs)+m),z0:Math.floor(Math.min(...zs)-m),z1:Math.ceil(Math.max(...zs)+m)};
+  const W=B.x1-B.x0,D=B.z1-B.z0;
+  // light spill on the paving
+  const GW=2048,GH=Math.max(64,Math.round(GW*D/W)),gc=document.createElement('canvas');gc.width=GW;gc.height=GH;const x=gc.getContext('2d'),sx=GW/W;
+  x.fillStyle='#000';x.fillRect(0,0,GW,GH);x.lineCap='round';x.lineJoin='round';
+  const path=()=>{x.beginPath();R.pieces.forEach((q,n)=>q.pts.forEach((p,k)=>{const X=(p.x/1000-B.x0)*sx,Y=(p.z/1000-B.z0)*sx;(n||k)?x.lineTo(X,Y):x.moveTo(X,Y);}));};
+  for(const [w,b,a] of [[1.1,220,0.30],[0.45,70,0.55],[0.12,18,0.9]]){x.filter=`blur(${b*sx/1000}px)`;x.strokeStyle=`rgba(255,206,150,${a})`;x.lineWidth=w*sx*0.25;path();x.stroke();}
+  x.filter='none';const glow=new THREE.CanvasTexture(gc);glow.channel=1;
+  const g=new THREE.PlaneGeometry(W,D);g.rotateX(-Math.PI/2);g.translate((B.x0+B.x1)/2,0,(B.z0+B.z1)/2);
+  const uv=g.attributes.uv,p=g.attributes.position,uv1=[];for(let i=0;i<uv.count;i++){uv.setXY(i,p.getX(i)/4,-p.getZ(i)/4);uv1.push((p.getX(i)-B.x0)/W,1-(p.getZ(i)-B.z0)/D);}
+  g.setAttribute('uv1',new THREE.Float32BufferAttribute(uv1,2));
+  plazaMat=new THREE.MeshStandardMaterial({map:pav.map,normalMap:pav.normal,normalScale:new THREE.Vector2(0.8,0.8),roughness:0.9,lightMap:glow,lightMapIntensity:0});
+  const plaza=new THREE.Mesh(g,plazaMat);plaza.position.y=-0.003;plaza.receiveShadow=true;site.add(plaza);groundMats.push(plazaMat);
+  const kerbM=new THREE.MeshStandardMaterial({color:0x8e8b86,roughness:0.85});groundMats.push(kerbM);
+  [[W+0.3,0.15,(B.x0+B.x1)/2,B.z0-0.075],[W+0.3,0.15,(B.x0+B.x1)/2,B.z1+0.075],[0.15,D,B.x0-0.075,(B.z0+B.z1)/2],[0.15,D,B.x1+0.075,(B.z0+B.z1)/2]].forEach(([a,b,cx,cz])=>{const k=new THREE.Mesh(new THREE.BoxGeometry(a,0.06,b),kerbM);k.position.set(cx,-0.03,cz);k.receiveShadow=true;site.add(k);});
+  const lm=new THREE.MeshStandardMaterial({map:grass,roughness:1,color:0xbfc8b0});groundMats.push(lm);
+  const lawn=new THREE.Mesh(new THREE.PlaneGeometry(W+80,D+80).rotateX(-Math.PI/2),lm);lawn.position.set((B.x0+B.x1)/2,-0.03,(B.z0+B.z1)/2);lawn.receiveShadow=true;site.add(lawn);
+  run=buildRun(site,R.pieces);
+  sun.shadow.camera.left=B.x0-1;sun.shadow.camera.right=B.x1+1;sun.shadow.camera.top=B.z1+1;sun.shadow.camera.bottom=B.z0-1;sun.target.position.set((B.x0+B.x1)/2,0,(B.z0+B.z1)/2);sun.position.set(sun.target.position.x-8,14,sun.target.position.z+6);sun.shadow.camera.updateProjectionMatrix();
+  // labels: piece numbers, feed markers
+  R.pieces.forEach(q=>{const el=document.createElement('div');el.className='lbl';el.textContent=q.i+1;const o=new CSS2DObject(el);o.position.set(q.mid.x/1000,0.03,q.mid.z/1000);o.visible=numbersOn;scene.add(o);labels.push(o);
+    if(q.seg==='S'||q.seg==='I'){const f=document.createElement('div');f.className='lbl feed';f.textContent='Feed '+(q.run+1);const p0=q.pts[0];const fo=new CSS2DObject(f);fo.position.set(p0.x/1000-Math.cos(p0.h)*0.25,0.03,p0.z/1000-Math.sin(p0.h)*0.25);fo.visible=true;scene.add(fo);labels.push(fo);}});
+  setMode(night);
+}
+
+/* ---------- lights ---------- */
+const hemi=new THREE.HemisphereLight(0xdfe8f2,0x5d5a52,0.6);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff4e6,2.6);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.near=1;sun.shadow.camera.far=60;sun.shadow.bias=-0.0004;scene.add(sun,sun.target);
+
+/* ---------- studio: a straight joined to a curve, open end showing the section ---------- */
+let studioRun=null;
+function buildStudio(){
+  if(studioRun){disposeGroup(studioRun.group);studioRun.group.removeFromParent();}
+  const dS=PIECE.L500,dC=PIECE.R515,th=dC.ang*Math.PI/180,rc=dC.len/th,cp=[];
+  for(let k=0;k<=40;k++){const t=k/40,a=Math.PI/2-t*th;cp.push({x:Math.cos(a)*rc,z:-rc+Math.sin(a)*rc,h:-t*th});}
+  studioRun=buildRun(studio,[{i:0,run:0,d:dS,pts:[{x:-dS.len,z:0,h:0},{x:0,z:0,h:0}]},{i:1,run:0,d:dC,pts:cp}],{full:true});
+  studioRun.group.position.y=0.102;studioRun.picks.forEach(o=>o.material.emissiveIntensity=2.0);studioRun.group.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+}
+{const floor=new THREE.Mesh(new THREE.CircleGeometry(12,64).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:0x9c9c9c,roughness:0.95}));floor.receiveShadow=true;studio.add(floor);
+ studio.background=new THREE.Color(0xa9a9a9);studio.fog=new THREE.Fog(0xa9a9a9,1.6,4.5);
+ const key=new THREE.DirectionalLight(0xffffff,1.7);key.position.set(1.5,2.5,1.2);key.castShadow=true;key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{left:-1,right:1,top:1,bottom:-1});key.shadow.bias=-0.0003;studio.add(key);
+ studio.add(new THREE.HemisphereLight(0xffffff,0x8a8a8a,0.45));}
+
+/* ---------- day / night ---------- */
+const composer=new EffectComposer(renderer,new THREE.WebGLRenderTarget(16,16,{samples:4,type:THREE.HalfFloatType}));const rp=new RenderPass(scene,camera);composer.addPass(rp);
+const bloom=new UnrealBloomPass(new THREE.Vector2(512,512),0.5,0.3,0.86);composer.addPass(bloom);composer.addPass(new OutputPass());
+function skyTex(a,b){const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,a);g.addColorStop(1,b);x.fillStyle=g;x.fillRect(0,0,2,256);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
+const SKY={night:skyTex('#05080d','#1b2633'),day:skyTex('#9fb6cc','#e7edf2')};
+let night=true,numbersOn=true;
+function setMode(n){night=n;$('m-night').setAttribute('aria-pressed',n);$('m-day').setAttribute('aria-pressed',!n);
+  scene.background=n?SKY.night:SKY.day;scene.fog=new THREE.Fog(n?0x141c26:0xe2e8ee,30,120);
+  hemi.intensity=n?0.2:0.8;sun.intensity=n?0:2.6;sun.castShadow=!n;
+  run&&run.picks.forEach(o=>o.material.emissiveIntensity=n?1.35:0);
+  if(plazaMat)plazaMat.lightMapIntensity=n?1.5:0;groundMats.forEach(m=>m.envMapIntensity=n?0.015:0.45);}
+$('m-night').onclick=()=>setMode(true);$('m-day').onclick=()=>setMode(false);
+$('t-num').onclick=()=>{numbersOn=!numbersOn;$('t-num').setAttribute('aria-pressed',numbersOn);labels.forEach(l=>{if(!l.element.classList.contains('feed'))l.visible=numbersOn;});};
+
+/* ---------- views ---------- */
+let current='aerial',anim=0,activeScene=scene;
+function viewFor(name){
+  const ps=R.pieces,sz=Math.max(R.ext.w,R.ext.d,2000)/1000;
+  if(name==='walk'){const p=ps[0].pts[0],q=ps[Math.min(ps.length-1,Math.floor(ps.length/3))].mid;return {s:scene,pos:[p.x/1000-Math.cos(p.h)*1.6+Math.sin(p.h)*0.9,1.55,p.z/1000-Math.sin(p.h)*1.6-Math.cos(p.h)*0.9],tgt:[q.x/1000,0,q.z/1000]};}
+  if(name==='aerial')return {s:scene,pos:[-sz*0.75,sz*0.75+1.5,sz*0.85],tgt:[0,0,0]};
+  if(name==='detail'){const c=ps.find(q=>q.d.ang)||ps[0],m=c.mid;return {s:scene,pos:[m.x/1000+0.32,0.2,m.z/1000+0.26],tgt:[m.x/1000,0,m.z/1000]};}
+  return {s:studio,pos:[-0.98,0.3,0.36],tgt:[-0.18,0.07,-0.06]};
+}
+function go(name,instant){
+  current=name;['walk','aerial','detail','studio','plan'].forEach(v=>$('v-'+v).setAttribute('aria-pressed',v===name));
+  $('plan').hidden=name!=='plan';$('legend').hidden=name==='plan';$('modes').classList.toggle('dim',name==='studio'||name==='plan');
+  if(name==='plan'){$('plan').innerHTML=planSVG({screen:true});return;}
+  const V=viewFor(name),prev=activeScene;activeScene=V.s;rp.scene=activeScene;
+  const to={p:new THREE.Vector3(...V.pos),t:new THREE.Vector3(...V.tgt)};
+  if(instant||prev!==activeScene||matchMedia('(prefers-reduced-motion: reduce)').matches){camera.position.copy(to.p);controls.target.copy(to.t);anim=0;return;}
+  anim={from:{p:camera.position.clone(),t:controls.target.clone()},to,t0:performance.now()};}
+for(const v of ['walk','aerial','detail','studio','plan'])$('v-'+v).onclick=()=>go(v,false);
+
+/* ---------- hover ---------- */
+const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=$('tip');let hovered=null;
+function highlight(q){document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
+  run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:0xeeece6);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):(CCTCOL[S.cct]||CCTCOL.T930));});}
+canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run){tip.hidden=true;return;}
+  const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
+  const q=ray.intersectObjects(run.picks,false)[0]?.object.userData.piece||null;if(q!==hovered){hovered=q;highlight(q);}
+  if(q){tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';
+    tip.innerHTML=`<b>Piece ${q.i+1}</b> · Feed ${q.run+1} · ${SEGNAME[q.seg]} · ${q.d.name}${q.dir?(q.dir==='L'?' left':' right'):''}<br>${q.d.len} mm · ${q.w} W · ${q.lm} lm<code>${q.code}</code>`;}else tip.hidden=true;});
+canvas.addEventListener('pointerleave',()=>{tip.hidden=true;hovered=null;highlight(null);});
+
+/* ======================= plan drawing (SVG, mm) ======================= */
+function planSVG(o={}){
+  const ps=R.pieces,all=ps.flatMap(q=>q.pts);
+  const x0=Math.min(...all.map(p=>p.x)),x1=Math.max(...all.map(p=>p.x)),z0=Math.min(...all.map(p=>p.z)),z1=Math.max(...all.map(p=>p.z));
+  const pad=Math.max(900,Math.max(x1-x0,z1-z0)*0.12),vb=[x0-pad,z0-pad,x1-x0+2*pad,z1-z0+2*pad];
+  const k=Math.max(vb[2],vb[3])/1000; // mm per "unit" of line/label size
+  const sw=Math.max(33,k*3.2),fs=k*13,ink='#10181f',grey='#777779';
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(' ')}" preserveAspectRatio="xMidYMid meet" font-family="Helvetica Neue,Helvetica,Arial,sans-serif">`;
+  s+=`<rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="#fff"/>`;
+  // 1 m grid
+  s+=`<g stroke="#eceded" stroke-width="${k*0.8}">`;for(let gx=Math.ceil(vb[0]/1000)*1000;gx<vb[0]+vb[2];gx+=1000)s+=`<line x1="${gx}" y1="${vb[1]}" x2="${gx}" y2="${vb[1]+vb[3]}"/>`;
+  for(let gz=Math.ceil(vb[1]/1000)*1000;gz<vb[1]+vb[3];gz+=1000)s+=`<line x1="${vb[0]}" y1="${gz}" x2="${vb[0]+vb[2]}" y2="${gz}"/>`;s+='</g>';
+  // pieces, alternating tone so every joint reads
+  ps.forEach((q,i)=>{s+=`<polyline fill="none" stroke="${i%2?grey:ink}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
+  // joints and end caps
+  ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
+    const capped=i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
+  {const q=ps.at(-1),p=q.pts.at(-1),nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="#ff5000" stroke-width="${k*2.4}"/>`;}
+  // piece numbers on the left-hand side of travel
+  ps.forEach(q=>{const m=q.mid,off=sw*0.5+fs*1.15,cx=m.x+Math.sin(m.h)*off,cz=m.z-Math.cos(m.h)*off;
+    s+=`<circle cx="${cx}" cy="${cz}" r="${fs*0.8}" fill="#fff" stroke="${ink}" stroke-width="${k*0.9}"/><text x="${cx}" y="${cz}" font-size="${fs*0.85}" text-anchor="middle" dominant-baseline="central" fill="${ink}" font-weight="700">${q.i+1}</text>`;});
+  // feeds
+  ps.filter(q=>q.seg==='S'||q.seg==='I').forEach(q=>{const p=q.pts[0],bx=p.x-Math.cos(p.h)*fs*3.2,bz=p.z-Math.sin(p.h)*fs*3.2;
+    s+=`<line x1="${bx}" y1="${bz}" x2="${p.x-Math.cos(p.h)*sw}" y2="${p.z-Math.sin(p.h)*sw}" stroke="#ff5000" stroke-width="${k*1.6}" stroke-dasharray="${k*5} ${k*3}"/><circle cx="${bx}" cy="${bz}" r="${fs*0.45}" fill="#ff5000"/>`;
+    s+=`<text x="${bx}" y="${bz-fs*1.0}" font-size="${fs}" text-anchor="middle" fill="#ff5000" font-weight="700">FEED ${q.run+1}</text>`;});
+  // step callouts: radius + angle for turns, length for straights (right-hand side)
+  let idx=0;S.steps.forEach((st,si)=>{const mine=ps.filter(q=>q.step===si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
+    const off=sw*0.5+fs*1.6,cx=m.x-Math.sin(m.h)*off,cz=m.z+Math.cos(m.h)*off;
+    const t=st.t==='S'?`${st._actual} mm`:`R${PIECE[st.r].r} · ${+st._actual.toFixed(1)}° ${st.t==='L'?'left':'right'}`;
+    s+=`<text x="${cx}" y="${cz}" font-size="${fs*0.95}" text-anchor="middle" dominant-baseline="central" fill="${grey}" paint-order="stroke" stroke="#fff" stroke-width="${k*3}">${t}</text>`;});
+  // overall dimensions
+  const dimY=z1+pad*0.55,dimX=x1+pad*0.55,tk=fs*0.6;
+  s+=`<g stroke="${ink}" stroke-width="${k*0.9}" fill="none"><line x1="${x0}" y1="${dimY}" x2="${x1}" y2="${dimY}"/><line x1="${x0}" y1="${dimY-tk}" x2="${x0}" y2="${dimY+tk}"/><line x1="${x1}" y1="${dimY-tk}" x2="${x1}" y2="${dimY+tk}"/>
+    <line x1="${dimX}" y1="${z0}" x2="${dimX}" y2="${z1}"/><line x1="${dimX-tk}" y1="${z0}" x2="${dimX+tk}" y2="${z0}"/><line x1="${dimX-tk}" y1="${z1}" x2="${dimX+tk}" y2="${z1}"/></g>`;
+  s+=`<text x="${(x0+x1)/2}" y="${dimY-fs*0.6}" font-size="${fs}" text-anchor="middle" fill="${ink}">${Math.round(x1-x0)} mm</text>`;
+  s+=`<text x="${dimX-fs*0.6}" y="${(z0+z1)/2}" font-size="${fs}" text-anchor="middle" fill="${ink}" transform="rotate(-90 ${dimX-fs*0.6} ${(z0+z1)/2})">${Math.round(z1-z0)} mm</text>`;
+  // scale bar
+  const sbx=vb[0]+pad*0.3,sby=vb[1]+vb[3]-pad*0.3;
+  s+=`<g><rect x="${sbx}" y="${sby-fs*0.4}" width="1000" height="${fs*0.4}" fill="${ink}"/><text x="${sbx}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}">0</text><text x="${sbx+1000}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}" text-anchor="end">1 m</text></g>`;
+  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange</text>`;
+  return s+'</svg>';
+}
+
+/* ======================= PDF ======================= */
+function svgToPng(svg,w,h){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(img,0,0,w,h);res(c.toDataURL('image/png'));};img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});}
+function logoSVG(){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 19 125 27" width="1000" height="216">${"<defs><clipPath id=\"lp\"><rect x=\"0\" y=\"0\" width=\"55.25\" height=\"60\"/></clipPath><clipPath id=\"lf\"><rect x=\"55.25\" y=\"0\" width=\"80\" height=\"60\"/></clipPath></defs><g clip-path=\"url(#lp)\" fill=\"var(--ink)\"><path d=\"M11.5,29a5.61,5.61,0,0,0-1.9-1.34,6.15,6.15,0,0,0-2.5-.49,5.77,5.77,0,0,0-2.4.5,3.89,3.890,0,0,0-1.77,1.61H2.88V27.44H0V45.21H3V38H3.11a4.3,4.3,0,0,0,.58.62,4.61,4.61,0,0,0,.86.59,5.23,5.23,0,0,0,1.16.45,5.9,5.9,0,0,0,1.52.18,5.72,5.72,0,0,0,2.38-.49A5.530,5.530,0,0,0,11.460,38a6.170,6.170,0,0,0,1.2-2,7.06,7.06,0,0,0,.43-2.48,7.47,7.47,0,0,0-.4-2.48A5.74,5.74,0,0,0,11.5,29ZM9.82,34.82A3.4,3.4,0,0,1,9.11,36a3.48,3.48,0,0,1-2.62,1.1A3.48,3.48,0,0,1,3.88,36a3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,3.88,31a3.48,3.48,0,0,1,2.62-1.1A3.48,3.48,0,0,1,9.11,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,9.82,34.82ZM26,28.59a3.89,3.89,0,0,0-1.38-1.05,4.78,4.78,0,0,0-2.06-.4,4,4,0,0,0-2.31.62A3.52,3.52,0,0,0,19,29.12H19V20.51h-3v19h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.910,2.910,0,0,1,1.28-.25,1.93,1.93,0,0,1,1.24.36,2.17,2.17,0,0,1,.67.9,4,4,0,0,1,.27,1.15Q24,32.89,24,33.39v6.1h3V31.88a6.88,6.88,0,0,0-.23-1.78A4,4,0,0,0,26,28.59Zm15.09.28A6.19,6.19,0,0,0,39,27.59a7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.07,6.07,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.18,6.18,0,0,0,2.1-1.28,6.07,6.070,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,41.11,28.87Zm-1.35,5.95A3.4,3.4,0,0,1,39,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,33.81,31,3.6,3.6,0,0,1,39,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,39.75,34.82ZM53,33a6.25,6.25,0,0,0-1.58-.58l-1.58-.36a5.28,5.28,0,0,1-1.21-.43.84.84,0,0,1-.48-.8,1,1,0,0,1,.58-1,2.55,2.55,0,0,1,1.19-.3,2.78,2.78,0,0,1,2.38,1.23l2-1.81a3.93,3.93,0,0,0-1.92-1.42,7.2,7.2,0,0,0-4.2-.19,4.77,4.77,0,0,0-1.57.7,3.65,3.65,0,0,0-1.1,1.22A3.5,3.5,0,0,0,45.15,31a3,3,0,0,0,.48,1.81,3.3,3.3,0,0,0,1.21,1,6.13,6.13,0,0,0,1.58.53q.85.16,1.58.35a4.29,4.29,0,0,1,1.21.49,1.12,1.12,0,0,1,.29,1.54,1.55,1.55,0,0,1-.49.44,2.23,2.23,0,0,1-.66.25,3.27,3.27,0,0,1-.68.08A3,3,0,0,1,48,37.12,5.67,5.67,0,0,1,46.79,36l-2,1.88a4.94,4.94,0,0,0,2.12,1.46,8.09,8.09,0,0,0,2.6.4,8.9,8.9,0,0,0,1.87-.2,5.4,5.4,0,0,0,1.68-.65,3.66,3.66,0,0,0,1.21-1.19,3.34,3.34,0,0,0,.47-1.82,3.17,3.17,0,0,0-.48-1.86A3.46,3.46,0,0,0,53,33Zm7.36-12.4A3.15,3.15,0,0,0,59,21.72a4.42,4.42,0,0,0-.67,1.75,13.28,13.28,0,0,0-.18,2.27v1.71h-2.5V30h2.5v9.49h3V30H64V27.44H61.2V25.26a6.86,6.86,0,0,1,.06-1,2,2,0,0,1,.28-.79A1.54,1.54,0,0,1,62.14,23a2.17,2.17,0,0,1,1-.2,3.92,3.92,0,0,1,.63,0l.63.13.2-2.56a9.86,9.86,0,0,0-1.92-.18A5.77,5.77,0,0,0,60.39,20.6Zm16.26,8.27a6.19,6.19,0,0,0-2.1-1.28,7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.06,6.06,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.19,6.19,0,0,0,2.1-1.28,6.07,6.07,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,76.65,28.87ZM75.3,34.82A3.4,3.4,0,0,1,74.59,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.94,3.94,0,0,1,0-2.71A3.4,3.4,0,0,1,69.36,31a3.6,3.6,0,0,1,5.23,0,3.41,3.41,0,0,1,.71,1.15A3.94,3.94,0,0,1,75.3,34.82Zm12.78-7.68a4,4,0,0,0-2.15.58,3.79,3.79,0,0,0-1.44,1.63H84.44V27.44h-3v12h3V33a3.75,3.75,0,0,1,.11-.75,3,3,0,0,1,.46-1,3.11,3.11,0,0,1,1-.89A3.28,3.28,0,0,1,87.7,30a4.32,4.32,0,0,1,.72.06q.37.06.75.16V27.31l-.54-.13A2.92,2.92,0,0,0,88.08,27.14Zm21.32,1.51a3.58,3.58,0,0,0-1.35-1.1,4.7,4.7,0,0,0-2-.4,4.83,4.83,0,0,0-2.35.54A4.27,4.27,0,0,0,102,29.37a3.69,3.69,0,0,0-3.79-2.23,4,4,0,0,0-2.41.67,4.08,4.08,0,0,0-1.3,1.52H94.45V27.44H91.56v12h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.91,2.91,0,0,1,1.28-.25,1.83,1.83,0,0,1,1.59.67,3,3,0,0,1,.48,1.79v7.18h3V33a4.75,4.75,0,0,1,.14-1.14,2.87,2.87,0,0,1,.45-1,2.34,2.34,0,0,1,.81-.7,2.52,2.52,0,0,1,1.2-.26,2.39,2.39,0,0,1,1.11.23,1.8,1.8,0,0,1,.68.61,2.55,2.55,0,0,1,.35.9,5.54,5.54,0,0,1,.1,1.07v6.83h3V32.31a8.59,8.59,0,0,0-.23-2A4.54,4.54,0,0,0,109.4,28.64ZM124,31.57a6.53,6.53,0,0,0-.16-1.17,4.83,4.83,0,0,0-.46-1.19,3.29,3.29,0,0,0-.9-1,4.81,4.81,0,0,0-1.47-.74,7.08,7.08,0,0,0-2.17-.29,8.76,8.76,0,0,0-2.79.45,5.89,5.89,0,0,0-2.36,1.48l1.59,1.58a4.55,4.55,0,0,1,1.44-.92,4.72,4.72,0,0,1,1.79-.34,3.33,3.33,0,0,1,2,.56,2,2,0,0,1,.78,1.69V32h-.76q-.76,0-1.62,0a14.64,14.64,0,0,0-1.71.18,9.52,9.52,0,0,0-1.63.41,4.82,4.82,0,0,0-1.38.74,3.43,3.43,0,0,0-.95,1.15,3.62,3.62,0,0,0-.35,1.67,3.19,3.19,0,0,0,.38,1.58,3.49,3.49,0,0,0,1,1.13,4.44,4.44,0,0,0,1.42.68,6,6,0,0,0,1.630.23,5.27,5.27,0,0,0,2.22-.46,3.9,3.9,0,0,0,1.67-1.49h.08v1.66H124V32.56Q124,32.13,124,31.57Zm-2.88,3.2a2.72,2.72,0,0,1-.75,2,3.17,3.17,0,0,1-2.31.74,3.32,3.32,0,0,1-.76-.09,2.08,2.08,0,0,1-.68-.29,1.71,1.71,0,0,1-.49-.49,1.27,1.27,0,0,1-.19-.72,1.2,1.2,0,0,1,.48-1,3.4,3.4,0,0,1,1.18-.55,7.5,7.5,0,0,1,1.48-.24q.78,0,1.42,0h.63v.68Z\"/></g><g clip-path=\"url(#lf)\" fill=\"var(--muted)\"><path d=\"M11.5,29a5.61,5.61,0,0,0-1.9-1.34,6.15,6.15,0,0,0-2.5-.49,5.77,5.77,0,0,0-2.4.5,3.89,3.890,0,0,0-1.77,1.61H2.88V27.44H0V45.21H3V38H3.11a4.3,4.3,0,0,0,.58.62,4.61,4.61,0,0,0,.86.59,5.23,5.23,0,0,0,1.16.45,5.9,5.9,0,0,0,1.52.18,5.72,5.72,0,0,0,2.38-.49A5.530,5.530,0,0,0,11.460,38a6.170,6.170,0,0,0,1.2-2,7.06,7.06,0,0,0,.43-2.48,7.47,7.47,0,0,0-.4-2.48A5.74,5.74,0,0,0,11.5,29ZM9.82,34.82A3.4,3.4,0,0,1,9.11,36a3.48,3.48,0,0,1-2.62,1.1A3.48,3.48,0,0,1,3.88,36a3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,3.88,31a3.48,3.48,0,0,1,2.62-1.1A3.48,3.48,0,0,1,9.11,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,9.82,34.82ZM26,28.59a3.89,3.89,0,0,0-1.38-1.05,4.78,4.78,0,0,0-2.06-.4,4,4,0,0,0-2.31.62A3.52,3.52,0,0,0,19,29.12H19V20.51h-3v19h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.910,2.910,0,0,1,1.28-.25,1.93,1.93,0,0,1,1.24.36,2.17,2.17,0,0,1,.67.9,4,4,0,0,1,.27,1.15Q24,32.89,24,33.39v6.1h3V31.88a6.88,6.88,0,0,0-.23-1.78A4,4,0,0,0,26,28.59Zm15.09.28A6.19,6.19,0,0,0,39,27.59a7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.07,6.07,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.18,6.18,0,0,0,2.1-1.28,6.07,6.070,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,41.11,28.87Zm-1.35,5.95A3.4,3.4,0,0,1,39,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,33.81,31,3.6,3.6,0,0,1,39,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,39.75,34.82ZM53,33a6.25,6.25,0,0,0-1.58-.58l-1.58-.36a5.28,5.28,0,0,1-1.21-.43.84.84,0,0,1-.48-.8,1,1,0,0,1,.58-1,2.55,2.55,0,0,1,1.19-.3,2.78,2.78,0,0,1,2.38,1.23l2-1.81a3.93,3.93,0,0,0-1.92-1.42,7.2,7.2,0,0,0-4.2-.19,4.77,4.77,0,0,0-1.57.7,3.65,3.65,0,0,0-1.1,1.22A3.5,3.5,0,0,0,45.15,31a3,3,0,0,0,.48,1.81,3.3,3.3,0,0,0,1.21,1,6.13,6.13,0,0,0,1.58.53q.85.16,1.58.35a4.29,4.29,0,0,1,1.21.49,1.12,1.12,0,0,1,.29,1.54,1.55,1.55,0,0,1-.49.44,2.23,2.23,0,0,1-.66.25,3.27,3.27,0,0,1-.68.08A3,3,0,0,1,48,37.12,5.67,5.67,0,0,1,46.79,36l-2,1.88a4.94,4.94,0,0,0,2.12,1.46,8.09,8.09,0,0,0,2.6.4,8.9,8.9,0,0,0,1.87-.2,5.4,5.4,0,0,0,1.68-.65,3.66,3.66,0,0,0,1.21-1.19,3.34,3.34,0,0,0,.47-1.82,3.17,3.17,0,0,0-.48-1.86A3.46,3.46,0,0,0,53,33Zm7.36-12.4A3.15,3.15,0,0,0,59,21.72a4.42,4.42,0,0,0-.67,1.75,13.28,13.28,0,0,0-.18,2.27v1.71h-2.5V30h2.5v9.49h3V30H64V27.44H61.2V25.26a6.86,6.86,0,0,1,.06-1,2,2,0,0,1,.28-.79A1.54,1.54,0,0,1,62.14,23a2.17,2.17,0,0,1,1-.2,3.92,3.92,0,0,1,.63,0l.63.13.2-2.56a9.86,9.86,0,0,0-1.92-.18A5.77,5.77,0,0,0,60.39,20.6Zm16.26,8.27a6.19,6.19,0,0,0-2.1-1.28,7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.06,6.06,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.19,6.19,0,0,0,2.1-1.28,6.07,6.07,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,76.65,28.87ZM75.3,34.82A3.4,3.4,0,0,1,74.59,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.94,3.94,0,0,1,0-2.71A3.4,3.4,0,0,1,69.36,31a3.6,3.6,0,0,1,5.23,0,3.41,3.41,0,0,1,.71,1.15A3.94,3.94,0,0,1,75.3,34.82Zm12.78-7.68a4,4,0,0,0-2.15.58,3.79,3.79,0,0,0-1.44,1.63H84.44V27.44h-3v12h3V33a3.75,3.75,0,0,1,.11-.75,3,3,0,0,1,.46-1,3.11,3.11,0,0,1,1-.89A3.28,3.28,0,0,1,87.7,30a4.32,4.32,0,0,1,.72.06q.37.06.75.16V27.31l-.54-.13A2.92,2.92,0,0,0,88.08,27.14Zm21.32,1.51a3.58,3.58,0,0,0-1.35-1.1,4.7,4.7,0,0,0-2-.4,4.83,4.83,0,0,0-2.35.54A4.27,4.27,0,0,0,102,29.37a3.69,3.69,0,0,0-3.79-2.23,4,4,0,0,0-2.41.67,4.08,4.08,0,0,0-1.3,1.52H94.45V27.44H91.56v12h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.91,2.91,0,0,1,1.28-.25,1.83,1.83,0,0,1,1.59.67,3,3,0,0,1,.48,1.79v7.18h3V33a4.75,4.75,0,0,1,.14-1.14,2.87,2.87,0,0,1,.45-1,2.34,2.34,0,0,1,.81-.7,2.52,2.52,0,0,1,1.2-.26,2.39,2.39,0,0,1,1.11.23,1.8,1.8,0,0,1,.68.61,2.55,2.55,0,0,1,.35.9,5.54,5.54,0,0,1,.1,1.07v6.83h3V32.31a8.59,8.59,0,0,0-.23-2A4.54,4.54,0,0,0,109.4,28.64ZM124,31.57a6.53,6.53,0,0,0-.16-1.17,4.83,4.83,0,0,0-.46-1.19,3.29,3.29,0,0,0-.9-1,4.81,4.81,0,0,0-1.47-.74,7.08,7.08,0,0,0-2.17-.29,8.76,8.76,0,0,0-2.79.45,5.89,5.89,0,0,0-2.36,1.48l1.59,1.58a4.55,4.55,0,0,1,1.44-.92,4.72,4.72,0,0,1,1.79-.34,3.33,3.33,0,0,1,2,.56,2,2,0,0,1,.78,1.69V32h-.76q-.76,0-1.62,0a14.64,14.64,0,0,0-1.71.18,9.52,9.52,0,0,0-1.63.41,4.82,4.82,0,0,0-1.38.74,3.43,3.43,0,0,0-.95,1.15,3.62,3.62,0,0,0-.35,1.67,3.19,3.19,0,0,0,.38,1.58,3.49,3.49,0,0,0,1,1.13,4.44,4.44,0,0,0,1.42.68,6,6,0,0,0,1.630.23,5.27,5.27,0,0,0,2.22-.46,3.9,3.9,0,0,0,1.67-1.49h.08v1.66H124V32.56Q124,32.13,124,31.57Zm-2.88,3.2a2.72,2.72,0,0,1-.75,2,3.17,3.17,0,0,1-2.31.74,3.32,3.32,0,0,1-.76-.09,2.08,2.08,0,0,1-.68-.29,1.71,1.71,0,0,1-.49-.49,1.27,1.27,0,0,1-.19-.72,1.2,1.2,0,0,1,.48-1,3.4,3.4,0,0,1,1.18-.55,7.5,7.5,0,0,1,1.48-.24q.78,0,1.42,0h.63v.68Z\"/></g>".replace(/var\(--ink\)/g,'#10181f').replace(/var\(--muted\)/g,'#777779')}</svg>`;}
+async function snapshot(view,isNight){
+  const keep={view:current,night,cam:camera.position.clone(),tgt:controls.target.clone(),num:numbersOn,w:stage.clientWidth,h:stage.clientHeight};
+  labels.forEach(l=>l.visible=false);setMode(isNight);const V=viewFor(view);activeScene=V.s;rp.scene=activeScene;camera.position.set(...V.pos);controls.target.set(...V.tgt);controls.update();
+  const W=1600,H=1000;renderer.setPixelRatio(1);renderer.setSize(W,H,false);composer.setSize(W,H);camera.aspect=W/H;camera.updateProjectionMatrix();
+  applyFrame();composer.render();const url=canvas.toDataURL('image/jpeg',0.9);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));setMode(keep.night);numbersOn=keep.num;labels.forEach(l=>l.visible=l.element.classList.contains('feed')||numbersOn);
+  resize();go(keep.view,true);if(keep.view!=='plan'){camera.position.copy(keep.cam);controls.target.copy(keep.tgt);}
+  return url;}
+$('pdf').onclick=async()=>{
+  const btn=$('pdf');btn.textContent='Preparing PDF…';btn.disabled=true;
+  try{
+    const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});const PW=297,PH=210,M=14;
+    const logo=await svgToPng(logoSVG(),1000,216);
+    const title=S.proj||'Inground Radius run';const sub=['Holectron Inground Radius','planning drawing',new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})].join(' · ');
+    const head=(t)=>{doc.addImage(logo,'PNG',M,M-2,34,7.3);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(16,24,31);doc.text(t,PW-M,M+2,{align:'right'});doc.setFont('helvetica','normal');doc.setTextColor(119,119,121);doc.text(sub,PW-M,M+6.5,{align:'right'});};
+    const foot=(n,N)=>{doc.setFontSize(7.5);doc.setTextColor(119,119,121);doc.text('info@phosforma.com.au',M,PH-8);doc.text('Planning drawing, subject to Phosforma confirmation. Phosforma reserves the right to update the technical specifications.',PW/2,PH-8,{align:'center'});doc.text(`${n}/${N}`,PW-M,PH-8,{align:'right'});};
+    const {st,pieces,runs,ext}=R;const L=pieces.reduce((a,q)=>a+q.d.len,0),Wt=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0),cctL=CCTS.find(c=>c[0]===S.cct)[1];
+    // page 1: overview
+    head(title);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(16,24,31);doc.text(title,M,M+24);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(119,119,121);doc.text(S.client?`Prepared for ${S.client}`:'Inground Radius run plan',M,M+30.5);
+    const night1=await snapshot('aerial',true),day1=await snapshot('aerial',false);
+    doc.addImage(night1,'JPEG',M,M+36,170,106.25);doc.addImage(day1,'JPEG',M+174,M+36+54.25,90,52);
+    const rows=[['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',String(pieces.length)],['LED strip',`${st.label} · ${cctL}`],['Load',Wt.toFixed(1)+' W'],['Delivered light',Math.round(LM)+' lm'],['Feeds / drivers',`${runs.length} × ${st.v}V DC (max ${st.max} m per feed)`]];
+    let y=M+40;doc.setFontSize(9);rows.forEach(([k,v])=>{doc.setTextColor(119,119,121);doc.text(k,M+174,y);doc.setTextColor(16,24,31);doc.text(v,PW-M,y,{align:'right'});doc.setDrawColor(223,224,226);doc.line(M+174,y+2,PW-M,y+2);y+=6.6;});
+    doc.setFontSize(7.5);doc.setTextColor(119,119,121);doc.text('Night and daytime views. Visualisation only: light spill and paving are indicative.',M,M+36+106.25+5);
+    // page 2: plan
+    doc.addPage();head(title);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(16,24,31);doc.text('Plan',M,M+18);
+    const svg=planSVG();const vbm=svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);const boxW=PW-2*M,boxH=PH-M-22-14,sc=Math.min(boxW/vbm[2],boxH/vbm[3]);
+    const pw=vbm[2]*sc,ph=vbm[3]*sc;const png=await svgToPng(svg,Math.round(pw*12),Math.round(ph*12));doc.addImage(png,'PNG',M+(boxW-pw)/2,M+22,pw,ph);
+    doc.setFontSize(7.5);doc.setTextColor(119,119,121);doc.text(`Scale approx. 1:${Math.round(1/sc)} at A4. Dimensions on the centre line, in mm. Curve radii on the outer edge. End caps and feeds in orange.`,M,PH-14);
+    // page 3: order list
+    doc.addPage();head(title);doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(16,24,31);doc.text('Order list',M,M+18);
+    y=M+27;doc.setFontSize(8);doc.setTextColor(119,119,121);doc.text('Qty',M,y);doc.text('Order code',M+12,y);doc.text('Description',M+150,y);doc.text('Pieces',PW-M,y,{align:'right'});y+=2.5;doc.setDrawColor(16,24,31);doc.line(M,y,PW-M,y);y+=5;
+    for(const [code,g] of Object.entries(R.groups)){if(y>PH-30){doc.addPage();head(title);y=M+24;}
+      doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.text(String(g.q),M,y);doc.setFont('courier','normal');doc.setFontSize(7.6);doc.text(code,M+12,y);
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,M+150,y);doc.setTextColor(119,119,121);doc.text(rangeTxt(g.list).replace(/–/g,'-'),PW-M,y,{align:'right'});
+      y+=3;doc.setDrawColor(223,224,226);doc.line(M,y,PW-M,y);y+=5;}
+    y+=4;doc.setFont('helvetica','bold');doc.setTextColor(16,24,31);doc.setFontSize(10);doc.text('Feeds',M,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(8.5);
+    runs.forEach((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;doc.text(`Feed ${i+1}: pieces ${r[0].i+1}-${r.at(-1).i+1} · ${l.toFixed(2)} m · ${w.toFixed(1)} W · ${st.v}V DC driver (separate), fed at piece ${r[0].i+1}`,M,y);y+=5;});
+    y+=3;doc.setTextColor(119,119,121);doc.setFontSize(8);
+    doc.text(doc.splitTextToSize('Start pieces carry an end cap at the start and take the feed cable; middle pieces join both sides; end pieces carry an end cap at the end. Pieces join with male/female T1X connectors inside the chamber. Curves can be laid turning left or right. Power and light output are Holectron\'s published values per piece. Drivers are sized and supplied separately by Phosforma.',PW-2*M),M,y);
+    const N=doc.getNumberOfPages();for(let i=1;i<=N;i++){doc.setPage(i);foot(i,N);}
+    doc.save(`${(S.proj||'Inground Radius run').replace(/[^\w\- ]+/g,'').trim()||'Inground Radius run'} - Phosforma.pdf`);
+    toast('PDF downloaded');
+  }catch(e){console.error(e);toast('The PDF could not be made: '+e.message);}
+  btn.textContent='Download PDF';btn.disabled=false;
+};
+
+/* ======================= loop ======================= */
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);composer.setSize(w,h);labelR.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(stage);resize();
+function applyFrame(){const st=activeScene===studio;const dist=camera.position.distanceTo(controls.target);
+  renderer.toneMappingExposure=st?0.82:night?1.0:0.95;bloom.strength=st?0.1:night?0.5*Math.min(1,Math.max(0.2,dist/4)):0;MAT.steel.envMapIntensity=st?0.45:night?0.12:0.6;}
+renderer.setAnimationLoop(t=>{
+  if(current==='plan')return;
+  if(anim){const k=Math.min(1,(t-anim.t0)/1100),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(anim.from.p,anim.to.p,e);controls.target.lerpVectors(anim.from.t,anim.to.t,e);if(k>=1)anim=0;}
+  controls.update();applyFrame();composer.render();const st=activeScene===studio;labelR.domElement.hidden=st;if(!st)labelR.render(scene,camera);});
+
+/* ======================= update ======================= */
+let rebuildT=0;
+function update(redrawSteps,reframe){
+  R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();
+  $('strip').value=S.strip;$('cct').value=S.cct;$('proj').value=S.proj;$('client').value=S.client;
+  clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
+}
+buildStudio();update(true);setTimeout(()=>go('aerial',true),0);
+window.__ready=true;
+</script>
+</body>
+</html>

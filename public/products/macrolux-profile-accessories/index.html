@@ -1248,7 +1248,7 @@ function viewProduct(f){
       <p class="tag">${esc(f.tagline)}</p>
       </div>
       <dl class="quick">${quick.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
-      <div class="p-actions">${cfgFor(f)?'<a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models & downloads</a>':'<a class="btn solid" href="#codes" data-jump="codes">Models & downloads</a>'}<button class="btn" data-dl="Product brochure">Product brochure</button></div>
+      <div class="p-actions">${cfgFor(f)?'<a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models & downloads</a>':'<a class="btn solid" href="#codes" data-jump="codes">Models & downloads</a>'}<button class="btn" data-dl="Product brochure">Product brochure</button>${f.family==='Inground Radius'?'<a class="btn" href="/planner/inground-radius/">Plan a run</a>':''}</div>
       
     </div></div></div>
   
