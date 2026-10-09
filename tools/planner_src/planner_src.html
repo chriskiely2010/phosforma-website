@@ -169,6 +169,7 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
       <div class="grp" id="modes" role="group" aria-label="Lighting">
         <button id="m-day" aria-pressed="false">Day</button>
         <button id="m-twi" aria-pressed="true">Twilight</button>
+        <button id="t-scene" aria-pressed="true" title="Show or hide the planters and trees around the paving">Planters &amp; trees</button>
         <button id="t-num" aria-pressed="true">Piece numbers</button>
       </div>
       <div class="grp cctb" id="cctb" role="group" aria-label="Colour temperature"><button data-cct="922" aria-pressed="false">2200K</button><button data-cct="T927" aria-pressed="false">2700K</button><button data-cct="T930" aria-pressed="false">3000K</button><button data-cct="T940" aria-pressed="false">4000K</button>
@@ -237,7 +238,7 @@ const PRESETS={
   'Planter surround with 90° corners':ONE([{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000},{t:'L',r:'R515',a:90},{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000}]),
 };
 const copyLines=l=>JSON.parse(JSON.stringify(l));
-let S={proj:'',client:'',strip:STRIPS[0].id,cct:'T930',lines:copyLines(PRESETS['S-bend walkway (10 m)'])};
+let S={proj:'',client:'',strip:STRIPS[0].id,cct:'T930',scene:'plaza',lines:copyLines(PRESETS['S-bend walkway (10 m)'])};
 // share links carry the plan in the address (#p=…); otherwise the last plan in this browser
 const clean=()=>JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);
 function enc(){return 'p='+encodeURIComponent(clean());}
@@ -512,9 +513,10 @@ function buildSite(){
     const l=new THREE.Mesh(lg,lawnM);l.position.set((x0+x1)/2,KH-0.05,(z0+z1)/2);l.receiveShadow=true;site.add(l);};
   const O=0.6; // walkway between plaza edge and planters
   const sideX=(z0,z1)=>{bed(B.x0-O-BW-BW,z0,cx-GAP/2,z1);bed(cx+GAP/2,z0,B.x1+O+BW+BW,z1);};
-  sideX(B.z0-O-BW,B.z0-O);sideX(B.z1+O,B.z1+O+BW);
+  const open=S.scene==='open'; // open paving: just the slabs, no planters or trees
+  if(!open){sideX(B.z0-O-BW,B.z0-O);sideX(B.z1+O,B.z1+O+BW);
   const sideZ=(x0,x1)=>{bed(x0,B.z0-O+0.0001,x1,cz-GAP/2);bed(x0,cz+GAP/2,x1,B.z1+O-0.0001);};
-  sideZ(B.x0-O-BW,B.x0-O);sideZ(B.x1+O,B.x1+O+BW);
+  sideZ(B.x0-O-BW,B.x0-O);sideZ(B.x1+O,B.x1+O+BW);}
   // trees in the planters (trunk, branches, leaf cards); some in autumn colour, as in a planted plaza
   const trees=[];const rr=rng(Math.round(W*31+D*17));
   beds.forEach(b=>{const w=b.x1-b.x0,d=b.z1-b.z0,long=Math.max(w,d),n=Math.max(1,Math.floor(long/4.6));
@@ -657,7 +659,7 @@ const SKY={night:skyTex('#05080d','#1b2633'),day:skyTex('#9fb6cc','#e7edf2'),twi
 let mode='twilight',night=true,dim=1,numbersOn=true;
 const MODE={
   day:{fog:0xdfe6ee,hemi:[0xdfe8f2,0x5d5a52,0.55],sun:[0xfff4e6,2.4,[-8,14,6]],env:0.35,opal:0xeeece6,glow:0,bloom:0,exp:0.95},
-  twilight:{fog:0x8c7c8c,hemi:[0x8e9cc8,0x3a332c,0.55],sun:[0xff9a5c,0.9,[-14,3,4]],env:0.18,opal:0xbab7b0,glow:1.1,bloom:0.32,exp:1.0},
+  twilight:{fog:0x8c7c8c,hemi:[0x8e9cc8,0x3a332c,0.55],sun:[0xff9a5c,0.9,[-14,3,4]],env:0.18,opal:0xbab7b0,glow:1.25,bloom:0.32,exp:0.85},
   night:{fog:0x141c26,hemi:[0x6a7f99,0x2a2824,0.2],sun:[0xffffff,0,[-8,14,6]],env:0.015,opal:0x9a9893,glow:1.5,bloom:0.5,exp:1.0},
 };
 function setMode(m){if(m===true||m==='night')m='twilight';if(m===false)m='day';mode=m;night=m!=='day';const M=MODE[m];
@@ -677,6 +679,8 @@ $('m-day').onclick=()=>setMode('day');$('m-twi').onclick=()=>setMode('twilight')
 $('dim').oninput=e=>{dim=+e.target.value/100;$('dimv').textContent=e.target.value+'%';if(mode==='day'&&dim>0)setMode('twilight');else applyLight();};
 $('t-exp').oninput=e=>{explodeTo=+e.target.value/100;};
 document.querySelectorAll('[data-cct]').forEach(b=>b.onclick=()=>{S.cct=b.dataset.cct;if(!night)setMode('twilight');update(false);});
+$('t-scene').onclick=()=>{S.scene=S.scene==='open'?'plaza':'open';$('t-scene').setAttribute('aria-pressed',S.scene!=='open');keepSite=true;save();buildSite();};
+$('t-scene').setAttribute('aria-pressed',S.scene!=='open');
 $('t-num').onclick=()=>{numbersOn=!numbersOn;applyExplode();$('t-num').setAttribute('aria-pressed',numbersOn);labels.forEach(l=>{if(!l.element.classList.contains('feed'))l.visible=numbersOn;});};
 
 /* ---------- views ---------- */
