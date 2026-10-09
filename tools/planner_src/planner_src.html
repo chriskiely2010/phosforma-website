@@ -310,7 +310,7 @@ function renderSteps(){
   $('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
     <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div>${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px">Remove line</button>`:''}</div>
     <div class="lstart">
-      <label class="f">Start X (mm)<input type="number" step="10" id="lx-${l}" data-l="${l}" data-lk="x" value="${ln.x}"${l===0?' title="Line A starts at the datum (0, 0)"':''}></label>
+      <label class="f">Start X (mm)<input type="number" step="10" id="lx-${l}" data-l="${l}" data-lk="x" value="${ln.x}"${l===0?' title="Measured from the datum (0, 0)"':''}></label>
       <label class="f">Start Y (mm)<input type="number" step="10" id="ly-${l}" data-l="${l}" data-lk="y" value="${ln.y}"></label>
       <label class="f">Heading<select id="ld-${l}" data-l="${l}" data-lk="dir">${DIRS.map(([v,t])=>`<option value="${v}"${+ln.dir===v?' selected':''}>${t}</option>`).join('')}</select></label>
     </div>
@@ -467,12 +467,15 @@ function makeTrees(list,r){
 
 /* ---------- site (rebuilt with the path) ---------- */
 const site=new THREE.Group();scene.add(site);
-let run=null,groundMats=[],plazaMat=null,labels=[],B=null;
+let run=null,groundMats=[],plazaMat=null,labels=[],B=null,siteFrame=null,keepSite=false;
 function disposeGroup(g){g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&!Object.values(MAT).includes(o.material)&&o.material!==barkM&&o.material!==leafM&&o.material.map!==pav.map&&o.material.map!==grass)o.material.dispose();});}
 function buildSite(){
   disposeGroup(site);site.clear();labels.forEach(l=>l.removeFromParent());labels=[];groundMats=[];
   const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000));
-  const m=3;B={x0:Math.floor(Math.min(...xs)-m),x1:Math.ceil(Math.max(...xs)+m),z0:Math.floor(Math.min(...zs)-m),z1:Math.ceil(Math.max(...zs)+m)};
+  const m=3,ox=R.origin.x/1000,oz=R.origin.z/1000; // site frame kept in datum coordinates (m)
+  const fit={x0:Math.floor(Math.min(...xs)+ox-m),x1:Math.ceil(Math.max(...xs)+ox+m),z0:Math.floor(Math.min(...zs)+oz-m),z1:Math.ceil(Math.max(...zs)+oz+m)};
+  siteFrame=keepSite&&siteFrame?{x0:Math.min(siteFrame.x0,fit.x0),x1:Math.max(siteFrame.x1,fit.x1),z0:Math.min(siteFrame.z0,fit.z0),z1:Math.max(siteFrame.z1,fit.z1)}:fit;keepSite=false;
+  B={x0:siteFrame.x0-ox,x1:siteFrame.x1-ox,z0:siteFrame.z0-oz,z1:siteFrame.z1-oz};
   const W=B.x1-B.x0,D=B.z1-B.z0;
   // light spill on the paving
   const GW=2048,GH=Math.max(64,Math.round(GW*D/W)),gc=document.createElement('canvas');gc.width=GW;gc.height=GH;const x=gc.getContext('2d'),sx=GW/W;
@@ -651,7 +654,7 @@ let current='aerial',anim=0,activeScene=scene;
 function viewFor(name){
   const ps=R.pieces,sz=Math.max(R.ext.w,R.ext.d,2000)/1000;
   if(name==='walk'){const p=ps[0].pts[0],q=ps[Math.min(ps.length-1,Math.floor(ps.length/3))].mid;return {s:scene,pos:[p.x/1000-Math.cos(p.h)*1.6+Math.sin(p.h)*0.9,1.55,p.z/1000-Math.sin(p.h)*1.6-Math.cos(p.h)*0.9],tgt:[q.x/1000,0,q.z/1000]};}
-  if(name==='aerial'){const ss=B?Math.max(B.x1-B.x0,B.z1-B.z0)+7:sz;return {s:scene,pos:[-ss*0.42,ss*0.78+3,ss*0.6],tgt:[0,0,0.4]};}
+  if(name==='aerial'){const ss=B?Math.max(B.x1-B.x0,B.z1-B.z0)+7:sz;const cx=B?(B.x0+B.x1)/2:0,cz=B?(B.z0+B.z1)/2:0;return {s:scene,pos:[cx-ss*0.42,ss*0.78+3,cz+ss*0.6],tgt:[cx,0,cz+0.4]};}
   if(name==='detail'){const c=ps.find(q=>q.d.ang)||ps[0],m=c.mid;return {s:scene,pos:[m.x/1000+0.32,0.2,m.z/1000+0.26],tgt:[m.x/1000,0,m.z/1000]};}
   if(name==='parts'&&studioRun){ // frame the parts at the start of feed 1: profile, insert, end cap, leads, feed cable, driver
     studioRun.group.updateMatrixWorld(true);const A0=studioRun.pgs[0].userData.anch,A1=studioRun.pgs[1]?studioRun.pgs[1].userData.anch:{};
@@ -678,7 +681,7 @@ const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=$('tip');let hover
 function highlight(q){document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
   run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):(CCTCOL[S.cct]||CCTCOL.T930));});}
 canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run||drag3){tip.hidden=true;return;}
-  if(S.lines.length>1&&!e.buttons)canvas.style.cursor=pickAt(e)?'grab':'';
+  if(!e.buttons)canvas.style.cursor=pickAt(e)?'grab':'';
   const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
   const q=ray.intersectObjects(run.picks,false)[0]?.object.userData.piece||null;if(q!==hovered){hovered=q;highlight(q);}
   if(q){tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';
@@ -687,27 +690,27 @@ canvas.addEventListener('pointerleave',()=>{tip.hidden=true;hovered=null;highlig
 
 
 /* ======================= move and turn lines with the cursor ======================= */
-// Line A's start is the datum (0, 0): dragging Line A moves the other lines the opposite way, so A appears to move.
+// Every line (Line A too, and a single line on its own) moves against the fixed datum 0,0 and the plaza around it.
 // The view is held still through the change (the design is re-centred on every resolve), so nothing jumps.
 let drag=null,camShift=null;const SNAP=50;
 function dragBegin(li,x,z){drag={li,sx:x,sz:z,d:{x:0,z:0},O0:{...R.origin},s0:S.lines.map(l=>({x:+l.x||0,y:+l.y||0}))};}
 function dragTo(x,z){const dx=Math.round((x-drag.sx)/SNAP)*SNAP,dz=Math.round((z-drag.sz)/SNAP)*SNAP;drag.d={x:dx,z:dz};
   S.lines.forEach((l,i)=>{const s0=drag.s0[i];l.x=s0.x;l.y=s0.y;
-    if(drag.li===0){if(i){l.x=s0.x-dx;l.y=s0.y+dz;}}else if(i===drag.li){l.x=s0.x+dx;l.y=s0.y-dz;}});}
+    if(i===drag.li){l.x=s0.x+dx;l.y=s0.y-dz;}});}
 function holdShift(F){const T={x:R.origin.x-drag.O0.x+F.x,z:R.origin.z-drag.O0.z+F.z};return T;} // call after R=resolve()
-function dragEnd(){const d=drag.d,moved=d.x||d.z;R=resolve();const T=holdShift(drag.li===0?d:{x:0,z:0});drag=null;
-  if(!moved)return false;camShift=V3(-T.x/1000,0,-T.z/1000);update(true);toast('Line moved · start points updated');return true;}
-function turnLine(li){const O0={...R.origin};const l=S.lines[li];l.dir=((+l.dir||0)+270)%360;R=resolve();
+function dragEnd(){const d=drag.d,moved=d.x||d.z;R=resolve();const T=holdShift({x:0,z:0});drag=null;
+  if(!moved)return false;camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);toast('Line moved · start points updated');return true;}
+function turnLine(li){const O0={...R.origin};const l=S.lines[li];l.dir=((+l.dir||0)+270)%360;R=resolve();keepSite=true;
   camShift=V3(-(R.origin.x-O0.x)/1000,0,-(R.origin.z-O0.z)/1000);update(true);}
 // plan drawing
 const planEl=$('plan');let planFrame=null,planRaf=0;
 function svgPt(e){const svg=planEl.querySelector('svg'),m=svg.getScreenCTM().inverse();const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(m);return p;}
 let lastDown={t:0,li:-1};
-planEl.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-line]');if(!t||S.lines.length<2||e.button)return;e.preventDefault();
+planEl.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-line]');if(!t||e.button)return;e.preventDefault();
   const li=+t.dataset.line,now=performance.now();if(lastDown.li===li&&now-lastDown.t<400){lastDown={t:0,li:-1};turnLine(li);return;}lastDown={t:now,li};
   const svg=planEl.querySelector('svg'),v=svg.viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];const p=svgPt(e);dragBegin(+t.dataset.line,p.x,p.y);planEl.setPointerCapture(e.pointerId);planEl.style.cursor='grabbing';});
 planEl.addEventListener('pointermove',e=>{if(!drag||!planFrame)return;const p=svgPt(e);
-  dragTo(p.x,p.y);cancelAnimationFrame(planRaf);planRaf=requestAnimationFrame(()=>{if(!drag)return;R=resolve();const T=holdShift(drag.li===0?drag.d:{x:0,z:0});
+  dragTo(p.x,p.y);cancelAnimationFrame(planRaf);planRaf=requestAnimationFrame(()=>{if(!drag)return;R=resolve();const T=holdShift({x:0,z:0});
     planEl.innerHTML=planSVG({screen:true,frame:{vb:planFrame,tx:T.x,tz:T.z}});});});
 const planUp=e=>{if(!drag||!planFrame)return;cancelAnimationFrame(planRaf);planFrame=null;planEl.style.cursor='';dragEnd()||(planEl.innerHTML=planSVG({screen:true}));};
 planEl.addEventListener('pointerup',planUp);planEl.addEventListener('pointercancel',planUp);
@@ -718,7 +721,7 @@ function groundAt(e){const r=canvas.getBoundingClientRect();mouse.set((e.clientX
 function pickAt(e){const g=groundAt(e);if(!g)return null;const tol=Math.min(0.6,Math.max(0.12,camera.position.distanceTo(g)*0.025))*1000;let best=null,bd=tol;
   R.pieces.forEach(q=>{for(let k=1;k<q.pts.length;k++){const a=q.pts[k-1],b=q.pts[k],dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((g.x*1000-a.x)*dx+(g.z*1000-a.z)*dz)/L2));
     const d=Math.hypot(a.x+dx*t-g.x*1000,a.z+dz*t-g.z*1000);if(d<bd){bd=d;best=q;}}});return best;}
-stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||S.lines.length<2||e.button||current==='plan')return;
+stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||e.button||current==='plan')return;
   const q=pickAt(e);if(!q)return;const g=groundAt(e);if(!g)return;e.stopPropagation();e.preventDefault();
   dragBegin(q.line,g.x*1000,g.z*1000);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
   labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
@@ -734,7 +737,8 @@ canvas.addEventListener('pointerup',up3);canvas.addEventListener('pointercancel'
 function planSVG(o={}){
   const ps=R.pieces,all=ps.flatMap(q=>q.pts);
   const x0=Math.min(...all.map(p=>p.x)),x1=Math.max(...all.map(p=>p.x)),z0=Math.min(...all.map(p=>p.z)),z1=Math.max(...all.map(p=>p.z));
-  const pad=Math.max(900,Math.max(x1-x0,z1-z0)*0.12),vb=o.frame?o.frame.vb:[x0-pad,z0-pad,x1-x0+2*pad,z1-z0+2*pad];
+  const dX=-R.origin.x,dZ=-R.origin.z,X0=Math.min(x0,dX),X1=Math.max(x1,dX),Z0=Math.min(z0,dZ),Z1=Math.max(z1,dZ); // datum in view
+  const pad=Math.max(900,Math.max(X1-X0,Z1-Z0)*0.12),vb=o.frame?o.frame.vb:[X0-pad,Z0-pad,X1-X0+2*pad,Z1-Z0+2*pad];
   const k=Math.max(vb[2],vb[3])/1000; // mm per "unit" of line/label size
   const sw=Math.max(33,k*3.2),fs=k*13,ink='#10181f',grey='#777779';
   let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(' ')}" preserveAspectRatio="xMidYMid meet" font-family="Helvetica Neue,Helvetica,Arial,sans-serif">`;
@@ -746,7 +750,7 @@ function planSVG(o={}){
   // datum: Line A start = (0, 0); start points of other lines are measured from here
   {const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
   // pieces, alternating tone so every joint reads
-  const mv=o.screen&&S.lines.length>1?' style="cursor:grab"':'';
+  const mv=o.screen?' style="cursor:grab"':'';
   ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${i%2?grey:ink}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
   // joints and end caps
   ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
@@ -774,7 +778,7 @@ function planSVG(o={}){
   const sbx=vb[0]+pad*0.3,sby=vb[1]+vb[3]-pad*0.3;
   s+=`<g><rect x="${sbx}" y="${sby-fs*0.4}" width="1000" height="${fs*0.4}" fill="${ink}"/><text x="${sbx}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}">0</text><text x="${sbx+1000}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}" text-anchor="end">1 m</text></g>`;
   s+='</g>';
-  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange${S.lines.length>1?' · drag a line to move it, double-click to turn it 90°':''}</text>`;
+  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange${' · drag a line to move it, double-click to turn it 90°'}</text>`;
   return s+'</svg>';
 }
 
@@ -869,7 +873,7 @@ $('pdf').onclick=async()=>{
       dot(LET(ln.li),cx+1.9,cy-1);txt(`Line ${LET(ln.li)} · ${(len/1000).toFixed(2)} m · ${ln.pieces.length} pieces${ln.closed?' · closed':''}`,cx+6,cy,{s:8});
       txt(`start ${+s0.x||0}, ${+s0.y||0} · ${ln.runs.length} feed${ln.runs.length>1?'s':''}`,cx+w,cy,{s:7,c:GREY,a:'right'});rule(cx,cy+2.2,w);});
     y+=Math.ceil(R.lines.length/2)*6.2+5;
-    txt('All lengths in mm on the centre line. Start points from the datum 0,0 at the start of Line A.',RX,y,{s:6,c:LIGHT});y+=4.2;
+    txt('All lengths in mm on the centre line. Start points measured from the datum 0,0.',RX,y,{s:6,c:LIGHT});y+=4.2;
     const col=RW/2-6;let yl=olabel('Run data',proj,RX,y),yr=olabel('Feeds',`${runs.length} × ${st.v}V DC · max ${st.max} m per feed`,RX+RW/2+6,y);
     rows([['Length',`${L} mm (${(L/1000).toFixed(2)} m) on the centre line`],['Footprint',`${Math.round(ext.w)} × ${Math.round(ext.d)} mm`],['Pieces',`${pieces.length} (${Object.keys(R.groups).length} order codes)`],
       ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',`${Wt.toFixed(1)} W`],['Delivered light',`${Math.round(LM)} lm`],['Drivers',`${runs.length} × ${st.v}V DC: to be advised`],['Prepared',[S.client&&('for '+S.client),date].filter(Boolean).join(' · ')]],RX,yl,col);
@@ -940,7 +944,7 @@ let rebuildT=0;
 function update(redrawSteps,reframe){
   R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();
   $('strip').value=S.strip;$('cct').value=S.cct;document.querySelectorAll('[data-cct]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cct===S.cct));$('proj').value=S.proj;$('client').value=S.client;
-  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+(S.lines.length>1?' · drag a line to move it · double-click to turn it':'');
+  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · drag a line to move it · double-click to turn it';
   clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(camShift){anim=0;camera.position.add(camShift);controls.target.add(camShift);camShift=null;}if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
 }
 update(true);setTimeout(()=>go('aerial',true),0);
