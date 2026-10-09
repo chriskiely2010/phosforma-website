@@ -130,7 +130,8 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
       <div id="lines" class="lines"></div>
       <div class="adds">
         <button class="btn" id="add-line">+ Add a separate line</button>
-        <select id="preset" aria-label="Load an example" style="width:auto;flex:1"><option value="">Load an example…</option></select>
+        <select id="preset" aria-label="Add a ready-made shape" style="width:auto;flex:1"><option value="">+ Add a shape…</option></select>
+        <button class="btn" id="clear-all" title="Remove every line and start again">Clear all</button>
       </div>
     </section>
 
@@ -358,7 +359,17 @@ $('lines').addEventListener('click',e=>{
   if(a==='del'){if(st.length>1)st.splice(i,1);}else{const j=a==='up'?i-1:i+1;if(j<0||j>=st.length)return;[st[i],st[j]]=[st[j],st[i]];}
   update(true);});
 $('add-line').onclick=()=>{const b=R.raw;S.lines.push({x:Math.round(b.x0/10)*10,y:-Math.round((b.z1+1500)/10)*10,dir:0,steps:[{t:'S',len:3000}]});update(true,true);toast(`Line ${LET(S.lines.length-1)} added below the design. Set its start and heading.`);};
-$('preset').onchange=e=>{const p=PRESETS[e.target.value];if(p){S.lines=copyLines(p);update(true,true);}e.target.value='';};
+// Ready-made shapes are added beside the design (2.5 m to the right of it, centred on it); nothing already drawn is removed.
+$('preset').onchange=e=>{const p=PRESETS[e.target.value];e.target.value='';if(!p)return;
+  const add=copyLines(p);if(S.lines.length+add.length>26){toast('Up to 26 lines (A–Z) in one design');return;}
+  const keep=S.lines,cur=R.raw;S.lines=add;const r=resolve().raw;S.lines=keep;
+  const dx=cur.x1+2500-r.x0,dz=(cur.z0+cur.z1)/2-(r.z0+r.z1)/2;
+  add.forEach(l=>{l.x=Math.round(((+l.x||0)+dx)/10)*10;l.y=Math.round(((+l.y||0)-dz)/10)*10;});
+  S.lines=keep.concat(add);update(true,true);toast(`Added: ${LET(keep.length)}${add.length>1?'–'+LET(S.lines.length-1):''} · drag to place it`);};
+// Clear all asks for a second click so a design can't be lost by accident
+let clearArm=0;$('clear-all').onclick=e=>{const b=e.currentTarget;
+  if(Date.now()-clearArm>3000){clearArm=Date.now();b.textContent='Click again to clear';setTimeout(()=>{b.textContent='Clear all';},3000);return;}
+  clearArm=0;b.textContent='Clear all';S.lines=[{x:0,y:0,dir:0,steps:[{t:'S',len:3000}]}];update(true,true);toast('Cleared · one 3 m straight to start from');};
 $('strip').onchange=e=>{S.strip=e.target.value;update(false);};
 $('cct').onchange=e=>{S.cct=e.target.value;update(false);};
 $('proj').oninput=e=>{S.proj=e.target.value;save();};
