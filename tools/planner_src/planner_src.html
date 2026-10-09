@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Inground Radius Run Planner · Phosforma</title>
+<title>Line to Light · Inground Radius · Phosforma</title>
 <style>
 /* Layout: spec panel docked left (path editor, options, order list), full-height 3D / plan stage right; stacks on phones */
 :root{
@@ -99,14 +99,14 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 </head>
 <body>
 <div class="app">
-  <aside class="panel" aria-label="Run planner">
+  <aside class="panel" aria-label="Line to Light">
     <div class="brand">
       <a href="/" aria-label="Phosforma home"><svg viewBox="0 19 125 27" id="logo" role="img" aria-label="Phosforma"></svg></a>
-      <span class="tag">Run planner</span>
+      <span class="tag">Line to Light</span>
     </div>
     <div>
-      <h1>Inground Radius run planner</h1>
-      <p class="lede">Set out a line of Holectron Inground Radius from straights and turns. The planner picks the catalogue pieces, splits feeds by maximum run, and gives you the drawings and order list.</p>
+      <h1>Inground Radius</h1>
+      <p class="lede"><b>Draw the line. We'll give it form.</b> Set out a line of Holectron Inground Radius from straights and turns. Line to Light picks the catalogue pieces, splits feeds by maximum run, and gives you the drawings and order list.</p>
     </div>
 
     <section>
@@ -827,7 +827,7 @@ $('pdf').onclick=async()=>{
     // a spread: left picture page (grey) and right data page (white)
     const spread=(head,desc)=>{doc.addPage([SW,H],'landscape');doc.setFillColor(...PAGE);doc.rect(0,0,HW,H,'F');
       txt(head.toUpperCase(),M,13.5,{s:7.5,b:true});txt(desc,M+wid(head.toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});
-      pg+=2;txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
+      pg+=2;txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
       txt(pg,RX,199.5,{s:6.5,c:GREY});txt('Planning drawing, subject to Phosforma confirmation. Verify site dimensions before installation. · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);};
     const inset=(data)=>img(data,8,19,HW-16,172);
     const title=(t,sub)=>{txt(t,RX,21,{s:22,b:true});if(sub)txt(sub,RX,28,{s:9.5,c:GREY});};
@@ -855,7 +855,7 @@ $('pdf').onclick=async()=>{
     // ---- cover (landscape A4)
     txt(proj.toUpperCase(),38,22,{s:20,b:true});
     txt('INGROUND RADIUS',38,30.5,{s:20,b:true,c:ORANGE});
-    txt('Drawings and order list',258.6,40,{s:8.5,c:GREY,a:'right'});
+    txt('Line to Light · drawings and order list',258.6,40,{s:8.5,c:GREY,a:'right'});
     img(coverImg,38,43,220.6,147);
     txt("Draw the line.",38,197,{s:8.5,b:true});txt("We'll give it form.",38+wid('Draw the line. ',8.5,true),197,{s:8.5,b:true,c:ORANGE});
     logo(HW/2-13,195,26);
@@ -886,7 +886,7 @@ $('pdf').onclick=async()=>{
     // ---- spread: exploded view, component key, parts
     doc.addPage([SW,H],'landscape');pg+=2;img(expImg,0,0,HW,H);
     txt('EXPLODED VIEW',M,13.5,{s:7.5,b:true});txt(`Start of feed 1 · pieces ${R.pieces[0].label}${P1.female?'-'+R.pieces[1].label:''} · parts separated for clarity, not to scale in separation`,M+wid('EXPLODED VIEW',7.5,true)+4,13.5,{s:7.5,c:GREY});
-    txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
+    txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
     txt(pg,RX,199.5,{s:6.5,c:GREY});txt('Parts as in Holectron\'s installation guide. · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);
     const used=[];KEY.forEach((k,i)=>{const p=expPts[i];if(!p||p.x<0.03||p.x>0.97||p.y<0.1||p.y>0.92)return;used.push(i);
       const x=p.x*HW,yy=p.y*H,ty=Math.max(22,yy-12-(i%3)*6);doc.setDrawColor(...ORANGE);doc.setLineWidth(0.35);doc.line(x,ty+2,x,yy);doc.setFillColor(...ORANGE);doc.circle(x,yy,0.55,'F');dot(i+1,x,ty,2.3);});
@@ -905,7 +905,7 @@ $('pdf').onclick=async()=>{
 
     // ---- spread(s): order list
     const OR=Object.entries(R.groups);const per=17;const lefts=[[asmImg,'Assembled view',`Start of feed 1 · every part modelled · lifted out of the ground`,true],[aerialDay,'Aerial view',`${proj} · daytime · visualisation only`],[detailImg,'Detail view',`${proj} · twilight · close up`]];
-    for(let k=0;k*per<OR.length;k++){const lf=lefts[k%lefts.length];spread(lf[1],lf[2]);if(lf[3]){img(lf[0],0,0,HW,H);txt(lf[1].toUpperCase(),M,13.5,{s:7.5,b:true});txt(lf[2],M+wid(lf[1].toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);}else inset(lf[0]);
+    for(let k=0;k*per<OR.length;k++){const lf=lefts[k%lefts.length];spread(lf[1],lf[2]);if(lf[3]){img(lf[0],0,0,HW,H);txt(lf[1].toUpperCase(),M,13.5,{s:7.5,b:true});txt(lf[2],M+wid(lf[1].toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);}else inset(lf[0]);
       title(k?'Order list (continued)':'Order list',`${pieces.length} pieces · ${OR.length} order codes · Holectron Inground Radius · ${cctL}`);
       const yy=olabel('Parts',`page ${k+1} of ${Math.ceil(OR.length/per)}`,RX,38);
       table([{t:'Code',w:112},{t:'Description',w:RW-112-52-12},{t:'Pieces',w:52},{t:'Qty',w:12,a:'right'}],

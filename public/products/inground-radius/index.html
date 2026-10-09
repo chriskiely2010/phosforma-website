@@ -640,7 +640,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--accent-ink)}
       <p class="tag">Walk-over and drive-over lines of light, straight or curved.</p>
       </div>
       <dl class="quick"><div><dt>Colour temperature</dt><dd>2200K | 2700K | 3000K | 4000K</dd></div><div><dt>Colour rendering</dt><dd>CRI&gt;90</dd></div><div><dt>Control</dt><dd>DALI | 1-10V | Phase Dim</dd></div><div><dt>Protection</dt><dd>IP67</dd></div><div><dt>Impact rating</dt><dd>IK10</dd></div><div><dt>Finishes</dt><dd>Stainless Steel</dd></div><div><dt>Brand</dt><dd>Holectron</dd></div></dl>
-      <div class="p-actions"><a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models &amp; downloads</a><button class="btn" data-dl="Product brochure">Product brochure</button><a class="btn" href="/planner/inground-radius/">Plan a run</a></div>
+      <div class="p-actions"><a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models &amp; downloads</a><button class="btn" data-dl="Product brochure">Product brochure</button><a class="btn" href="/planner/inground-radius/">Line to Light</a></div>
       
     </div></div></div>
   
@@ -1308,7 +1308,7 @@ function viewProduct(f){
       <p class="tag">${esc(f.tagline)}</p>
       </div>
       <dl class="quick">${quick.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
-      <div class="p-actions">${cfgFor(f)?'<a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models & downloads</a>':'<a class="btn solid" href="#codes" data-jump="codes">Models & downloads</a>'}<button class="btn" data-dl="Product brochure">Product brochure</button>${f.family==='Inground Radius'?'<a class="btn" href="/planner/inground-radius/">Plan a run</a>':''}</div>
+      <div class="p-actions">${cfgFor(f)?'<a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models & downloads</a>':'<a class="btn solid" href="#codes" data-jump="codes">Models & downloads</a>'}<button class="btn" data-dl="Product brochure">Product brochure</button>${f.family==='Inground Radius'?'<a class="btn" href="/planner/inground-radius/">Line to Light</a>':''}</div>
       
     </div></div></div>
   
