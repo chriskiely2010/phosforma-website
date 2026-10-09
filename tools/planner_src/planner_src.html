@@ -167,8 +167,7 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
       <div class="grp" id="expgrp" hidden><label class="exp" for="t-exp">Assembled<input type="range" id="t-exp" min="0" max="100" value="0" aria-label="Explode the model">Exploded</label></div>
       <div class="grp" id="modes" role="group" aria-label="Lighting">
         <button id="m-day" aria-pressed="false">Day</button>
-        <button id="m-twi" aria-pressed="false">Twilight</button>
-        <button id="m-night" aria-pressed="true">Night</button>
+        <button id="m-twi" aria-pressed="true">Twilight</button>
         <button id="t-num" aria-pressed="true">Piece numbers</button>
       </div>
       <div class="grp cctb" id="cctb" role="group" aria-label="Colour temperature"><button data-cct="922" aria-pressed="false">2200K</button><button data-cct="T927" aria-pressed="false">2700K</button><button data-cct="T930" aria-pressed="false">3000K</button><button data-cct="T940" aria-pressed="false">4000K</button>
@@ -618,15 +617,15 @@ const composer=new EffectComposer(renderer,new THREE.WebGLRenderTarget(16,16,{sa
 const bloom=new UnrealBloomPass(new THREE.Vector2(512,512),0.5,0.35,0.5);composer.addPass(bloom);composer.addPass(new OutputPass());
 function skyTex(...stops){const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,256);stops.forEach((col,i)=>g.addColorStop(i/(stops.length-1),col));x.fillStyle=g;x.fillRect(0,0,2,256);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
 const SKY={night:skyTex('#05080d','#1b2633'),day:skyTex('#9fb6cc','#e7edf2'),twilight:skyTex('#121a33','#3b4a78','#8a6f86','#e59a63')};
-// Day: lights off. Twilight: dusk sky, low warm sun, lights on. Night: dark, lights on.
-let mode='night',night=true,dim=1,numbersOn=true;
+// Day: lights off. Twilight: dusk sky, low warm sun, lights on.
+let mode='twilight',night=true,dim=1,numbersOn=true;
 const MODE={
   day:{fog:0xdfe6ee,hemi:[0xdfe8f2,0x5d5a52,0.55],sun:[0xfff4e6,2.4,[-8,14,6]],env:0.35,opal:0xeeece6,glow:0,bloom:0,exp:0.95},
   twilight:{fog:0x8c7c8c,hemi:[0x8e9cc8,0x3a332c,0.55],sun:[0xff9a5c,0.9,[-14,3,4]],env:0.18,opal:0xbab7b0,glow:1.1,bloom:0.32,exp:1.0},
   night:{fog:0x141c26,hemi:[0x6a7f99,0x2a2824,0.2],sun:[0xffffff,0,[-8,14,6]],env:0.015,opal:0x9a9893,glow:1.5,bloom:0.5,exp:1.0},
 };
-function setMode(m){if(m===true)m='night';if(m===false)m='day';mode=m;night=m!=='day';const M=MODE[m];
-  ['day','twi','night'].forEach(k=>$('m-'+k).setAttribute('aria-pressed',(k==='twi'?'twilight':k)===m));
+function setMode(m){if(m===true||m==='night')m='twilight';if(m===false)m='day';mode=m;night=m!=='day';const M=MODE[m];
+  ['day','twi'].forEach(k=>$('m-'+k).setAttribute('aria-pressed',(k==='twi'?'twilight':k)===m));
   if(m==='night'){sky.visible=false;scene.background=SKY.night;scene.environment=envTex;}
   else{sky.visible=true;scene.background=null;scene.environment=setSky(m);}
   scene.fog=new THREE.Fog(M.fog,m==='twilight'?25:40,m==='twilight'?110:180);
@@ -638,10 +637,10 @@ function setMode(m){if(m===true)m='night';if(m===false)m='day';mode=m;night=m!==
 function applyLight(){const M=MODE[mode],k=night?dim:0;
   run&&run.picks.forEach(o=>{o.material.emissiveIntensity=1.2*k;o.material.envMapIntensity=night?0.03:1;o.material.color.set(M.opal);});
   if(plazaMat)plazaMat.lightMapIntensity=M.glow*k;}
-$('m-day').onclick=()=>setMode('day');$('m-twi').onclick=()=>setMode('twilight');$('m-night').onclick=()=>setMode('night');
-$('dim').oninput=e=>{dim=+e.target.value/100;$('dimv').textContent=e.target.value+'%';if(mode==='day'&&dim>0)setMode('night');else applyLight();};
+$('m-day').onclick=()=>setMode('day');$('m-twi').onclick=()=>setMode('twilight');
+$('dim').oninput=e=>{dim=+e.target.value/100;$('dimv').textContent=e.target.value+'%';if(mode==='day'&&dim>0)setMode('twilight');else applyLight();};
 $('t-exp').oninput=e=>{explodeTo=+e.target.value/100;};
-document.querySelectorAll('[data-cct]').forEach(b=>b.onclick=()=>{S.cct=b.dataset.cct;if(!night)setMode('night');update(false);});
+document.querySelectorAll('[data-cct]').forEach(b=>b.onclick=()=>{S.cct=b.dataset.cct;if(!night)setMode('twilight');update(false);});
 $('t-num').onclick=()=>{numbersOn=!numbersOn;applyExplode();$('t-num').setAttribute('aria-pressed',numbersOn);labels.forEach(l=>{if(!l.element.classList.contains('feed'))l.visible=numbersOn;});};
 
 /* ---------- views ---------- */
@@ -726,7 +725,7 @@ function logoSVG(){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 19
 // Render one view to an image for the PDF. o = {view, mode:'day'|'twilight'|'night', w, h, explode}
 async function snapshot(o){
   const keep={view:current,mode,cam:camera.position.clone(),tgt:controls.target.clone(),num:numbersOn,ex:explode,exTo:explodeTo};
-  labels.forEach(l=>l.visible=false);setMode(o.mode||'night');
+  labels.forEach(l=>l.visible=false);setMode(o.mode||'twilight');
   const V=viewFor(o.view);activeScene=V.s;rp.scene=activeScene;
   const W=o.w||1600,H=o.h||1000,asp=W/H;
   const pos=new THREE.Vector3(...V.pos),tgt=new THREE.Vector3(...V.tgt);
@@ -761,10 +760,10 @@ $('pdf').onclick=async()=>{
     const img=(data,x,y,w,h)=>doc.addImage(data,'JPEG',x,y,w,h,undefined,'FAST');
 
     // ---- renders
-    const coverImg=await snapshot({view:'aerial',mode:'night',w:1240,h:1754});
+    const coverImg=await snapshot({view:'aerial',mode:'twilight',w:1240,h:1754});
     const twiFull=await snapshot({view:'walk',mode:'twilight',w:1240,h:1754});
     const dayImg=await snapshot({view:'aerial',mode:'day',w:1600,h:760});
-    const twiImg=await snapshot({view:'walk',mode:'night',w:1600,h:760});
+    const twiImg=await snapshot({view:'detail',mode:'twilight',w:1600,h:760});
     const modelA=await snapshot({view:'studio',mode:'day',w:1600,h:1000,explode:0});
     const modelE=await snapshot({view:'studio',mode:'day',w:1600,h:1000,explode:1});
 
@@ -789,7 +788,7 @@ $('pdf').onclick=async()=>{
       ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',Wt.toFixed(1)+' W'],['Delivered light',Math.round(LM)+' lm'],['Feeds / drivers',`${runs.length} × ${st.v}V DC, max ${st.max} m per feed`]];
     let y=M+36;rows.forEach(([k,v])=>{txt(k,M,y,{s:9,c:GREY});txt(v,PW-M,y,{s:9,a:'right'});doc.setDrawColor(...LINE);doc.setLineWidth(0.2);doc.line(M,y+2.2,PW-M,y+2.2);y+=7;});
     y+=6;const iw=PW-2*M,ih=iw*760/1600;
-    img(twiImg,M,y,iw,ih);txt('Night, along the line',M,y+ih+4.5,{s:7.5,c:GREY});y+=ih+11;
+    img(twiImg,M,y,iw,ih);txt('Twilight, up close',M,y+ih+4.5,{s:7.5,c:GREY});y+=ih+11;
     img(dayImg,M,y,iw,ih);txt('Daytime, from above. Twilight view opposite. Visualisation only.',M,y+ih+4.5,{s:7.5,c:GREY});
 
     // ---- spread 2: plan across both pages
