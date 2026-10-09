@@ -667,18 +667,64 @@ for(const v of ['walk','aerial','detail','studio','plan'])$('v-'+v).onclick=()=>
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=$('tip');let hovered=null;
 function highlight(q){document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
   run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):(CCTCOL[S.cct]||CCTCOL.T930));});}
-canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run){tip.hidden=true;return;}
+canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run||drag3){tip.hidden=true;return;}
+  if(S.lines.length>1&&!e.buttons)canvas.style.cursor=pickAt(e)?'grab':'';
   const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
   const q=ray.intersectObjects(run.picks,false)[0]?.object.userData.piece||null;if(q!==hovered){hovered=q;highlight(q);}
   if(q){tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';
     tip.innerHTML=`<b>Piece ${q.label}</b> · Feed ${q.run+1} · ${SEGNAME[q.seg]} · ${q.d.name}${q.dir?(q.dir==='L'?' left':' right'):''}<br>${q.d.len} mm · ${q.w} W · ${q.lm} lm<code>${q.code}</code>`;}else tip.hidden=true;});
 canvas.addEventListener('pointerleave',()=>{tip.hidden=true;hovered=null;highlight(null);});
 
+
+/* ======================= move and turn lines with the cursor ======================= */
+// Line A's start is the datum (0, 0): dragging Line A moves the other lines the opposite way, so A appears to move.
+// The view is held still through the change (the design is re-centred on every resolve), so nothing jumps.
+let drag=null,camShift=null;const SNAP=50;
+function dragBegin(li,x,z){drag={li,sx:x,sz:z,d:{x:0,z:0},O0:{...R.origin},s0:S.lines.map(l=>({x:+l.x||0,y:+l.y||0}))};}
+function dragTo(x,z){const dx=Math.round((x-drag.sx)/SNAP)*SNAP,dz=Math.round((z-drag.sz)/SNAP)*SNAP;drag.d={x:dx,z:dz};
+  S.lines.forEach((l,i)=>{const s0=drag.s0[i];l.x=s0.x;l.y=s0.y;
+    if(drag.li===0){if(i){l.x=s0.x-dx;l.y=s0.y+dz;}}else if(i===drag.li){l.x=s0.x+dx;l.y=s0.y-dz;}});}
+function holdShift(F){const T={x:R.origin.x-drag.O0.x+F.x,z:R.origin.z-drag.O0.z+F.z};return T;} // call after R=resolve()
+function dragEnd(){const d=drag.d,moved=d.x||d.z;R=resolve();const T=holdShift(drag.li===0?d:{x:0,z:0});drag=null;
+  if(!moved)return false;camShift=V3(-T.x/1000,0,-T.z/1000);update(true);toast('Line moved · start points updated');return true;}
+function turnLine(li){const O0={...R.origin};const l=S.lines[li];l.dir=((+l.dir||0)+270)%360;R=resolve();
+  camShift=V3(-(R.origin.x-O0.x)/1000,0,-(R.origin.z-O0.z)/1000);update(true);}
+// plan drawing
+const planEl=$('plan');let planFrame=null,planRaf=0;
+function svgPt(e){const svg=planEl.querySelector('svg'),m=svg.getScreenCTM().inverse();const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(m);return p;}
+let lastDown={t:0,li:-1};
+planEl.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-line]');if(!t||S.lines.length<2||e.button)return;e.preventDefault();
+  const li=+t.dataset.line,now=performance.now();if(lastDown.li===li&&now-lastDown.t<400){lastDown={t:0,li:-1};turnLine(li);return;}lastDown={t:now,li};
+  const svg=planEl.querySelector('svg'),v=svg.viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];const p=svgPt(e);dragBegin(+t.dataset.line,p.x,p.y);planEl.setPointerCapture(e.pointerId);planEl.style.cursor='grabbing';});
+planEl.addEventListener('pointermove',e=>{if(!drag||!planFrame)return;const p=svgPt(e);
+  dragTo(p.x,p.y);cancelAnimationFrame(planRaf);planRaf=requestAnimationFrame(()=>{if(!drag)return;R=resolve();const T=holdShift(drag.li===0?drag.d:{x:0,z:0});
+    planEl.innerHTML=planSVG({screen:true,frame:{vb:planFrame,tx:T.x,tz:T.z}});});});
+const planUp=e=>{if(!drag||!planFrame)return;cancelAnimationFrame(planRaf);planFrame=null;planEl.style.cursor='';dragEnd()||(planEl.innerHTML=planSVG({screen:true}));};
+planEl.addEventListener('pointerup',planUp);planEl.addEventListener('pointercancel',planUp);
+// 3D: grab a piece on the paving and slide its line along the ground
+const ground=new THREE.Plane(new THREE.Vector3(0,1,0),0),gp=new THREE.Vector3();let drag3=null;
+function groundAt(e){const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);return ray.ray.intersectPlane(ground,gp)?gp:null;}
+// the profile is only 30 mm wide, so a line can be grabbed anywhere within a few centimetres to ~0.5 m of it (scales with the view distance)
+function pickAt(e){const g=groundAt(e);if(!g)return null;const tol=Math.min(0.6,Math.max(0.12,camera.position.distanceTo(g)*0.025))*1000;let best=null,bd=tol;
+  R.pieces.forEach(q=>{for(let k=1;k<q.pts.length;k++){const a=q.pts[k-1],b=q.pts[k],dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((g.x*1000-a.x)*dx+(g.z*1000-a.z)*dz)/L2));
+    const d=Math.hypot(a.x+dx*t-g.x*1000,a.z+dz*t-g.z*1000);if(d<bd){bd=d;best=q;}}});return best;}
+stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||S.lines.length<2||e.button||current==='plan')return;
+  const q=pickAt(e);if(!q)return;const g=groundAt(e);if(!g)return;e.stopPropagation();e.preventDefault();
+  dragBegin(q.line,g.x*1000,g.z*1000);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
+  labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
+canvas.addEventListener('pointermove',e=>{if(!drag3||!drag)return;const g=groundAt(e);if(!g)return;dragTo(g.x*1000,g.z*1000);
+  run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li)run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);});});
+let last3={t:0,li:-1};
+const up3=()=>{if(!drag3)return;const li=drag3.li;drag3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');
+  const moved=drag&&(drag.d.x||drag.d.z);if(drag)dragEnd();
+  if(!moved){const now=performance.now();if(last3.li===li&&now-last3.t<400){last3={t:0,li:-1};turnLine(li);}else last3={t:now,li};}else last3={t:0,li:-1};};
+canvas.addEventListener('pointerup',up3);canvas.addEventListener('pointercancel',up3);
+
 /* ======================= plan drawing (SVG, mm) ======================= */
 function planSVG(o={}){
   const ps=R.pieces,all=ps.flatMap(q=>q.pts);
   const x0=Math.min(...all.map(p=>p.x)),x1=Math.max(...all.map(p=>p.x)),z0=Math.min(...all.map(p=>p.z)),z1=Math.max(...all.map(p=>p.z));
-  const pad=Math.max(900,Math.max(x1-x0,z1-z0)*0.12),vb=[x0-pad,z0-pad,x1-x0+2*pad,z1-z0+2*pad];
+  const pad=Math.max(900,Math.max(x1-x0,z1-z0)*0.12),vb=o.frame?o.frame.vb:[x0-pad,z0-pad,x1-x0+2*pad,z1-z0+2*pad];
   const k=Math.max(vb[2],vb[3])/1000; // mm per "unit" of line/label size
   const sw=Math.max(33,k*3.2),fs=k*13,ink='#10181f',grey='#777779';
   let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(' ')}" preserveAspectRatio="xMidYMid meet" font-family="Helvetica Neue,Helvetica,Arial,sans-serif">`;
@@ -686,10 +732,12 @@ function planSVG(o={}){
   // 1 m grid
   s+=`<g stroke="#eceded" stroke-width="${k*0.8}">`;for(let gx=Math.ceil(vb[0]/1000)*1000;gx<vb[0]+vb[2];gx+=1000)s+=`<line x1="${gx}" y1="${vb[1]}" x2="${gx}" y2="${vb[1]+vb[3]}"/>`;
   for(let gz=Math.ceil(vb[1]/1000)*1000;gz<vb[1]+vb[3];gz+=1000)s+=`<line x1="${vb[0]}" y1="${gz}" x2="${vb[0]+vb[2]}" y2="${gz}"/>`;s+='</g>';
+  s+=o.frame?`<g transform="translate(${o.frame.tx} ${o.frame.tz})">`:'<g>';
   // datum: Line A start = (0, 0); start points of other lines are measured from here
   {const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
   // pieces, alternating tone so every joint reads
-  ps.forEach((q,i)=>{s+=`<polyline fill="none" stroke="${i%2?grey:ink}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
+  const mv=o.screen&&S.lines.length>1?' style="cursor:grab"':'';
+  ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${i%2?grey:ink}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
   // joints and end caps
   ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
     const capped=i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
@@ -715,7 +763,8 @@ function planSVG(o={}){
   // scale bar
   const sbx=vb[0]+pad*0.3,sby=vb[1]+vb[3]-pad*0.3;
   s+=`<g><rect x="${sbx}" y="${sby-fs*0.4}" width="1000" height="${fs*0.4}" fill="${ink}"/><text x="${sbx}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}">0</text><text x="${sbx+1000}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}" text-anchor="end">1 m</text></g>`;
-  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange</text>`;
+  s+='</g>';
+  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange${S.lines.length>1?' · drag a line to move it, double-click to turn it 90°':''}</text>`;
   return s+'</svg>';
 }
 
@@ -851,7 +900,8 @@ let rebuildT=0;
 function update(redrawSteps,reframe){
   R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();
   $('strip').value=S.strip;$('cct').value=S.cct;document.querySelectorAll('[data-cct]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cct===S.cct));$('proj').value=S.proj;$('client').value=S.client;
-  clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
+  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+(S.lines.length>1?' · drag a line to move it · double-click to turn it':'');
+  clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(camShift){anim=0;camera.position.add(camShift);controls.target.add(camShift);camShift=null;}if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
 }
 update(true);setTimeout(()=>go('aerial',true),0);
 window.__ready=true;
