@@ -561,26 +561,29 @@ function buildParts(target,list){
     ins.add(opal,new THREE.Mesh(sweep(IPARTS.body,f,true,true),PMAT.insert));
     const P=(pt,along,side,y)=>{const t=V3(Math.cos(pt.h),0,Math.sin(pt.h)),nn=V3(-Math.sin(pt.h),0,Math.cos(pt.h));return V3(pt.x/1000,y,pt.z/1000).addScaledVector(t,along).addScaledVector(nn,side);};
     const T=pt=>V3(Math.cos(pt.h),0,Math.sin(pt.h));
-    const extras=[];
+    const extras=[],anch={};
     // end caps on the profile at the ends of a run (screwed plate, as step 1 of the guide)
     for(const [on,pt,sg] of [[capA,f[0],-1],[capB,f.at(-1),1]]) if(on){
       const cap=new THREE.Group();const plate=new THREE.Mesh(new THREE.BoxGeometry(0.003,0.1,0.034),PMAT.plate);cap.add(plate);
       for(const [yy,zz] of [[0.03,0.009],[0.03,-0.009],[-0.02,0.009],[-0.02,-0.009]]){const sc=new THREE.Mesh(new THREE.CylinderGeometry(0.0025,0.0025,0.004,10).rotateZ(Math.PI/2),PMAT.screw);sc.position.set(sg*0.0025,yy,zz);cap.add(sc);}
-      cap.position.copy(P(pt,sg*0.0016,0,-0.05));cap.rotation.y=-pt.h;prof.add(cap);cap.userData.dir=T(pt).multiplyScalar(sg*0.14);extras.push(cap);}
+      cap.position.copy(P(pt,sg*0.0016,0,-0.05));cap.rotation.y=-pt.h;prof.add(cap);cap.userData.dir=T(pt).multiplyScalar(sg*0.14);extras.push(cap);anch.cap=anch.cap||cap;}
     // T1X leads: male at the end of this insert, female at the start of the next insert in the same run
     const lead=(pt,sg,male)=>{const L=male?0.057:0.066,t=T(pt).multiplyScalar(sg);
       const c=connector(male);const cp=P(pt,-sg*(L/2+0.002),0,-0.066);c.position.copy(cp);aim(c,t);ins.add(c);
       const back=cp.clone().addScaledVector(t,-L/2),root=P(pt,-sg*0.13,0,-0.037);
       const cab=tube(leadPts(root,back,t),0.00265);ins.add(cab);
-      c.userData.dir=t.clone().multiplyScalar(-0.035);c.userData.cable={mesh:cab,root,back,t};extras.push(c);};
+      c.userData.dir=t.clone().multiplyScalar(-0.035);c.userData.cable={mesh:cab,root,back,t};extras.push(c);anch[male?'male':'female']=c;};
     if(!capB)lead(f.at(-1),1,true);
     if(!capA)lead(f[0],-1,false);
     // feed cable on the first insert of a run: down through the profile opening and out to the 24/48V driver
     if(capA){const pt=f[0],sd=0.5;const a=P(pt,0.09,0,-0.037),b=P(pt,0.09,0,-0.085),c=P(pt,0.09,0.03,-0.09),d=P(pt,-0.15,sd*0.6,-0.096),e=P(pt,-0.3,sd,-0.093);
       ins.add(tube([a,b,c,d,e],0.00345)); // feed cable leaves with the insert
+      anch.feed={obj:ins,p:d.clone()};
       const drv=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.038,0.062),PMAT.driver);drv.position.copy(e).addScaledVector(T(pt),-0.11);drv.position.y=-0.083;drv.rotation.y=-pt.h;
-      prof.add(drv);drv.userData.dir=V3(-Math.sin(pt.h),0,Math.cos(pt.h)).multiplyScalar(0.12);extras.push(drv);} // driver stays on the ground
-    pg.userData.prof=prof;pg.userData.ins=ins;pg.userData.extras=extras;
+      prof.add(drv);drv.userData.dir=V3(-Math.sin(pt.h),0,Math.cos(pt.h)).multiplyScalar(0.12);extras.push(drv);anch.drv=drv;} // driver stays on the ground
+    const mp=q.pts[Math.max(1,Math.floor(q.pts.length*0.3))]||q.pts[0],ip=q.pts[Math.floor(q.pts.length*0.6)]||q.pts.at(-1);
+    anch.prof={obj:prof,p:P(mp,0,0.0165,-0.004)};anch.ins={obj:ins,p:P(ip,0,0,-0.018)};
+    pg.userData.prof=prof;pg.userData.ins=ins;pg.userData.extras=extras;pg.userData.anch=anch;
   });
   group.traverse(o=>{if(o.isMesh){o.receiveShadow=true;o.castShadow=true;}});target.add(group);return {group,picks,pgs};}
 function buildStudio(){ // the whole design as built, lifted out of the ground, every part modelled
@@ -650,6 +653,13 @@ function viewFor(name){
   if(name==='walk'){const p=ps[0].pts[0],q=ps[Math.min(ps.length-1,Math.floor(ps.length/3))].mid;return {s:scene,pos:[p.x/1000-Math.cos(p.h)*1.6+Math.sin(p.h)*0.9,1.55,p.z/1000-Math.sin(p.h)*1.6-Math.cos(p.h)*0.9],tgt:[q.x/1000,0,q.z/1000]};}
   if(name==='aerial'){const ss=B?Math.max(B.x1-B.x0,B.z1-B.z0)+7:sz;return {s:scene,pos:[-ss*0.42,ss*0.78+3,ss*0.6],tgt:[0,0,0.4]};}
   if(name==='detail'){const c=ps.find(q=>q.d.ang)||ps[0],m=c.mid;return {s:scene,pos:[m.x/1000+0.32,0.2,m.z/1000+0.26],tgt:[m.x/1000,0,m.z/1000]};}
+  if(name==='parts'&&studioRun){ // frame the parts at the start of feed 1: profile, insert, end cap, leads, feed cable, driver
+    studioRun.group.updateMatrixWorld(true);const A0=studioRun.pgs[0].userData.anch,A1=studioRun.pgs[1]?studioRun.pgs[1].userData.anch:{};
+    const pts=[A0.prof,A0.ins,A0.cap,A0.male,A1.female,A0.feed,A0.drv].filter(Boolean).map(a=>a.obj?a.obj.localToWorld(a.p.clone()):a.getWorldPosition(V3()));
+    const bx=new THREE.Box3().setFromPoints(pts);const c=bx.getCenter(V3()),r=Math.max(0.35,bx.getSize(V3()).length()/2*1.05);
+    const h=R.pieces[0].pts[0].h,n=V3(-Math.sin(h),0,Math.cos(h)),t=V3(Math.cos(h),0,Math.sin(h));
+    const dir=n.multiplyScalar(0.85).addScaledVector(t,-0.4).add(V3(0,0.8,0)).normalize(),d=r/Math.sin(THREE.MathUtils.degToRad(camera.fov/2))*0.9;
+    return {s:studio,pos:c.clone().addScaledVector(dir,d).toArray(),tgt:c.toArray()};}
   if(R.pieces.length<=3){const q=R.pieces[0].pts[0];return {s:studio,pos:[q.x/1000-0.75,0.3,q.z/1000+0.45],tgt:[q.x/1000+0.2,0.07,q.z/1000-0.05]};}
   return {s:studio,pos:[-sz*0.75-0.35,sz*0.32+0.35,sz*0.9+0.45],tgt:[0,0.1,0]};
 }
@@ -775,14 +785,18 @@ function logoSVG(){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 19
 async function snapshot(o){
   const keep={view:current,mode,cam:camera.position.clone(),tgt:controls.target.clone(),num:numbersOn,ex:explode,exTo:explodeTo};
   labels.forEach(l=>l.visible=false);setMode(o.mode||'twilight');
+  if(o.explode!==undefined){explode=explodeTo=o.explode;applyExplode();studioRun&&studioRun.group.updateMatrixWorld(true);}
+  const sb={bg:studio.background.getHex(),fog:studio.fog.color.getHex(),fl:sFloor.material.color.getHex(),near:studio.fog.near,far:studio.fog.far};
+  if(o.light){studio.background.set(0xd9d9d9);studio.fog.color.set(0xd9d9d9);sFloor.material.color.set(0xd4d4d4);studio.fog.near*=1.6;studio.fog.far*=1.6;}
   const V=viewFor(o.view);activeScene=V.s;rp.scene=activeScene;
   const W=o.w||1600,H=o.h||1000,asp=W/H;
   const pos=new THREE.Vector3(...V.pos),tgt=new THREE.Vector3(...V.tgt);
   if(o.view!=='walk'&&o.view!=='detail'&&asp<1.4)pos.sub(tgt).multiplyScalar(Math.pow(1.4/asp,0.85)).add(tgt); // portrait images: step back so the design fits
   camera.position.copy(pos);controls.target.copy(tgt);controls.update();
-  if(o.explode!==undefined){explode=explodeTo=o.explode;applyExplode();}
   renderer.setPixelRatio(1);renderer.setSize(W,H,false);composer.setSize(W,H);camera.aspect=asp;camera.updateProjectionMatrix();
   applyFrame();composer.render();const url=canvas.toDataURL('image/jpeg',0.9);
+  snapshot.pts=o.probe?o.probe().map(v=>{if(!v)return null;const q=v.clone().project(camera);return {x:(q.x+1)/2,y:(1-q.y)/2};}):null;
+  studio.background.set(sb.bg);studio.fog.color.set(sb.fog);sFloor.material.color.set(sb.fl);studio.fog.near=sb.near;studio.fog.far=sb.far;
   explode=keep.ex;explodeTo=keep.exTo;applyExplode();
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));setMode(keep.mode);numbersOn=keep.num;labels.forEach(l=>l.visible=l.element.classList.contains('feed')||numbersOn);
   resize();go(keep.view,true);if(keep.view!=='plan'){camera.position.copy(keep.cam);controls.target.copy(keep.tgt);}
@@ -792,92 +806,118 @@ $('pdf').onclick=async()=>{
   const btn=$('pdf');btn.textContent='Preparing PDF…';btn.disabled=true;
   try{
     const {jsPDF}=window.jspdf;
-    // A4 portrait pages laid out as a book: single cover, two-page spreads, single back page
-    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});const PW=210,PH=297,M=14;
-    doc.setDisplayMode('fullpage','tworight');
-    const INK=[16,24,31],GREY=[119,119,121],LINE=[223,224,226],ORANGE=[255,80,0];
-    const logoK=await logoPNG(false),logoW=await logoPNG(true);
+    // Book in the Phosforma types-book layout: landscape A4 cover, then double-width spreads
+    // (grey picture page on the left, white data page on the right), landscape A4 back page.
+    const HW=297,H=210,SW=594,M=14,RX=HW+17,RW=HW-17-17;
+    const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});doc.setDisplayMode('fullpage','continuous');
+    const INK=[16,24,31],GREY=[119,119,121],LIGHT=[160,162,164],LINE=[223,224,226],ORANGE=[255,80,0],PAGE=[229,229,229];
+    const logoK=await logoPNG(false);
     const {st,pieces,runs,ext}=R;const L=pieces.reduce((a,q)=>a+q.d.len,0),Wt=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0),cctL=CCTS.find(c=>c[0]===S.cct)[1];
-    const title=S.proj||'Inground Radius run';const date=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
-    const txt=(t,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.s||9);doc.setTextColor(...(o.c||INK));doc.text(String(t).replace(/–/g,'-'),x,y,o.a?{align:o.a}:undefined);};
-    const label=(t,x,y,c)=>txt(t.toUpperCase(),x,y,{s:7.5,b:true,c:c||GREY});
-    let pageNo=0;const inner=[]; // inner page numbers (covers excluded)
-    const foot=(left)=>{pageNo++;inner.push(doc.getNumberOfPages());};
-    const footers=()=>{inner.forEach(pg=>{doc.setPage(pg);const left=pg%2===0;const n=pg-1;
-      txt(n,left?M:PW-M,PH-8,{s:7.5,c:GREY,a:left?'left':'right'});
-      txt(left?'info@phosforma.com.au':'Planning drawing, subject to Phosforma confirmation.',left?M+8:PW-M-8,PH-8,{s:7,c:GREY,a:left?'left':'right'});});};
-    const img=(data,x,y,w,h)=>doc.addImage(data,'JPEG',x,y,w,h,undefined,'FAST');
+    const proj=S.proj||'Inground Radius run';const date=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+    const who=[proj,S.client].filter(Boolean).join(' · ');
+    const clean=t=>String(t).replace(/–/g,'-').replace(/→/g,'>');
+    const txt=(t,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.s||8);doc.setTextColor(...(o.c||INK));doc.text(clean(t),x,y,o.a?{align:o.a}:undefined);};
+    const wid=(t,s,b)=>{doc.setFont('helvetica',b?'bold':'normal');doc.setFontSize(s);return doc.getTextWidth(clean(t));};
+    const wrap=(t,w,s)=>{doc.setFont('helvetica','normal');doc.setFontSize(s);return doc.splitTextToSize(clean(t),w);};
+    const img=(d,x,y,w,h)=>doc.addImage(d,'JPEG',x,y,w,h,undefined,'FAST');
+    const logo=(x,y,w)=>doc.addImage(logoK,'PNG',x,y,w,w*0.216);
+    const rule=(x,y,w,c,lw)=>{doc.setDrawColor(...(c||LINE));doc.setLineWidth(lw||0.2);doc.line(x,y,x+w,y);};
+    const dot=(n,x,y,r=1.9)=>{doc.setFillColor(...ORANGE);doc.circle(x,y,r,'F');txt(n,x,y+0.75,{s:r*3.2,b:true,c:[255,255,255],a:'center'});};
+    let pg=0;
+    // a spread: left picture page (grey) and right data page (white)
+    const spread=(head,desc)=>{doc.addPage([SW,H],'landscape');doc.setFillColor(...PAGE);doc.rect(0,0,HW,H,'F');
+      txt(head.toUpperCase(),M,13.5,{s:7.5,b:true});txt(desc,M+wid(head.toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});
+      pg+=2;txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
+      txt(pg,RX,199.5,{s:6.5,c:GREY});txt('Planning drawing, subject to Phosforma confirmation. Verify site dimensions before installation. · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);};
+    const inset=(data)=>img(data,8,19,HW-16,172);
+    const title=(t,sub)=>{txt(t,RX,21,{s:22,b:true});if(sub)txt(sub,RX,28,{s:9.5,c:GREY});};
+    const section=(t,x,y,w)=>{txt(t.toUpperCase(),x,y,{s:7,b:true});rule(x,y+2.4,w,INK,0.3);return y+7.4;};
+    const olabel=(t,sub,x,y)=>{txt(t.toUpperCase(),x,y,{s:7,b:true,c:ORANGE});if(sub)txt(sub,x+wid(t.toUpperCase(),7,true)+3,y,{s:7,c:GREY});return y+3.6;};
+    // label/value rows with hairlines (RUN DATA style); returns the new y
+    const rows=(list,x,y,w,kw=30)=>{rule(x,y,w,INK,0.3);y+=4.4;list.forEach(([k,v])=>{const ls=wrap(v,w-kw-2,7.2);txt(k,x,y,{s:7.2,c:GREY});ls.forEach((l,i)=>txt(l,x+kw,y+i*3.3,{s:7.2}));y+=(ls.length-1)*3.3;rule(x,y+1.6,w);y+=4.9;});return y;};
+    // a simple table: cols [{t,w,a}] ; returns the new y
+    const table=(cols,data,x,y,boldLast)=>{let cx=x;cols.forEach(c=>{txt(c.t.toUpperCase(),c.a==='right'?cx+c.w:cx,y,{s:6.5,b:true,c:GREY,a:c.a});cx+=c.w;});
+      const w=cols.reduce((a,c)=>a+c.w,0);y+=1.6;rule(x,y,w,INK,0.3);y+=3.8;
+      data.forEach(r=>{let cx=x;r.forEach((v,i)=>{const c=cols[i];txt(v,c.a==='right'?cx+c.w:cx,y,{s:7,a:c.a,b:boldLast&&i===r.length-1,c:i===0&&cols[0].grey?GREY:INK});cx+=c.w;});y+=1.6;rule(x,y,w);y+=3.6;});return y;};
 
     // ---- renders
-    const coverImg=await snapshot({view:'aerial',mode:'twilight',w:1240,h:1754});
-    const twiFull=await snapshot({view:'walk',mode:'twilight',w:1240,h:1754});
-    const dayImg=await snapshot({view:'aerial',mode:'day',w:1600,h:760});
-    const twiImg=await snapshot({view:'detail',mode:'twilight',w:1600,h:760});
-    const modelA=await snapshot({view:'studio',mode:'day',w:1600,h:1000,explode:0});
-    const modelE=await snapshot({view:'studio',mode:'day',w:1600,h:1000,explode:1});
+    const coverImg=await snapshot({view:'aerial',mode:'twilight',w:1760,h:1180});
+    const aerialDay=await snapshot({view:'aerial',mode:'day',w:1720,h:1050});
+    const walkImg=await snapshot({view:'walk',mode:'twilight',w:1720,h:1050});
+    const detailImg=await snapshot({view:'detail',mode:'twilight',w:1720,h:1050});
+    const asmImg=await snapshot({view:'parts',mode:'day',w:1782,h:1260,explode:0,light:true});
+    const P0=studioRun.pgs[0].userData.anch,P1=(studioRun.pgs[1]&&R.pieces[1].run===R.pieces[0].run)?studioRun.pgs[1].userData.anch:{};
+    const wp=a=>!a?null:a.obj?a.obj.localToWorld(a.p.clone()):a.getWorldPosition(V3());
+    const KEY=[[P0.prof,'Stainless profile, EOP H100 (in the ground)'],[P0.ins,'LED insert with opal face'],[P0.cap,'End cap, screwed to the profile'],
+      [P0.male,'T1X lead, male'],[P1.female,'T1X lead, female'],[P0.feed,'Feed cable'],[P0.drv,`${st.v}V DC driver`]];
+    const expImg=await snapshot({view:'parts',mode:'day',w:1782,h:1260,explode:1,light:true,probe:()=>KEY.map(k=>wp(k[0]))});const expPts=snapshot.pts;
 
-    // ---- 1 cover
-    img(coverImg,0,0,PW,PH);
-    doc.setGState(new doc.GState({opacity:0.55}));doc.setFillColor(5,8,13);doc.rect(0,PH-112,PW,112,'F');doc.rect(0,0,PW,34,'F');doc.setGState(new doc.GState({opacity:1}));
-    doc.addImage(logoW,'PNG',M,M-1,40,8.6);
-    txt('INGROUND RADIUS · RUN PLAN',PW-M,M+5,{s:7.5,b:true,c:[220,222,224],a:'right'});
-    txt('Draw the line.',M,PH-78,{s:30,b:true,c:[255,255,255]});
-    txt("We'll give it form.",M,PH-65,{s:30,b:true,c:[255,140,80]});
-    doc.setDrawColor(255,255,255);doc.setLineWidth(0.2);doc.line(M,PH-50,PW-M,PH-50);
-    txt(title,M,PH-40,{s:13,b:true,c:[255,255,255]});
-    txt(S.client?`Prepared for ${S.client}`:'Holectron Inground Radius',M,PH-33,{s:9,c:[210,212,214]});
-    txt(date,M,PH-26,{s:9,c:[210,212,214]});
-    txt('phosforma.com.au',PW-M,PH-26,{s:9,c:[210,212,214],a:'right'});
+    // ---- cover (landscape A4)
+    txt(proj.toUpperCase(),38,22,{s:20,b:true});
+    txt('INGROUND RADIUS',38,30.5,{s:20,b:true,c:ORANGE});
+    txt('Drawings and order list',258.6,40,{s:8.5,c:GREY,a:'right'});
+    img(coverImg,38,43,220.6,147);
+    txt("Draw the line.",38,197,{s:8.5,b:true});txt("We'll give it form.",38+wid('Draw the line. ',8.5,true),197,{s:8.5,b:true,c:ORANGE});
+    logo(HW/2-13,195,26);
+    txt([S.client&&('Prepared for '+S.client),date].filter(Boolean).join(' · '),258.6,197,{s:7.5,c:GREY,a:'right'});
 
-    // ---- spread 1: overview
-    doc.addPage();img(twiFull,0,0,PW,PH); // left page full bleed
-    doc.addPage();foot();
-    label('Overview',M,M+4);txt(title,M,M+16,{s:20,b:true});txt(S.client?`Prepared for ${S.client} · ${date}`:date,M,M+23,{s:9,c:GREY});
-    const rows=[['Lines',String(R.lines.length)],['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',String(pieces.length)],
-      ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',Wt.toFixed(1)+' W'],['Delivered light',Math.round(LM)+' lm'],['Feeds / drivers',`${runs.length} × ${st.v}V DC, max ${st.max} m per feed`]];
-    let y=M+36;rows.forEach(([k,v])=>{txt(k,M,y,{s:9,c:GREY});txt(v,PW-M,y,{s:9,a:'right'});doc.setDrawColor(...LINE);doc.setLineWidth(0.2);doc.line(M,y+2.2,PW-M,y+2.2);y+=7;});
-    y+=6;const iw=PW-2*M,ih=iw*760/1600;
-    img(twiImg,M,y,iw,ih);txt('Twilight, up close',M,y+ih+4.5,{s:7.5,c:GREY});y+=ih+11;
-    img(dayImg,M,y,iw,ih);txt('Daytime, from above. Twilight view opposite. Visualisation only.',M,y+ih+4.5,{s:7.5,c:GREY});
+    // ---- spread: overview
+    spread('Aerial view',`${proj} · twilight · ${cctL} · visualisation only`);inset(coverImg);
+    title(proj,`Holectron Inground Radius · ${(L/1000).toFixed(2)} m · ${R.lines.length} line${R.lines.length>1?'s':''} · ${pieces.length} pieces · ${cctL}`);
+    let y=section('Lines',RX,38,RW);
+    R.lines.forEach((ln,i)=>{const s0=S.lines[ln.li],len=ln.pieces.reduce((a,q)=>a+q.d.len,0),cx=RX+(i%2)*(RW/2+6),cy=y+Math.floor(i/2)*6.2,w=RW/2-6;
+      dot(LET(ln.li),cx+1.9,cy-1);txt(`Line ${LET(ln.li)} · ${(len/1000).toFixed(2)} m · ${ln.pieces.length} pieces${ln.closed?' · closed':''}`,cx+6,cy,{s:8});
+      txt(`start ${+s0.x||0}, ${+s0.y||0} · ${ln.runs.length} feed${ln.runs.length>1?'s':''}`,cx+w,cy,{s:7,c:GREY,a:'right'});rule(cx,cy+2.2,w);});
+    y+=Math.ceil(R.lines.length/2)*6.2+5;
+    txt('All lengths in mm on the centre line. Start points from the datum 0,0 at the start of Line A.',RX,y,{s:6,c:LIGHT});y+=4.2;
+    const col=RW/2-6;let yl=olabel('Run data',proj,RX,y),yr=olabel('Feeds',`${runs.length} × ${st.v}V DC · max ${st.max} m per feed`,RX+RW/2+6,y);
+    rows([['Length',`${L} mm (${(L/1000).toFixed(2)} m) on the centre line`],['Footprint',`${Math.round(ext.w)} × ${Math.round(ext.d)} mm`],['Pieces',`${pieces.length} (${Object.keys(R.groups).length} order codes)`],
+      ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',`${Wt.toFixed(1)} W`],['Delivered light',`${Math.round(LM)} lm`],['Drivers',`${runs.length} × ${st.v}V DC: to be advised`],['Prepared',[S.client&&('for '+S.client),date].filter(Boolean).join(' · ')]],RX,yl,col);
+    table([{t:'Feed',w:12},{t:'Line',w:10},{t:'Pieces',w:col-12-10-18-14},{t:'Length',w:18,a:'right'},{t:'Load',w:14,a:'right'}],
+      runs.map((r,i)=>[String(i+1),LET(r[0].line),`${r[0].label}-${r.at(-1).label}`,(r.reduce((a,q)=>a+q.d.len,0)/1000).toFixed(2)+' m',r.reduce((a,q)=>a+q.w,0).toFixed(1)+' W']),RX+RW/2+6,yr);
 
-    // ---- spread 2: plan across both pages
+    // ---- spread: drawings
+    spread('Walkway view',`${proj} · twilight, at eye level · visualisation only`);inset(walkImg);
     const svg=planSVG();const vb=svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
-    const bx=M,by=M+16,bw=2*PW-2*M,bh=PH-by-20,sc=Math.min(bw/vb[2],bh/vb[3]),pw=vb[2]*sc,ph=vb[3]*sc;
-    const plan=await svgToPng(svg,Math.round(pw*9),Math.round(ph*9));const px=bx+(bw-pw)/2,py=by+(bh-ph)/2;
-    doc.addPage();foot();label('Plan',M,M+4);txt('Plan drawing',M,M+11,{s:13,b:true});doc.addImage(plan,'PNG',px,py,pw,ph,undefined,'FAST');
-    doc.addPage();foot();doc.addImage(plan,'PNG',px-PW,py,pw,ph,undefined,'FAST');
-    txt(`Scale approx. 1:${Math.round(1/sc)} across the spread at A4. Dimensions on the centre line, in mm. Curve radii on the outer edge. End caps and feeds in orange.`,PW-M,M+4,{s:7.5,c:GREY,a:'right'});
+    const bx=RX,by=36,bw=RW,bh=186-by,sc=Math.min(bw/vb[2],bh/vb[3]),pw=vb[2]*sc,ph=vb[3]*sc;
+    title('Drawings',`Plan · scale approx. 1:${Math.round(1/sc)} at A4 · mm on the centre line · end caps and feeds in orange`);
+    const plan=await svgToPng(svg,Math.round(pw*9),Math.round(ph*9));doc.addImage(plan,'PNG',bx+(bw-pw)/2,by+(bh-ph)/2,pw,ph,undefined,'FAST');
 
-    // ---- spread 3: 3D model (left) and order list (right)
-    doc.addPage();foot();label('Parts',M,M+4);txt('3D model',M,M+11,{s:13,b:true});
-    const mh=iw*1000/1600;img(modelA,M,M+18,iw,mh);txt('Assembled: stainless profiles with LED inserts, end caps and feed.',M,M+18+mh+4.5,{s:7.5,c:GREY});
-    img(modelE,M,M+28+mh,iw,mh);txt('Exploded: inserts lifted from their profiles, T1X leads separated, end caps and driver pulled clear.',M,M+28+2*mh+4.5,{s:7.5,c:GREY});
-    doc.addPage();foot();label('Order list',M,M+4);txt('Order list',M,M+11,{s:13,b:true});
-    y=M+20;txt('QTY',M,y,{s:7,b:true,c:GREY});txt('ORDER CODE / DESCRIPTION',M+10,y,{s:7,b:true,c:GREY});txt('PIECES',PW-M,y,{s:7,b:true,c:GREY,a:'right'});
-    y+=2;doc.setDrawColor(...INK);doc.setLineWidth(0.3);doc.line(M,y,PW-M,y);y+=5;
-    for(const [code,g] of Object.entries(R.groups)){
-      if(y>PH-40){doc.addPage();foot();y=M+12;}
-      txt(g.q,M,y,{s:9,b:true});txt(code,M+10,y,{s:7.6});
-      txt(`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,M+10,y+4,{s:7,c:GREY});
-      const pcs=doc.splitTextToSize(labelsTxt(g.list).replace(/–/g,'-'),36);txt(pcs[0]+(pcs.length>1?'…':''),PW-M,y,{s:7,c:GREY,a:'right'});
-      y+=6.5;doc.setDrawColor(...LINE);doc.setLineWidth(0.2);doc.line(M,y,PW-M,y);y+=4.5;}
-    y+=3;if(y>PH-60){doc.addPage();foot();y=M+12;}
-    txt('Feeds',M,y,{s:10,b:true});y+=6;
-    runs.forEach((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;
-      txt(`Feed ${i+1} · line ${LET(r[0].line)}: pieces ${r[0].label}-${r.at(-1).label} · ${l.toFixed(2)} m · ${w.toFixed(1)} W · ${st.v}V DC driver`,M,y,{s:8});y+=4.8;});
-    y+=3;doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...GREY);
-    doc.text(doc.splitTextToSize('Start pieces carry an end cap at the start and take the feed cable; middle pieces join both sides; end pieces carry an end cap at the end. LED inserts click into the stainless profiles and join with male/female T1X connectors in the chamber. Curves can be laid turning left or right. Power and light output are Holectron\'s published values per piece. Drivers are sized and supplied separately by Phosforma.',PW-2*M),M,y);
-    // keep the back cover on its own (left-hand) page
-    if(doc.getNumberOfPages()%2===0){doc.addPage();foot();}
+    // ---- spread: exploded view, component key, parts
+    doc.addPage([SW,H],'landscape');pg+=2;img(expImg,0,0,HW,H);
+    txt('EXPLODED VIEW',M,13.5,{s:7.5,b:true});txt(`Start of feed 1 · pieces ${R.pieces[0].label}${P1.female?'-'+R.pieces[1].label:''} · parts separated for clarity, not to scale in separation`,M+wid('EXPLODED VIEW',7.5,true)+4,13.5,{s:7.5,c:GREY});
+    txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
+    txt(pg,RX,199.5,{s:6.5,c:GREY});txt('Parts as in Holectron\'s installation guide. · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);
+    const used=[];KEY.forEach((k,i)=>{const p=expPts[i];if(!p||p.x<0.03||p.x>0.97||p.y<0.1||p.y>0.92)return;used.push(i);
+      const x=p.x*HW,yy=p.y*H,ty=Math.max(22,yy-12-(i%3)*6);doc.setDrawColor(...ORANGE);doc.setLineWidth(0.35);doc.line(x,ty+2,x,yy);doc.setFillColor(...ORANGE);doc.circle(x,yy,0.55,'F');dot(i+1,x,ty,2.3);});
+    const [sCode,sStrip]=codeOf(PIECE.L1000,'M',st,S.cct).split(' / ');
+    title('Inground Radius',`Holectron · stainless profile EOP H100 · ${st.label} · ${cctL} · ${pieces.length} pieces · ${runs.length} feed${runs.length>1?'s':''}`);
+    y=section('Component key',RX,38,RW);
+    const KC=['IngroundR … EOP H100','FL'+sStrip.split('FL')[1],'with start and end pieces','OR.T1x','OR.T1x','with each start piece','to be advised'];
+    KEY.forEach((k,i)=>{const cx=RX+(i<4?0:RW/2+6),cy=y+(i%4)*6.2,w=RW/2-6;dot(i+1,cx+1.9,cy-1);txt(k[1],cx+6,cy,{s:8});txt(KC[i],cx+w,cy,{s:7,c:GREY,a:'right'});rule(cx,cy+2.2,w);});
+    y+=4*6.2+4;txt('Numbers on the drawing opposite mark these parts. Every piece is ordered as one code: profile, LED insert and T1X leads together.',RX,y,{s:6,c:LIGHT});y+=4.2;
+    yl=olabel('Run data','per line',RX,y);yr=olabel('Parts','for the whole design',RX+RW/2+6,y);
+    rows(R.lines.map(ln=>{const seq=[];ln.pieces.forEach(q=>{const l=seq.at(-1),nm=q.d.ang?`${q.d.name.replace('Curve ','')}${q.dir==='L'?' L':' R'}`:q.d.name.replace('Straight ','');if(l&&l.n===nm)l.c++;else seq.push({n:nm,c:1});});
+      return [`Line ${LET(ln.li)}`,seq.map(s=>(s.c>1?s.c+' × ':'')+s.n).join(' + ')];}).concat([['Joints','T1X male to female in the chamber, at every joint inside a feed'],['Ends','End cap at the start and end of every feed']]),RX,yl,col,18);
+    const cnt={};pieces.forEach(q=>cnt[q.d.name]=(cnt[q.d.name]||0)+1);const joints=pieces.length-runs.length;
+    table([{t:'Part',w:col-30},{t:'Per feed',w:15,a:'right'},{t:'Total',w:15,a:'right'}],
+      Object.entries(cnt).map(([n,c])=>[n+' (profile + insert)','',String(c)]).concat([['End caps','2',String(runs.length*2)],['T1X joints (male + female)','',String(joints)],['Feed cables','1',String(runs.length)],[`${st.v}V DC drivers`,'1',String(runs.length)]]),RX+RW/2+6,yr,true);
 
-    // ---- back page
-    doc.addPage();doc.setFillColor(...INK);doc.rect(0,0,PW,PH,'F');
-    doc.addImage(logoW,'PNG',(PW-56)/2,PH/2-30,56,12.1);
-    txt('Draw the line.',PW/2,PH/2+2,{s:13,b:true,c:[255,255,255],a:'center'});txt("We'll give it form.",PW/2,PH/2+9,{s:13,b:true,c:[255,140,80],a:'center'});
-    txt('info@phosforma.com.au · phosforma.com.au',PW/2,PH-34,{s:9,c:[210,212,214],a:'center'});
-    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(150,153,156);
-    doc.text(doc.splitTextToSize('Planning drawing, subject to Phosforma confirmation. Phosforma reserves the right to update the technical specifications. Visualisations are indicative.',PW-60),PW/2,PH-26,{align:'center'});
-    footers();
+    // ---- spread(s): order list
+    const OR=Object.entries(R.groups);const per=17;const lefts=[[asmImg,'Assembled view',`Start of feed 1 · every part modelled · lifted out of the ground`,true],[aerialDay,'Aerial view',`${proj} · daytime · visualisation only`],[detailImg,'Detail view',`${proj} · twilight · close up`]];
+    for(let k=0;k*per<OR.length;k++){const lf=lefts[k%lefts.length];spread(lf[1],lf[2]);if(lf[3]){img(lf[0],0,0,HW,H);txt(lf[1].toUpperCase(),M,13.5,{s:7.5,b:true});txt(lf[2],M+wid(lf[1].toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);}else inset(lf[0]);
+      title(k?'Order list (continued)':'Order list',`${pieces.length} pieces · ${OR.length} order codes · Holectron Inground Radius · ${cctL}`);
+      const yy=olabel('Parts',`page ${k+1} of ${Math.ceil(OR.length/per)}`,RX,38);
+      table([{t:'Code',w:112},{t:'Description',w:RW-112-52-12},{t:'Pieces',w:52},{t:'Qty',w:12,a:'right'}],
+        OR.slice(k*per,(k+1)*per).map(([code,g])=>{const pcs=labelsTxt(g.list);return [code,`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,pcs.length>34?pcs.slice(0,33)+'…':pcs,String(g.q)];}),RX,yy,true);
+      if((k+1)*per>=OR.length){doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...GREY);
+        doc.text(doc.splitTextToSize(clean('Start pieces carry an end cap at the start and take the feed cable; middle pieces join both sides; end pieces carry an end cap at the end. LED inserts click into the stainless profiles and join with male/female T1X connectors in the chamber. Curves can be laid turning left or right. Power and light output are Holectron\'s published values per piece. Drivers are sized and supplied separately by Phosforma.'),RW),RX,172);}}
+
+    // ---- back page (landscape A4)
+    doc.addPage([HW,H],'landscape');
+    {const x0=HW/2-wid("Draw the line. We'll give it form.",8.5,true)/2;txt('Draw the line.',x0,184,{s:8.5,b:true});txt("We'll give it form.",x0+wid('Draw the line. ',8.5,true),184,{s:8.5,b:true,c:ORANGE});}
+    logo(HW/2-13,195,26);
+    txt('info@phosforma.com.au · phosforma.com.au',HW/2,190.5,{s:6.5,c:GREY,a:'center'});
     doc.save(`${(S.proj||'Inground Radius run').replace(/[^\w\- ]+/g,'').trim()||'Inground Radius run'} - Phosforma.pdf`);
     toast('PDF downloaded');
   }catch(e){console.error(e);toast('The PDF could not be made: '+e.message);}
