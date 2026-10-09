@@ -539,8 +539,16 @@ const PMAT={
 };
 const IPARTS={body:[[-15,15,-37,-17]],steel:[[-16.5,-15,-100,1.2],[15,16.5,-100,1.2],[-36.5,36.5,-102,-100]]};
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
-function leadPts(root,back,t){return [root,root.clone().add(V3(0,-0.02,0)).addScaledVector(t,0.03),back.clone().addScaledVector(t,-0.02),back];}
-function tube(points,r){return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),24,r,8,false),PMAT.cable);}
+// Cables run as neat looms: straight runs joined by tight 90° bends (radius ~12 mm).
+function loom(pts,r=0.012){const cp=new THREE.CurvePath();let prev=pts[0].clone();
+  for(let i=1;i<pts.length-1;i++){const a=pts[i-1],b=pts[i],c=pts[i+1],d1=b.clone().sub(a),d2=c.clone().sub(b),rr=Math.min(r,d1.length()*0.45,d2.length()*0.45);
+    const p1=b.clone().addScaledVector(d1.normalize(),-rr),p2=b.clone().addScaledVector(d2.normalize(),rr);
+    if(prev.distanceTo(p1)>1e-5)cp.add(new THREE.LineCurve3(prev,p1));cp.add(new THREE.QuadraticBezierCurve3(p1,b.clone(),p2));prev=p2;}
+  cp.add(new THREE.LineCurve3(prev,pts.at(-1).clone()));return cp;}
+function loomGeo(points,r){return new THREE.TubeGeometry(loom(points),96,r,10,false);}
+// joint lead: straight down from the insert, one 90° bend, straight along the profile into the connector tail
+function leadPts(root,back,t){return [root,V3(root.x,back.y,root.z),back];}
+function tube(points,r){return new THREE.Mesh(loomGeo(points,r),PMAT.cable);}
 function connector(male){ // T1X: Ø23 body, Ø14 nose; male 57 mm, female 66 mm (spec sheet)
   const g=new THREE.Group(),L=male?0.057:0.066;
   const body=new THREE.Mesh(new THREE.CylinderGeometry(0.0115,0.0115,L*0.62,20),PMAT.conn);body.position.y=L*0.19;   // coupling end (meets the other half)
@@ -578,12 +586,22 @@ function buildParts(target,list){
       c.userData.dir=t.clone().multiplyScalar(-0.035);c.userData.cable={mesh:cab,root,back,t};extras.push(c);anch[male?'male':'female']=c;};
     if(!capB)lead(f.at(-1),1,true);
     if(!capA)lead(f[0],-1,false);
-    // feed cable on the first insert of a run: down through the profile opening and out to the 24/48V driver
-    if(capA){const pt=f[0],sd=0.5;const a=P(pt,0.09,0,-0.037),b=P(pt,0.09,0,-0.085),c=P(pt,0.09,0.03,-0.09),d=P(pt,-0.15,sd*0.6,-0.096),e=P(pt,-0.3,sd,-0.093);
-      ins.add(tube([a,b,c,d,e],0.00345)); // feed cable leaves with the insert
-      anch.feed={obj:ins,p:d.clone()};
-      const drv=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.038,0.062),PMAT.driver);drv.position.copy(e).addScaledVector(T(pt),-0.11);drv.position.y=-0.083;drv.rotation.y=-pt.h;
-      prof.add(drv);drv.userData.dir=V3(-Math.sin(pt.h),0,Math.cos(pt.h)).multiplyScalar(0.12);extras.push(drv);anch.drv=drv;} // driver stays on the ground
+    // feed on the first insert of a run (T1X, as the joints): a lead drops from the insert, runs along the channel floor and out through
+    // the end cap, turns 90° and ends in a female T1X; the driver's lead ends in the male T1X that plugs into it. Exploded, the driver
+    // and its lead slide clear as one, so the pair parts at the coupling; the fitting's lead lifts out with the insert.
+    if(capA){const pt=f[0],n=V3(-Math.sin(pt.h),0,Math.cos(pt.h)),Y=-0.088,Lf=0.066,Lm=0.057,X=0.13;
+      const a=P(pt,0.07,0,-0.037),b=P(pt,0.07,0,Y),c=P(pt,-0.05,0,Y),d=P(pt,-0.05,X,Y);
+      ins.add(tube([a,b,c,d],0.00345));
+      const fc=connector(false);fc.position.copy(d).addScaledVector(n,Lf/2);aim(fc,n);ins.add(fc);
+      const face=d.clone().addScaledVector(n,Lf),tail=face.clone().addScaledVector(n,Lm);
+      const dg=new THREE.Group();prof.add(dg);
+      const mc=connector(true);mc.position.copy(face).addScaledVector(n,Lm/2);aim(mc,n.clone().negate());dg.add(mc);
+      const DS=X+Lf+Lm+0.06,DL=0.22,dc=P(pt,-0.05-0.04-DL/2,DS,-0.083);
+      const e=P(pt,-0.05,DS,Y),g=P(pt,-0.05-0.04,DS,Y);dg.add(tube([tail,e,g],0.00345));
+      const drv=new THREE.Mesh(new THREE.BoxGeometry(DL,0.038,0.062),PMAT.driver);drv.position.copy(dc);drv.rotation.y=-pt.h;dg.add(drv);
+      const mains=new THREE.Mesh(loomGeo([P(pt,-0.05-0.04-DL,DS,Y),P(pt,-0.05-0.04-DL-0.07,DS,Y)],0.004),new THREE.MeshStandardMaterial({color:0xd9d9d6,roughness:0.6}));dg.add(mains);
+      dg.userData.dir=n.clone().multiplyScalar(0.1);extras.push(dg);
+      anch.feed={obj:ins,p:c.clone().lerp(d,0.55)};anch.feedF=fc;anch.feedM=mc;anch.drv=drv;}
     const mp=q.pts[Math.max(1,Math.floor(q.pts.length*0.3))]||q.pts[0],ip=q.pts[Math.floor(q.pts.length*0.6)]||q.pts.at(-1);
     anch.prof={obj:prof,p:P(mp,0,0.0165,-0.004)};anch.ins={obj:ins,p:P(ip,0,0,-0.018)};
     pg.userData.prof=prof;pg.userData.ins=ins;pg.userData.extras=extras;pg.userData.anch=anch;
@@ -607,7 +625,7 @@ function applyExplode(){if(!studioRun)return;const e=explode,ez=Math.min(1,e*1.6
   studioRun.pgs.forEach(pg=>{pg.position.copy(pg.userData.off).multiplyScalar(e);
     const ins=pg.userData.ins;ins.position.set(0,ins.userData.lift*ez,0);
     pg.userData.extras.forEach(x=>{if(!x.userData.base)x.userData.base=x.position.clone();x.position.copy(x.userData.base).addScaledVector(x.userData.dir,el);
-      const cb=x.userData.cable;if(cb&&cb.el!==el){cb.el=el;const b=cb.back.clone().addScaledVector(x.userData.dir,el);cb.mesh.geometry.dispose();cb.mesh.geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(leadPts(cb.root,b,cb.t)),24,0.00265,8,false);}});});
+      const cb=x.userData.cable;if(cb&&cb.el!==el){cb.el=el;const b=cb.back.clone().addScaledVector(x.userData.dir,el);cb.mesh.geometry.dispose();cb.mesh.geometry=loomGeo(leadPts(cb.root,b,cb.t),0.00265);}});});
   studioLabels.forEach(l=>l.visible=e>0.4);showLabels();}
 function showLabels(){const st=activeScene===studio;labels.forEach(l=>l.element.style.display=st?'none':'');studioLabels.forEach(l=>l.element.style.display=st?'':'none');}
 /* ---------- sky ---------- */
@@ -853,7 +871,7 @@ $('pdf').onclick=async()=>{
     const P0=studioRun.pgs[0].userData.anch,P1=(studioRun.pgs[1]&&R.pieces[1].run===R.pieces[0].run)?studioRun.pgs[1].userData.anch:{};
     const wp=a=>!a?null:a.obj?a.obj.localToWorld(a.p.clone()):a.getWorldPosition(V3());
     const KEY=[[P0.prof,'Stainless profile, EOP H100 (in the ground)'],[P0.ins,'LED insert with opal face'],[P0.cap,'End cap, screwed to the profile'],
-      [P0.male,'T1X lead, male'],[P1.female,'T1X lead, female'],[P0.feed,'Feed cable'],[P0.drv,`${st.v}V DC driver`]];
+      [P0.male,'T1X lead, male'],[P1.female,'T1X lead, female'],[P0.feed,'Feed lead out through the end cap, T1X female'],[P0.drv,`${st.v}V DC driver, lead with T1X male`]];
     const expImg=await snapshot({view:'parts',mode:'day',w:1782,h:1260,explode:1,light:true,probe:()=>KEY.map(k=>wp(k[0]))});const expPts=snapshot.pts;
 
     // ---- cover (landscape A4)
