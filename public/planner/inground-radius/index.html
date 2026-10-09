@@ -309,7 +309,7 @@ function stepHTML(s,l,i){
 }
 function renderSteps(){
   $('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
-    <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div>${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px">Remove line</button>`:''}</div>
+    <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div><div style="display:flex;gap:6px"><button class="btn" data-dupline="${l}" style="padding:4px 9px;font-size:11.5px" title="Copy this line and place the copy beside it">Duplicate</button>${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px" title="Remove this line">Remove</button>`:''}</div></div>
     <div class="lstart">
       <label class="f">Start X (mm)<input type="number" step="10" id="lx-${l}" data-l="${l}" data-lk="x" value="${ln.x}"${l===0?' title="Measured from the datum (0, 0)"':''}></label>
       <label class="f">Start Y (mm)<input type="number" step="10" id="ly-${l}" data-l="${l}" data-lk="y" value="${ln.y}"></label>
@@ -353,6 +353,7 @@ $('lines').addEventListener('input',e=>{const t=e.target,l=+t.dataset.l;if(Numbe
   if(!t.dataset.k)return;const s=ln.steps[+t.dataset.i];
   const v=t.dataset.k==='len'||t.dataset.k==='a'?parseFloat(t.value):t.value; if(t.type==='number'&&!(v>0))return; s[t.dataset.k]=v; update(false);});
 $('lines').addEventListener('click',e=>{
+  const du=e.target.closest('[data-dupline]');if(du){dupLine(+du.dataset.dupline);return;}
   const rm=e.target.closest('[data-rmline]');if(rm){S.lines.splice(+rm.dataset.rmline,1);update(true,true);return;}
   const ad=e.target.closest('[data-add]');if(ad){const ln=S.lines[+ad.dataset.l],t=ad.dataset.add;ln.steps.push(t==='S'?{t:'S',len:1000}:{t,r:'R1000',a:90});update(true);return;}
   const b=e.target.closest('.ib');if(!b)return;const st=S.lines[+b.dataset.l].steps,i=+b.dataset.i,a=b.dataset.a;
@@ -722,13 +723,21 @@ canvas.addEventListener('pointerleave',()=>{tip.hidden=true;hovered=null;highlig
 // Every line (Line A too, and a single line on its own) moves against the fixed datum 0,0 and the plaza around it.
 // The view is held still through the change (the design is re-centred on every resolve), so nothing jumps.
 let drag=null,camShift=null;const SNAP=50;
-function dragBegin(li,x,z){drag={li,sx:x,sz:z,d:{x:0,z:0},O0:{...R.origin},s0:S.lines.map(l=>({x:+l.x||0,y:+l.y||0}))};}
+// Duplicate: the copy goes 1.5 m to the right of the line's extent; it gets the next free letter.
+function dupLine(li){if(S.lines.length>=26){toast('Up to 26 lines (A–Z) in one design');return;}
+  const ln=R.lines.find(x=>x.li===li),xs=ln?ln.pieces.flatMap(q=>q.pts.map(p=>p.x)):[0],w=Math.max(...xs)-Math.min(...xs);
+  const c=JSON.parse(JSON.stringify(S.lines[li],(k,v)=>k.startsWith('_')?undefined:v));c.x=Math.round(((+c.x||0)+w+1500)/10)*10;
+  S.lines.push(c);update(true);toast(`Line ${LET(li)} duplicated as line ${LET(S.lines.length-1)} · drag to place it`);}
+// Alt / Option + drag: a copy stays where the line was and the line itself moves with the cursor
+function dragBegin(li,x,z,alt){let dup=false;
+  if(alt&&S.lines.length<26){S.lines.push(JSON.parse(JSON.stringify(S.lines[li],(k,v)=>k.startsWith('_')?undefined:v)));dup=true;}
+  drag={li,dup,sx:x,sz:z,d:{x:0,z:0},O0:{...R.origin},s0:S.lines.map(l=>({x:+l.x||0,y:+l.y||0}))};}
 function dragTo(x,z){const dx=Math.round((x-drag.sx)/SNAP)*SNAP,dz=Math.round((z-drag.sz)/SNAP)*SNAP;drag.d={x:dx,z:dz};
   S.lines.forEach((l,i)=>{const s0=drag.s0[i];l.x=s0.x;l.y=s0.y;
     if(i===drag.li){l.x=s0.x+dx;l.y=s0.y-dz;}});}
 function holdShift(F){const T={x:R.origin.x-drag.O0.x+F.x,z:R.origin.z-drag.O0.z+F.z};return T;} // call after R=resolve()
-function dragEnd(){const d=drag.d,moved=d.x||d.z;R=resolve();const T=holdShift({x:0,z:0});drag=null;
-  if(!moved)return false;camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);toast('Line moved · start points updated');return true;}
+function dragEnd(){const d=drag.d,moved=d.x||d.z,dup=drag.dup,li=drag.li;if(dup&&!moved)S.lines.pop();R=resolve();const T=holdShift({x:0,z:0});drag=null;
+  if(!moved)return false;camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);toast(dup?`Line ${LET(li)} copied · the copy left in its old place is line ${LET(S.lines.length-1)}`:'Line moved · start points updated');return true;}
 function turnLine(li){const O0={...R.origin};const l=S.lines[li];l.dir=((+l.dir||0)+270)%360;R=resolve();keepSite=true;
   camShift=V3(-(R.origin.x-O0.x)/1000,0,-(R.origin.z-O0.z)/1000);update(true);}
 // plan drawing
@@ -737,7 +746,7 @@ function svgPt(e){const svg=planEl.querySelector('svg'),m=svg.getScreenCTM().inv
 let lastDown={t:0,li:-1};
 planEl.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-line]');if(!t||e.button)return;e.preventDefault();
   const li=+t.dataset.line,now=performance.now();if(lastDown.li===li&&now-lastDown.t<400){lastDown={t:0,li:-1};turnLine(li);return;}lastDown={t:now,li};
-  const svg=planEl.querySelector('svg'),v=svg.viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];const p=svgPt(e);dragBegin(+t.dataset.line,p.x,p.y);planEl.setPointerCapture(e.pointerId);planEl.style.cursor='grabbing';});
+  const svg=planEl.querySelector('svg'),v=svg.viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];const p=svgPt(e);dragBegin(+t.dataset.line,p.x,p.y,e.altKey);planEl.setPointerCapture(e.pointerId);planEl.style.cursor='grabbing';});
 planEl.addEventListener('pointermove',e=>{if(!drag||!planFrame)return;const p=svgPt(e);
   dragTo(p.x,p.y);cancelAnimationFrame(planRaf);planRaf=requestAnimationFrame(()=>{if(!drag)return;R=resolve();const T=holdShift({x:0,z:0});
     planEl.innerHTML=planSVG({screen:true,frame:{vb:planFrame,tx:T.x,tz:T.z}});});});
@@ -752,7 +761,7 @@ function pickAt(e){const g=groundAt(e);if(!g)return null;const tol=Math.min(0.6,
     const d=Math.hypot(a.x+dx*t-g.x*1000,a.z+dz*t-g.z*1000);if(d<bd){bd=d;best=q;}}});return best;}
 stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||e.button||current==='plan')return;
   const q=pickAt(e);if(!q)return;const g=groundAt(e);if(!g)return;e.stopPropagation();e.preventDefault();
-  dragBegin(q.line,g.x*1000,g.z*1000);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
+  dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
   labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
 canvas.addEventListener('pointermove',e=>{if(!drag3||!drag)return;const g=groundAt(e);if(!g)return;dragTo(g.x*1000,g.z*1000);
   run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li)run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);});});
@@ -807,7 +816,7 @@ function planSVG(o={}){
   const sbx=vb[0]+pad*0.3,sby=vb[1]+vb[3]-pad*0.3;
   s+=`<g><rect x="${sbx}" y="${sby-fs*0.4}" width="1000" height="${fs*0.4}" fill="${ink}"/><text x="${sbx}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}">0</text><text x="${sbx+1000}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}" text-anchor="end">1 m</text></g>`;
   s+='</g>';
-  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange${' · drag a line to move it, double-click to turn it 90°'}</text>`;
+  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange${' · drag a line to move it (Alt-drag to copy), double-click to turn it 90°'}</text>`;
   return s+'</svg>';
 }
 
@@ -973,7 +982,7 @@ let rebuildT=0;
 function update(redrawSteps,reframe){
   R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();
   $('strip').value=S.strip;$('cct').value=S.cct;document.querySelectorAll('[data-cct]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cct===S.cct));$('proj').value=S.proj;$('client').value=S.client;
-  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · drag a line to move it · double-click to turn it';
+  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · drag a line to move it · Alt-drag to copy · double-click to turn it';
   clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(camShift){anim=0;camera.position.add(camShift);controls.target.add(camShift);camShift=null;}if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
 }
 update(true);setTimeout(()=>go('aerial',true),0);
