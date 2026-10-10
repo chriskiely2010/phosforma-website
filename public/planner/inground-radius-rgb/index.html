@@ -123,6 +123,8 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
         <label class="f">LED strip<select id="strip"></select></label>
         <label class="f" id="cctf">Colour temperature<select id="cct"></select></label>
         <label class="f" id="rgbf" hidden>Light colour (preview)<span style="display:flex;gap:6px;align-items:center"><select id="rgbsel" style="flex:1"></select><input type="color" id="rgbpick" aria-label="Pick any colour" style="width:38px;height:34px;padding:0;border:1px solid var(--line);border-radius:4px;background:none"></span></label>
+        <div id="mixf" hidden style="grid-column:1/-1;display:grid;gap:6px;margin-top:2px">
+        </div>
       </div>
     </section>
 
@@ -218,7 +220,11 @@ const CURVES=['R272','R515','R1000','R1975','R2950','R6100'];
 const PRODUCT={"path": "inground-radius-rgb", "name": "Inground Radius RGB", "store": "irrgbplan", "cct0": "RGB_RGB_", "rgb": true, "ccts": [["RGB_RGB_", "RGB"]], "strips": [{"id": "RGB48/Nx 07W", "label": "RGB48 24V · 7.2 W/m", "v": 24, "wm": 7.2, "max": 9}, {"id": "RGB48/Nx 11W", "label": "RGB48 24V · 11.5 W/m", "v": 24, "wm": 11.5, "max": 6.5}]};
 const STRIPS=PRODUCT.strips,CCTS=PRODUCT.ccts,RGB=!!PRODUCT.rgb;
 const RGBSW=[['#ff2318','Red'],['#ff7a00','Amber'],['#ffd21f','Yellow'],['#22e05a','Green'],['#14d4ff','Cyan'],['#2c55ff','Blue'],['#9b3cff','Violet'],['#ff2fb4','Magenta'],['#fff1e6','White mix']];
-const rgbName=h=>(RGBSW.find(x=>x[0]===h)||[0,'Custom '+h])[1];
+const rgbName=h=>(RGBSW.find(x=>x[0]===h)||[0,'Custom mix'])[1];
+// colour mix as % per channel (0-100) <-> preview colour
+const mixToHex=m=>'#'+m.map(v=>Math.round(Math.max(0,Math.min(100,v))*2.55).toString(16).padStart(2,'0')).join('');
+const hexToMix=h=>[1,3,5].map(i=>Math.round(parseInt(h.slice(i,i+2),16)/2.55));
+const mixTxt=()=>{const m=S.mix||hexToMix(S.rgb);return `R ${m[0]}% · G ${m[1]}% · B ${m[2]}%`;};
 const SEGNAME={S:'Start',M:'Middle',E:'End',I:'Individual',F:'Full'};
 const SEGDESC={S:'end cap at start, feed cable in',M:'no end caps, joins both sides',E:'end cap at end',I:'two end caps, single feed'};
 const codeOf=(p,seg,st,cct)=>{const [strip,ww]=st.id.split(' ');return `IngroundR ${seg} EOP H100 ${p.R} ${p.L} / ${strip} G5 ${ww} ${cct} / OR.T1x`;};
@@ -316,7 +322,10 @@ $('strip').innerHTML=STRIPS.map(s=>`<option value="${s.id}">${s.label}</option>`
 $('cct').innerHTML=CCTS.map(([c,l])=>`<option value="${c}">${l}</option>`).join('');
 // white ranges: colour temperature buttons; RGB: colour swatches (the colour is only a preview: the controller sets it on site)
 $('cctb').insertAdjacentHTML('afterbegin',RGB?RGBSW.map(([h,n])=>`<button data-rgb="${h}" title="${n}" aria-label="${n}" aria-pressed="false" style="padding:7px 9px"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${h};vertical-align:-2px;box-shadow:0 0 0 1px rgba(255,255,255,.5)"></span></button>`).join(''):CCTS.map(([c,l])=>`<button data-cct="${c}" aria-pressed="false">${l}</button>`).join(''));
-if(RGB){$('cctf').hidden=true;$('rgbf').hidden=false;$('rgbsel').innerHTML=RGBSW.map(([h,n])=>`<option value="${h}">${n}</option>`).join('')+'<option value="custom">Custom…</option>';}
+if(RGB){$('mixf').hidden=false;$('mixf').innerHTML=[['r','Red','#ff2318'],['g','Green','#22e05a'],['b','Blue','#2c55ff']].map(([k,n,c],i)=>
+    `<label style="display:grid;grid-template-columns:52px 1fr 56px;align-items:center;gap:8px;font-size:12px;color:var(--muted)"><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:${c}"></span>${n}</span><input type="range" min="0" max="100" step="1" id="mix-${k}" data-ch="${i}" aria-label="${n} %" style="accent-color:${c}"><input type="number" min="0" max="100" step="1" id="mixn-${k}" data-ch="${i}" aria-label="${n} % value" style="padding:4px 5px;font-size:12px;text-align:right"></label>`).join('')+
+    `<div style="font-size:11px;color:var(--muted)">Mix for the RGB controller, 0–100% per channel. Shown in the drawings.</div>`;
+  $('cctf').hidden=true;$('rgbf').hidden=false;$('rgbsel').innerHTML=RGBSW.map(([h,n])=>`<option value="${h}">${n}</option>`).join('')+'<option value="custom">Custom…</option>';}
 $('preset').innerHTML+=Object.keys(PRESETS).map(k=>`<option>${k}</option>`).join('');
 function stepHTML(s,l,i){
   const id=`${l}-${i}`,d=`data-l="${l}" data-i="${i}"`;
@@ -354,7 +363,7 @@ function labelsTxt(ps){const o=[];let a=null,b=null;const flush=()=>{if(a)o.push
 function renderSummary(){
   const {st,pieces,runs,ext}=R;
   const L=pieces.reduce((a,q)=>a+q.d.len,0),W=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0);
-  const cctL=RGB?'RGB':CCTS.find(c=>c[0]===S.cct)[1];
+  const cctL=RGB?`RGB · mix ${mixTxt()}`:CCTS.find(c=>c[0]===S.cct)[1];
   const runTxt=runs.map((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;return `Feed ${i+1} (line ${LET(r[0].line)}): ${l.toFixed(2)} m · ${w.toFixed(1)} W`;}).join('<br>');
   $('sum').innerHTML=[['Lines',R.lines.length],['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',pieces.length],
     ['LED strip',`${st.label} · ${cctL}${RGB?'':' · CRI>90'}`],['Load',W.toFixed(1)+' W'],['Delivered light',Math.round(LM).toLocaleString('en-AU')+' lm'],
@@ -701,7 +710,9 @@ $('m-day').onclick=()=>setMode('day');$('m-twi').onclick=()=>setMode('twilight')
 $('dim').oninput=e=>{dim=+e.target.value/100;$('dimv').textContent=e.target.value+'%';if(mode==='day'&&dim>0)setMode('twilight');else applyLight();};
 $('t-exp').oninput=e=>{explodeTo=+e.target.value/100;};
 document.querySelectorAll('[data-cct]').forEach(b=>b.onclick=()=>{S.cct=b.dataset.cct;if(!night)setMode('twilight');update(false);});
-const setRGB=h=>{S.rgb=h;if(!night)setMode('twilight');update(false);};
+const setRGB=(h,mix)=>{S.mix=mix||hexToMix(h);S.rgb=mixToHex(S.mix);if(!night)setMode('twilight');update(false);};
+if(RGB)$('mixf').addEventListener('input',e=>{const ch=+e.target.dataset.ch;if(Number.isNaN(ch))return;const v=Math.max(0,Math.min(100,Math.round(+e.target.value||0)));
+  const m=(S.mix||hexToMix(S.rgb)).slice();m[ch]=v;setRGB(null,m);});
 document.querySelectorAll('[data-rgb]').forEach(b=>b.onclick=()=>setRGB(b.dataset.rgb));
 if(RGB){$('rgbsel').onchange=e=>{if(e.target.value==='custom')$('rgbpick').click();else setRGB(e.target.value);};$('rgbpick').oninput=e=>setRGB(e.target.value);}
 $('t-scene').onclick=()=>{S.scene=S.scene==='open'?'plaza':'open';$('t-scene').setAttribute('aria-pressed',S.scene!=='open');keepSite=true;save();buildSite();};
@@ -924,7 +935,7 @@ $('pdf').onclick=async()=>{
     const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});doc.setDisplayMode('fullpage','continuous');
     const INK=[16,24,31],GREY=[119,119,121],LIGHT=[160,162,164],LINE=[223,224,226],ORANGE=[255,80,0],PAGE=[229,229,229];
     const logoK=await logoPNG(false);
-    const {st,pieces,runs,ext}=R;const L=pieces.reduce((a,q)=>a+q.d.len,0),Wt=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0),cctL=RGB?`RGB (shown in ${rgbName(S.rgb).toLowerCase()})`:CCTS.find(c=>c[0]===S.cct)[1];
+    const {st,pieces,runs,ext}=R;const L=pieces.reduce((a,q)=>a+q.d.len,0),Wt=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0),cctL=RGB?`RGB · mix ${mixTxt()}`:CCTS.find(c=>c[0]===S.cct)[1];
     const proj=S.proj||PRODUCT.name+' run';const date=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
     const who=[proj,S.client].filter(Boolean).join(' · ');
     const clean=t=>String(t).replace(/–/g,'-').replace(/→/g,'>');
@@ -1082,7 +1093,9 @@ let rebuildT=0;
 function update(redrawSteps,reframe){
   R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();
   $('strip').value=S.strip;$('cct').value=S.cct;document.querySelectorAll('[data-cct]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cct===S.cct));
-  if(RGB){document.querySelectorAll('[data-rgb]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.rgb===S.rgb));$('rgbsel').value=RGBSW.find(x=>x[0]===S.rgb)?S.rgb:'custom';$('rgbpick').value=S.rgb;}$('proj').value=S.proj;$('client').value=S.client;
+  if(RGB){if(!S.mix)S.mix=hexToMix(S.rgb);const sw=RGBSW.find(x=>hexToMix(x[0]).join()===S.mix.join());
+    document.querySelectorAll('[data-rgb]').forEach(b=>b.setAttribute('aria-pressed',!!sw&&b.dataset.rgb===sw[0]));$('rgbsel').value=sw?sw[0]:'custom';$('rgbpick').value=S.rgb;
+    ['r','g','b'].forEach((k,i)=>{$('mix-'+k).value=S.mix[i];if(document.activeElement!==$('mixn-'+k))$('mixn-'+k).value=S.mix[i];});}$('proj').value=S.proj;$('client').value=S.client;
   $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · drag a line to move it · Alt-drag to copy · double-click to turn it';
   clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(camShift){anim=0;camera.position.add(camShift);controls.target.add(camShift);camShift=null;}if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
 }
