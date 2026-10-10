@@ -293,6 +293,23 @@ function resolve(){
   return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0}};
 }
 let R=null;
+/* ---------- rule: lines may not overlap ----------
+   Centre lines of different lines (or far-apart parts of one line) must stay CLEAR mm apart:
+   the EOP H100 profile is 73 mm wide, so 150 mm centre to centre leaves about 77 mm of ground between profiles. */
+const CLEAR=150;
+function segDist(a,b,c,d){const cr=(p,q,r)=>(q.x-p.x)*(r.z-p.z)-(q.z-p.z)*(r.x-p.x);
+  const d1=cr(c,d,a),d2=cr(c,d,b),d3=cr(a,b,c),d4=cr(a,b,d);if(((d1>0)!==(d2>0))&&((d3>0)!==(d4>0)))return 0;
+  const ps=(p,u,v)=>{const dx=v.x-u.x,dz=v.z-u.z,L=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((p.x-u.x)*dx+(p.z-u.z)*dz)/L));return Math.hypot(u.x+dx*t-p.x,u.z+dz*t-p.z);};
+  return Math.min(ps(a,c,d),ps(b,c,d),ps(c,a,b),ps(d,a,b));}
+function clashFind(r){const segs=[];r.pieces.forEach((q,i)=>{for(let k=1;k<q.pts.length;k++){const a=q.pts[k-1],b=q.pts[k];segs.push({a,b,q,x0:Math.min(a.x,b.x)-CLEAR,x1:Math.max(a.x,b.x)+CLEAR,z0:Math.min(a.z,b.z),z1:Math.max(a.z,b.z)});}});
+  segs.sort((u,v)=>u.x0-v.x0);const ends={};r.lines.forEach(l=>{ends[l.li]={n:l.pieces.length,first:l.pieces[0].i,closed:l.closed};});const out=new Map();
+  for(let i=0;i<segs.length;i++){const A=segs[i];for(let j=i+1;j<segs.length&&segs[j].x0<=A.x1;j++){const B=segs[j];
+    if(B.z0-CLEAR>A.z1||A.z0-CLEAR>B.z1)continue;const qa=A.q,qb=B.q;
+    if(qa.line===qb.line){const e=ends[qa.line],ia=qa.i-e.first,ib=qb.i-e.first,g=Math.abs(ia-ib);if(g<=1||(e.closed&&g===e.n-1))continue;}
+    const key=Math.min(qa.line,qb.line)+'-'+Math.max(qa.line,qb.line);if(out.has(key))continue;
+    if(segDist(A.a,A.b,B.a,B.b)<CLEAR)out.set(key,[Math.min(qa.line,qb.line),Math.max(qa.line,qb.line)]);}}
+  return [...out.values()];}
+const clashTxt=c=>c.map(([a,b])=>a===b?`line ${LET(a)} crosses itself`:`lines ${LET(a)} and ${LET(b)}`).join(', ');
 
 /* ======================= panel ======================= */
 $('logo').innerHTML=__LOGO__;
@@ -343,6 +360,7 @@ function renderSummary(){
   const w=[];
   R.lines.forEach(LL=>{if(LL.runs.length>1)w.push(`Line ${LET(LL.li)} is longer than one ${st.label} feed allows (${st.max} m), so it is split into ${LL.runs.length} runs, each with its own start piece and feed. Where two runs meet, end caps sit back to back.`);
     if(LL.closed)w.push(`Line ${LET(LL.li)} closes on itself. Its first and last pieces meet with their end caps together.`);});
+  R.clash=clashFind(R);if(R.clash.length)w.unshift(`<b>Lines overlap:</b> ${clashTxt(R.clash)}. Keep at least ${CLEAR} mm between centre lines (the profile is 73 mm wide). Move or turn a line to clear it; the PDF is held until then.`);
   $('warn').innerHTML=w.join('<br><br>');$('warn').hidden=!w.length;
   const groups={};pieces.forEach(q=>{(groups[q.code]=groups[q.code]||{q:0,list:[],p:q}).q++;groups[q.code].list.push(q);});
   R.groups=groups;
@@ -367,7 +385,8 @@ $('preset').onchange=e=>{const p=PRESETS[e.target.value];e.target.value='';if(!p
   const keep=S.lines,cur=R.raw;S.lines=add;const r=resolve().raw;S.lines=keep;
   const dx=cur.x1+2500-r.x0,dz=(cur.z0+cur.z1)/2-(r.z0+r.z1)/2;
   add.forEach(l=>{l.x=Math.round(((+l.x||0)+dx)/10)*10;l.y=Math.round(((+l.y||0)-dz)/10)*10;});
-  S.lines=keep.concat(add);update(true,true);toast(`Added: ${LET(keep.length)}${add.length>1?'–'+LET(S.lines.length-1):''} · drag to place it`);};
+  S.lines=keep.concat(add);for(let n=0;n<80&&clashFind(resolve()).length>(R.clash||[]).length;n++)add.forEach(l=>l.x+=500); // slide right until clear
+  update(true,true);toast(`Added: ${LET(keep.length)}${add.length>1?'–'+LET(S.lines.length-1):''} · drag to place it`);};
 // Clear all asks for a second click so a design can't be lost by accident
 let clearArm=0;$('clear-all').onclick=e=>{const b=e.currentTarget;
   if(Date.now()-clearArm>3000){clearArm=Date.now();b.textContent='Click again to clear';setTimeout(()=>{b.textContent='Clear all';},3000);return;}
@@ -734,18 +753,27 @@ let drag=null,camShift=null;const SNAP=50;
 function dupLine(li){if(S.lines.length>=26){toast('Up to 26 lines (A–Z) in one design');return;}
   const ln=R.lines.find(x=>x.li===li),xs=ln?ln.pieces.flatMap(q=>q.pts.map(p=>p.x)):[0],w=Math.max(...xs)-Math.min(...xs);
   const c=JSON.parse(JSON.stringify(S.lines[li],(k,v)=>k.startsWith('_')?undefined:v));c.x=Math.round(((+c.x||0)+w+1500)/10)*10;
-  S.lines.push(c);update(true);toast(`Line ${LET(li)} duplicated as line ${LET(S.lines.length-1)} · drag to place it`);}
+  S.lines.push(c);const me=S.lines.length-1;for(let n=0;n<80&&clashFind(resolve()).some(p=>p.includes(me));n++)c.x+=500;
+  update(true);toast(`Line ${LET(li)} duplicated as line ${LET(S.lines.length-1)} · drag to place it`);}
 // Alt / Option + drag: a copy stays where the line was and the line itself moves with the cursor
 function dragBegin(li,x,z,alt){let dup=false;
   if(alt&&S.lines.length<26){S.lines.push(JSON.parse(JSON.stringify(S.lines[li],(k,v)=>k.startsWith('_')?undefined:v)));dup=true;}
-  drag={li,dup,sx:x,sz:z,d:{x:0,z:0},O0:{...R.origin},s0:S.lines.map(l=>({x:+l.x||0,y:+l.y||0}))};}
-function dragTo(x,z){const dx=Math.round((x-drag.sx)/SNAP)*SNAP,dz=Math.round((z-drag.sz)/SNAP)*SNAP;drag.d={x:dx,z:dz};
-  S.lines.forEach((l,i)=>{const s0=drag.s0[i];l.x=s0.x;l.y=s0.y;
-    if(i===drag.li){l.x=s0.x+dx;l.y=s0.y-dz;}});}
+  drag={li,dup,sx:x,sz:z,d:{x:0,z:0},O0:{...R.origin},s0:S.lines.map(l=>({x:+l.x||0,y:+l.y||0}))};
+  drag.base=new Set(clashFind(resolve()).filter(p=>p.includes(li)&&!(dup&&p.includes(S.lines.length-1))).map(p=>p.join('-'))); // clashes it already had (typed in) don't block moving
+  drag.valid=dup?null:{x:0,z:0};drag.bad=!!dup;}
+function placeD(d){S.lines.forEach((l,i)=>{const s0=drag.s0[i];l.x=s0.x;l.y=s0.y;if(i===drag.li){l.x=s0.x+d.x;l.y=s0.y-d.z;}});}
+function dragBad(){return clashFind(resolve()).some(p=>p.includes(drag.li)&&!drag.base.has(p.join('-')));}
+function dragTo(x,z){const dx=Math.round((x-drag.sx)/SNAP)*SNAP,dz=Math.round((z-drag.sz)/SNAP)*SNAP;
+  if(dx===drag.d.x&&dz===drag.d.z)return;drag.d={x:dx,z:dz};placeD(drag.d);drag.bad=dragBad();if(!drag.bad)drag.valid={...drag.d};}
 function holdShift(F){const T={x:R.origin.x-drag.O0.x+F.x,z:R.origin.z-drag.O0.z+F.z};return T;} // call after R=resolve()
-function dragEnd(){const d=drag.d,moved=d.x||d.z,dup=drag.dup,li=drag.li;if(dup&&!moved)S.lines.pop();R=resolve();const T=holdShift({x:0,z:0});drag=null;
-  if(!moved)return false;camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);toast(dup?`Line ${LET(li)} copied · the copy left in its old place is line ${LET(S.lines.length-1)}`:'Line moved · start points updated');return true;}
-function turnLine(li){const O0={...R.origin};const l=S.lines[li];l.dir=((+l.dir||0)+270)%360;R=resolve();keepSite=true;
+function dragEnd(){let back=false;
+  if(drag.bad){back=true;if(drag.valid){drag.d={...drag.valid};placeD(drag.d);}else{drag.d={x:0,z:0};placeD(drag.d);if(drag.dup){S.lines.pop();drag.dup=false;}}}
+  const d=drag.d,moved=d.x||d.z,dup=drag.dup,li=drag.li;if(dup&&!moved)S.lines.pop();
+  if(back)toast(`Lines can't overlap · keep ${CLEAR} mm between centre lines · line ${LET(li)} moved back to the last clear spot`);R=resolve();const T=holdShift({x:0,z:0});drag=null;
+  if(!moved){if(back){update(true);return true;}return false;}camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);if(!back)toast(dup?`Line ${LET(li)} copied · the copy left in its old place is line ${LET(S.lines.length-1)}`:'Line moved · start points updated');return true;}
+function turnLine(li){const O0={...R.origin};const l=S.lines[li],was=l.dir,before=new Set(clashFind(R).map(p=>p.join('-')));l.dir=((+l.dir||0)+270)%360;R=resolve();
+  if(clashFind(R).some(p=>p.includes(li)&&!before.has(p.join('-')))){l.dir=was;R=resolve();toast(`Line ${LET(li)} can't turn there: it would overlap another line`);return;}
+  keepSite=true;
   camShift=V3(-(R.origin.x-O0.x)/1000,0,-(R.origin.z-O0.z)/1000);update(true);}
 // plan drawing
 const planEl=$('plan');let planFrame=null,planRaf=0;
@@ -771,7 +799,8 @@ stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==sce
   dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
   labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
 canvas.addEventListener('pointermove',e=>{if(!drag3||!drag)return;const g=groundAt(e);if(!g)return;dragTo(g.x*1000,g.z*1000);
-  run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li)run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);});});
+  run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li){run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);o.material.color.set(drag.bad?0xff6a5a:MODE[mode].opal);o.material.emissive.set(drag.bad?0xff2a10:(CCTCOL[S.cct]||CCTCOL.T930));}});
+  canvas.style.cursor=drag.bad?'not-allowed':'grabbing';});
 let last3={t:0,li:-1};
 const up3=()=>{if(!drag3)return;const li=drag3.li;drag3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');
   const moved=drag&&(drag.d.x||drag.d.z);if(drag)dragEnd();
@@ -799,7 +828,8 @@ function planSVG(o={}){
   if(!solo){const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
   // pieces, alternating tone so every joint reads
   const mv=o.screen?' style="cursor:grab"':'';
-  ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${i%2?grey:ink}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
+  const red=new Set((o.clash||(o.screen?clashFind(R):[])).flat());
+  ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${red.has(q.line)?(i%2?'#f07a6e':'#d93a2b'):(i%2?grey:ink)}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
   // joints and end caps
   ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
     const capped=i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
@@ -878,7 +908,8 @@ async function snapshot(o){
   return url;}
 function logoPNG(white){const svg=logoSVG().replace(/#10181f/g,white?'#ffffff':'#10181f').replace(/#777779/g,white?'#b9bcbf':'#777779');return svgToPng(svg,1000,216,true);}
 $('pdf').onclick=async()=>{
-  const btn=$('pdf');btn.textContent='Preparing PDF…';btn.disabled=true;
+  const btn=$('pdf');{const c=clashFind(R);if(c.length){toast(`Lines overlap (${clashTxt(c)}): move them apart before making the PDF`);return;}}
+  btn.textContent='Preparing PDF…';btn.disabled=true;
   try{
     const {jsPDF}=window.jspdf;
     // Book in the Phosforma types-book layout: landscape A4 cover, then double-width spreads

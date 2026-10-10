@@ -293,6 +293,23 @@ function resolve(){
   return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0}};
 }
 let R=null;
+/* ---------- rule: lines may not overlap ----------
+   Centre lines of different lines (or far-apart parts of one line) must stay CLEAR mm apart:
+   the EOP H100 profile is 73 mm wide, so 150 mm centre to centre leaves about 77 mm of ground between profiles. */
+const CLEAR=150;
+function segDist(a,b,c,d){const cr=(p,q,r)=>(q.x-p.x)*(r.z-p.z)-(q.z-p.z)*(r.x-p.x);
+  const d1=cr(c,d,a),d2=cr(c,d,b),d3=cr(a,b,c),d4=cr(a,b,d);if(((d1>0)!==(d2>0))&&((d3>0)!==(d4>0)))return 0;
+  const ps=(p,u,v)=>{const dx=v.x-u.x,dz=v.z-u.z,L=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((p.x-u.x)*dx+(p.z-u.z)*dz)/L));return Math.hypot(u.x+dx*t-p.x,u.z+dz*t-p.z);};
+  return Math.min(ps(a,c,d),ps(b,c,d),ps(c,a,b),ps(d,a,b));}
+function clashFind(r){const segs=[];r.pieces.forEach((q,i)=>{for(let k=1;k<q.pts.length;k++){const a=q.pts[k-1],b=q.pts[k];segs.push({a,b,q,x0:Math.min(a.x,b.x)-CLEAR,x1:Math.max(a.x,b.x)+CLEAR,z0:Math.min(a.z,b.z),z1:Math.max(a.z,b.z)});}});
+  segs.sort((u,v)=>u.x0-v.x0);const ends={};r.lines.forEach(l=>{ends[l.li]={n:l.pieces.length,first:l.pieces[0].i,closed:l.closed};});const out=new Map();
+  for(let i=0;i<segs.length;i++){const A=segs[i];for(let j=i+1;j<segs.length&&segs[j].x0<=A.x1;j++){const B=segs[j];
+    if(B.z0-CLEAR>A.z1||A.z0-CLEAR>B.z1)continue;const qa=A.q,qb=B.q;
+    if(qa.line===qb.line){const e=ends[qa.line],ia=qa.i-e.first,ib=qb.i-e.first,g=Math.abs(ia-ib);if(g<=1||(e.closed&&g===e.n-1))continue;}
+    const key=Math.min(qa.line,qb.line)+'-'+Math.max(qa.line,qb.line);if(out.has(key))continue;
+    if(segDist(A.a,A.b,B.a,B.b)<CLEAR)out.set(key,[Math.min(qa.line,qb.line),Math.max(qa.line,qb.line)]);}}
+  return [...out.values()];}
+const clashTxt=c=>c.map(([a,b])=>a===b?`line ${LET(a)} crosses itself`:`lines ${LET(a)} and ${LET(b)}`).join(', ');
 
 /* ======================= panel ======================= */
 $('logo').innerHTML="<defs><clipPath id=\"lp\"><rect x=\"0\" y=\"0\" width=\"55.25\" height=\"60\"/></clipPath><clipPath id=\"lf\"><rect x=\"55.25\" y=\"0\" width=\"80\" height=\"60\"/></clipPath></defs><g clip-path=\"url(#lp)\" fill=\"var(--ink)\"><path d=\"M11.5,29a5.61,5.61,0,0,0-1.9-1.34,6.15,6.15,0,0,0-2.5-.49,5.77,5.77,0,0,0-2.4.5,3.89,3.890,0,0,0-1.77,1.61H2.88V27.44H0V45.21H3V38H3.11a4.3,4.3,0,0,0,.58.62,4.61,4.61,0,0,0,.86.59,5.23,5.23,0,0,0,1.16.45,5.9,5.9,0,0,0,1.52.18,5.72,5.72,0,0,0,2.38-.49A5.530,5.530,0,0,0,11.460,38a6.170,6.170,0,0,0,1.2-2,7.06,7.06,0,0,0,.43-2.48,7.47,7.47,0,0,0-.4-2.48A5.74,5.74,0,0,0,11.5,29ZM9.82,34.82A3.4,3.4,0,0,1,9.11,36a3.48,3.48,0,0,1-2.62,1.1A3.48,3.48,0,0,1,3.88,36a3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,3.88,31a3.48,3.48,0,0,1,2.62-1.1A3.48,3.48,0,0,1,9.11,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,9.82,34.82ZM26,28.59a3.89,3.89,0,0,0-1.38-1.05,4.78,4.78,0,0,0-2.06-.4,4,4,0,0,0-2.31.62A3.52,3.52,0,0,0,19,29.12H19V20.51h-3v19h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.910,2.910,0,0,1,1.28-.25,1.93,1.93,0,0,1,1.24.36,2.17,2.17,0,0,1,.67.9,4,4,0,0,1,.27,1.15Q24,32.89,24,33.39v6.1h3V31.88a6.88,6.88,0,0,0-.23-1.78A4,4,0,0,0,26,28.59Zm15.09.28A6.19,6.19,0,0,0,39,27.59a7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.07,6.07,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.18,6.18,0,0,0,2.1-1.28,6.07,6.070,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,41.11,28.87Zm-1.35,5.95A3.4,3.4,0,0,1,39,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,33.81,31,3.6,3.6,0,0,1,39,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,39.75,34.82ZM53,33a6.25,6.25,0,0,0-1.58-.58l-1.58-.36a5.28,5.28,0,0,1-1.21-.43.84.84,0,0,1-.48-.8,1,1,0,0,1,.58-1,2.55,2.55,0,0,1,1.19-.3,2.78,2.78,0,0,1,2.38,1.23l2-1.81a3.93,3.93,0,0,0-1.92-1.42,7.2,7.2,0,0,0-4.2-.19,4.77,4.77,0,0,0-1.57.7,3.65,3.65,0,0,0-1.1,1.22A3.5,3.5,0,0,0,45.15,31a3,3,0,0,0,.48,1.81,3.3,3.3,0,0,0,1.21,1,6.13,6.13,0,0,0,1.58.53q.85.16,1.58.35a4.29,4.29,0,0,1,1.21.49,1.12,1.12,0,0,1,.29,1.54,1.55,1.55,0,0,1-.49.44,2.23,2.23,0,0,1-.66.25,3.27,3.27,0,0,1-.68.08A3,3,0,0,1,48,37.12,5.67,5.67,0,0,1,46.79,36l-2,1.88a4.94,4.94,0,0,0,2.12,1.46,8.09,8.09,0,0,0,2.6.4,8.9,8.9,0,0,0,1.87-.2,5.4,5.4,0,0,0,1.68-.65,3.66,3.66,0,0,0,1.21-1.19,3.34,3.34,0,0,0,.47-1.82,3.17,3.17,0,0,0-.48-1.86A3.46,3.46,0,0,0,53,33Zm7.36-12.4A3.15,3.15,0,0,0,59,21.72a4.42,4.42,0,0,0-.67,1.75,13.28,13.28,0,0,0-.18,2.27v1.71h-2.5V30h2.5v9.49h3V30H64V27.44H61.2V25.26a6.86,6.86,0,0,1,.06-1,2,2,0,0,1,.28-.79A1.54,1.54,0,0,1,62.14,23a2.17,2.17,0,0,1,1-.2,3.92,3.92,0,0,1,.63,0l.63.13.2-2.56a9.86,9.86,0,0,0-1.92-.18A5.77,5.77,0,0,0,60.39,20.6Zm16.26,8.27a6.19,6.19,0,0,0-2.1-1.28,7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.06,6.06,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.19,6.19,0,0,0,2.1-1.28,6.07,6.07,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,76.65,28.87ZM75.3,34.82A3.4,3.4,0,0,1,74.59,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.94,3.94,0,0,1,0-2.71A3.4,3.4,0,0,1,69.36,31a3.6,3.6,0,0,1,5.23,0,3.41,3.41,0,0,1,.71,1.15A3.94,3.94,0,0,1,75.3,34.82Zm12.78-7.68a4,4,0,0,0-2.15.58,3.79,3.79,0,0,0-1.44,1.63H84.44V27.44h-3v12h3V33a3.75,3.75,0,0,1,.11-.75,3,3,0,0,1,.46-1,3.11,3.11,0,0,1,1-.89A3.28,3.28,0,0,1,87.7,30a4.32,4.32,0,0,1,.72.06q.37.06.75.16V27.31l-.54-.13A2.92,2.92,0,0,0,88.08,27.14Zm21.32,1.51a3.58,3.58,0,0,0-1.35-1.1,4.7,4.7,0,0,0-2-.4,4.83,4.83,0,0,0-2.35.54A4.27,4.27,0,0,0,102,29.37a3.69,3.69,0,0,0-3.79-2.23,4,4,0,0,0-2.41.67,4.08,4.08,0,0,0-1.3,1.52H94.45V27.44H91.56v12h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.91,2.91,0,0,1,1.28-.25,1.83,1.83,0,0,1,1.59.67,3,3,0,0,1,.48,1.79v7.18h3V33a4.75,4.75,0,0,1,.14-1.14,2.87,2.87,0,0,1,.45-1,2.34,2.34,0,0,1,.81-.7,2.52,2.52,0,0,1,1.2-.26,2.39,2.39,0,0,1,1.11.23,1.8,1.8,0,0,1,.68.61,2.55,2.55,0,0,1,.35.9,5.54,5.54,0,0,1,.1,1.07v6.83h3V32.31a8.59,8.59,0,0,0-.23-2A4.54,4.54,0,0,0,109.4,28.64ZM124,31.57a6.53,6.53,0,0,0-.16-1.17,4.83,4.83,0,0,0-.46-1.19,3.29,3.29,0,0,0-.9-1,4.81,4.81,0,0,0-1.47-.74,7.08,7.08,0,0,0-2.17-.29,8.76,8.76,0,0,0-2.79.45,5.89,5.89,0,0,0-2.36,1.48l1.59,1.58a4.55,4.55,0,0,1,1.44-.92,4.72,4.72,0,0,1,1.79-.34,3.33,3.33,0,0,1,2,.56,2,2,0,0,1,.78,1.69V32h-.76q-.76,0-1.62,0a14.64,14.64,0,0,0-1.71.18,9.52,9.52,0,0,0-1.63.41,4.82,4.82,0,0,0-1.38.74,3.43,3.43,0,0,0-.95,1.15,3.62,3.62,0,0,0-.35,1.67,3.19,3.19,0,0,0,.38,1.58,3.49,3.49,0,0,0,1,1.13,4.44,4.44,0,0,0,1.42.68,6,6,0,0,0,1.630.23,5.27,5.27,0,0,0,2.22-.46,3.9,3.9,0,0,0,1.67-1.49h.08v1.66H124V32.56Q124,32.13,124,31.57Zm-2.88,3.2a2.72,2.72,0,0,1-.75,2,3.17,3.17,0,0,1-2.31.74,3.32,3.32,0,0,1-.76-.09,2.08,2.08,0,0,1-.68-.29,1.71,1.71,0,0,1-.49-.49,1.27,1.27,0,0,1-.19-.72,1.2,1.2,0,0,1,.48-1,3.4,3.4,0,0,1,1.18-.55,7.5,7.5,0,0,1,1.48-.24q.78,0,1.42,0h.63v.68Z\"/></g><g clip-path=\"url(#lf)\" fill=\"var(--muted)\"><path d=\"M11.5,29a5.61,5.61,0,0,0-1.9-1.34,6.15,6.15,0,0,0-2.5-.49,5.77,5.77,0,0,0-2.4.5,3.89,3.890,0,0,0-1.77,1.61H2.88V27.44H0V45.21H3V38H3.11a4.3,4.3,0,0,0,.58.62,4.61,4.61,0,0,0,.86.59,5.23,5.23,0,0,0,1.16.45,5.9,5.9,0,0,0,1.52.18,5.72,5.72,0,0,0,2.38-.49A5.530,5.530,0,0,0,11.460,38a6.170,6.170,0,0,0,1.2-2,7.06,7.06,0,0,0,.43-2.48,7.47,7.47,0,0,0-.4-2.48A5.74,5.74,0,0,0,11.5,29ZM9.82,34.82A3.4,3.4,0,0,1,9.11,36a3.48,3.48,0,0,1-2.62,1.1A3.48,3.48,0,0,1,3.88,36a3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,3.88,31a3.48,3.48,0,0,1,2.62-1.1A3.48,3.48,0,0,1,9.11,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,9.82,34.82ZM26,28.59a3.89,3.89,0,0,0-1.38-1.05,4.78,4.78,0,0,0-2.06-.4,4,4,0,0,0-2.31.62A3.52,3.52,0,0,0,19,29.12H19V20.51h-3v19h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.910,2.910,0,0,1,1.28-.25,1.93,1.93,0,0,1,1.24.36,2.17,2.17,0,0,1,.67.9,4,4,0,0,1,.27,1.15Q24,32.89,24,33.39v6.1h3V31.88a6.88,6.88,0,0,0-.23-1.78A4,4,0,0,0,26,28.59Zm15.09.28A6.19,6.19,0,0,0,39,27.59a7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.07,6.07,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.18,6.18,0,0,0,2.1-1.28,6.07,6.070,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,41.11,28.87Zm-1.35,5.95A3.4,3.4,0,0,1,39,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,33.81,31,3.6,3.6,0,0,1,39,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,39.75,34.82ZM53,33a6.25,6.25,0,0,0-1.58-.58l-1.58-.36a5.28,5.28,0,0,1-1.21-.43.84.84,0,0,1-.48-.8,1,1,0,0,1,.58-1,2.55,2.55,0,0,1,1.19-.3,2.78,2.78,0,0,1,2.38,1.23l2-1.81a3.93,3.93,0,0,0-1.92-1.42,7.2,7.2,0,0,0-4.2-.19,4.77,4.77,0,0,0-1.57.7,3.65,3.65,0,0,0-1.1,1.22A3.5,3.5,0,0,0,45.15,31a3,3,0,0,0,.48,1.81,3.3,3.3,0,0,0,1.21,1,6.13,6.13,0,0,0,1.58.53q.85.16,1.58.35a4.29,4.29,0,0,1,1.21.49,1.12,1.12,0,0,1,.29,1.54,1.55,1.55,0,0,1-.49.44,2.23,2.23,0,0,1-.66.25,3.27,3.27,0,0,1-.68.08A3,3,0,0,1,48,37.12,5.67,5.67,0,0,1,46.79,36l-2,1.88a4.94,4.94,0,0,0,2.12,1.46,8.09,8.09,0,0,0,2.6.4,8.9,8.9,0,0,0,1.87-.2,5.4,5.4,0,0,0,1.68-.65,3.66,3.66,0,0,0,1.21-1.19,3.34,3.34,0,0,0,.47-1.82,3.17,3.17,0,0,0-.48-1.86A3.46,3.46,0,0,0,53,33Zm7.36-12.4A3.15,3.15,0,0,0,59,21.72a4.42,4.42,0,0,0-.67,1.75,13.28,13.28,0,0,0-.18,2.27v1.71h-2.5V30h2.5v9.49h3V30H64V27.44H61.2V25.26a6.86,6.86,0,0,1,.06-1,2,2,0,0,1,.28-.79A1.54,1.54,0,0,1,62.14,23a2.17,2.17,0,0,1,1-.2,3.92,3.92,0,0,1,.63,0l.63.13.2-2.56a9.86,9.86,0,0,0-1.92-.18A5.77,5.77,0,0,0,60.39,20.6Zm16.26,8.27a6.19,6.19,0,0,0-2.1-1.28,7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.06,6.06,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.19,6.19,0,0,0,2.1-1.28,6.07,6.07,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,76.65,28.87ZM75.3,34.82A3.4,3.4,0,0,1,74.59,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.94,3.94,0,0,1,0-2.71A3.4,3.4,0,0,1,69.36,31a3.6,3.6,0,0,1,5.23,0,3.41,3.41,0,0,1,.71,1.15A3.94,3.94,0,0,1,75.3,34.82Zm12.78-7.68a4,4,0,0,0-2.15.58,3.79,3.79,0,0,0-1.44,1.63H84.44V27.44h-3v12h3V33a3.75,3.75,0,0,1,.11-.75,3,3,0,0,1,.46-1,3.11,3.11,0,0,1,1-.89A3.28,3.28,0,0,1,87.7,30a4.32,4.32,0,0,1,.72.06q.37.06.75.16V27.31l-.54-.13A2.92,2.92,0,0,0,88.08,27.14Zm21.32,1.51a3.58,3.58,0,0,0-1.35-1.1,4.7,4.7,0,0,0-2-.4,4.83,4.83,0,0,0-2.35.54A4.27,4.27,0,0,0,102,29.37a3.69,3.69,0,0,0-3.79-2.23,4,4,0,0,0-2.41.67,4.08,4.08,0,0,0-1.3,1.52H94.45V27.44H91.56v12h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.91,2.91,0,0,1,1.28-.25,1.83,1.83,0,0,1,1.59.67,3,3,0,0,1,.48,1.79v7.18h3V33a4.75,4.75,0,0,1,.14-1.14,2.87,2.87,0,0,1,.45-1,2.34,2.34,0,0,1,.81-.7,2.52,2.52,0,0,1,1.2-.26,2.39,2.39,0,0,1,1.11.23,1.8,1.8,0,0,1,.68.61,2.55,2.55,0,0,1,.35.9,5.54,5.54,0,0,1,.1,1.07v6.83h3V32.31a8.59,8.59,0,0,0-.23-2A4.54,4.54,0,0,0,109.4,28.64ZM124,31.57a6.53,6.53,0,0,0-.16-1.17,4.83,4.83,0,0,0-.46-1.19,3.29,3.29,0,0,0-.9-1,4.81,4.81,0,0,0-1.47-.74,7.08,7.08,0,0,0-2.17-.29,8.76,8.76,0,0,0-2.79.45,5.89,5.89,0,0,0-2.36,1.48l1.59,1.58a4.55,4.55,0,0,1,1.44-.92,4.72,4.72,0,0,1,1.79-.34,3.33,3.33,0,0,1,2,.56,2,2,0,0,1,.78,1.69V32h-.76q-.76,0-1.62,0a14.64,14.64,0,0,0-1.71.18,9.52,9.52,0,0,0-1.63.41,4.82,4.82,0,0,0-1.38.74,3.43,3.43,0,0,0-.95,1.15,3.62,3.62,0,0,0-.35,1.67,3.19,3.19,0,0,0,.38,1.58,3.49,3.49,0,0,0,1,1.13,4.44,4.44,0,0,0,1.42.68,6,6,0,0,0,1.630.23,5.27,5.27,0,0,0,2.22-.46,3.9,3.9,0,0,0,1.67-1.49h.08v1.66H124V32.56Q124,32.13,124,31.57Zm-2.88,3.2a2.72,2.72,0,0,1-.75,2,3.17,3.17,0,0,1-2.31.74,3.32,3.32,0,0,1-.76-.09,2.08,2.08,0,0,1-.68-.29,1.71,1.71,0,0,1-.49-.49,1.27,1.27,0,0,1-.19-.72,1.2,1.2,0,0,1,.48-1,3.4,3.4,0,0,1,1.18-.55,7.5,7.5,0,0,1,1.48-.24q.78,0,1.42,0h.63v.68Z\"/></g>";
@@ -343,6 +360,7 @@ function renderSummary(){
   const w=[];
   R.lines.forEach(LL=>{if(LL.runs.length>1)w.push(`Line ${LET(LL.li)} is longer than one ${st.label} feed allows (${st.max} m), so it is split into ${LL.runs.length} runs, each with its own start piece and feed. Where two runs meet, end caps sit back to back.`);
     if(LL.closed)w.push(`Line ${LET(LL.li)} closes on itself. Its first and last pieces meet with their end caps together.`);});
+  R.clash=clashFind(R);if(R.clash.length)w.unshift(`<b>Lines overlap:</b> ${clashTxt(R.clash)}. Keep at least ${CLEAR} mm between centre lines (the profile is 73 mm wide). Move or turn a line to clear it; the PDF is held until then.`);
   $('warn').innerHTML=w.join('<br><br>');$('warn').hidden=!w.length;
   const groups={};pieces.forEach(q=>{(groups[q.code]=groups[q.code]||{q:0,list:[],p:q}).q++;groups[q.code].list.push(q);});
   R.groups=groups;
@@ -367,7 +385,8 @@ $('preset').onchange=e=>{const p=PRESETS[e.target.value];e.target.value='';if(!p
   const keep=S.lines,cur=R.raw;S.lines=add;const r=resolve().raw;S.lines=keep;
   const dx=cur.x1+2500-r.x0,dz=(cur.z0+cur.z1)/2-(r.z0+r.z1)/2;
   add.forEach(l=>{l.x=Math.round(((+l.x||0)+dx)/10)*10;l.y=Math.round(((+l.y||0)-dz)/10)*10;});
-  S.lines=keep.concat(add);update(true,true);toast(`Added: ${LET(keep.length)}${add.length>1?'–'+LET(S.lines.length-1):''} · drag to place it`);};
+  S.lines=keep.concat(add);for(let n=0;n<80&&clashFind(resolve()).length>(R.clash||[]).length;n++)add.forEach(l=>l.x+=500); // slide right until clear
+  update(true,true);toast(`Added: ${LET(keep.length)}${add.length>1?'–'+LET(S.lines.length-1):''} · drag to place it`);};
 // Clear all asks for a second click so a design can't be lost by accident
 let clearArm=0;$('clear-all').onclick=e=>{const b=e.currentTarget;
   if(Date.now()-clearArm>3000){clearArm=Date.now();b.textContent='Click again to clear';setTimeout(()=>{b.textContent='Clear all';},3000);return;}
@@ -734,18 +753,27 @@ let drag=null,camShift=null;const SNAP=50;
 function dupLine(li){if(S.lines.length>=26){toast('Up to 26 lines (A–Z) in one design');return;}
   const ln=R.lines.find(x=>x.li===li),xs=ln?ln.pieces.flatMap(q=>q.pts.map(p=>p.x)):[0],w=Math.max(...xs)-Math.min(...xs);
   const c=JSON.parse(JSON.stringify(S.lines[li],(k,v)=>k.startsWith('_')?undefined:v));c.x=Math.round(((+c.x||0)+w+1500)/10)*10;
-  S.lines.push(c);update(true);toast(`Line ${LET(li)} duplicated as line ${LET(S.lines.length-1)} · drag to place it`);}
+  S.lines.push(c);const me=S.lines.length-1;for(let n=0;n<80&&clashFind(resolve()).some(p=>p.includes(me));n++)c.x+=500;
+  update(true);toast(`Line ${LET(li)} duplicated as line ${LET(S.lines.length-1)} · drag to place it`);}
 // Alt / Option + drag: a copy stays where the line was and the line itself moves with the cursor
 function dragBegin(li,x,z,alt){let dup=false;
   if(alt&&S.lines.length<26){S.lines.push(JSON.parse(JSON.stringify(S.lines[li],(k,v)=>k.startsWith('_')?undefined:v)));dup=true;}
-  drag={li,dup,sx:x,sz:z,d:{x:0,z:0},O0:{...R.origin},s0:S.lines.map(l=>({x:+l.x||0,y:+l.y||0}))};}
-function dragTo(x,z){const dx=Math.round((x-drag.sx)/SNAP)*SNAP,dz=Math.round((z-drag.sz)/SNAP)*SNAP;drag.d={x:dx,z:dz};
-  S.lines.forEach((l,i)=>{const s0=drag.s0[i];l.x=s0.x;l.y=s0.y;
-    if(i===drag.li){l.x=s0.x+dx;l.y=s0.y-dz;}});}
+  drag={li,dup,sx:x,sz:z,d:{x:0,z:0},O0:{...R.origin},s0:S.lines.map(l=>({x:+l.x||0,y:+l.y||0}))};
+  drag.base=new Set(clashFind(resolve()).filter(p=>p.includes(li)&&!(dup&&p.includes(S.lines.length-1))).map(p=>p.join('-'))); // clashes it already had (typed in) don't block moving
+  drag.valid=dup?null:{x:0,z:0};drag.bad=!!dup;}
+function placeD(d){S.lines.forEach((l,i)=>{const s0=drag.s0[i];l.x=s0.x;l.y=s0.y;if(i===drag.li){l.x=s0.x+d.x;l.y=s0.y-d.z;}});}
+function dragBad(){return clashFind(resolve()).some(p=>p.includes(drag.li)&&!drag.base.has(p.join('-')));}
+function dragTo(x,z){const dx=Math.round((x-drag.sx)/SNAP)*SNAP,dz=Math.round((z-drag.sz)/SNAP)*SNAP;
+  if(dx===drag.d.x&&dz===drag.d.z)return;drag.d={x:dx,z:dz};placeD(drag.d);drag.bad=dragBad();if(!drag.bad)drag.valid={...drag.d};}
 function holdShift(F){const T={x:R.origin.x-drag.O0.x+F.x,z:R.origin.z-drag.O0.z+F.z};return T;} // call after R=resolve()
-function dragEnd(){const d=drag.d,moved=d.x||d.z,dup=drag.dup,li=drag.li;if(dup&&!moved)S.lines.pop();R=resolve();const T=holdShift({x:0,z:0});drag=null;
-  if(!moved)return false;camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);toast(dup?`Line ${LET(li)} copied · the copy left in its old place is line ${LET(S.lines.length-1)}`:'Line moved · start points updated');return true;}
-function turnLine(li){const O0={...R.origin};const l=S.lines[li];l.dir=((+l.dir||0)+270)%360;R=resolve();keepSite=true;
+function dragEnd(){let back=false;
+  if(drag.bad){back=true;if(drag.valid){drag.d={...drag.valid};placeD(drag.d);}else{drag.d={x:0,z:0};placeD(drag.d);if(drag.dup){S.lines.pop();drag.dup=false;}}}
+  const d=drag.d,moved=d.x||d.z,dup=drag.dup,li=drag.li;if(dup&&!moved)S.lines.pop();
+  if(back)toast(`Lines can't overlap · keep ${CLEAR} mm between centre lines · line ${LET(li)} moved back to the last clear spot`);R=resolve();const T=holdShift({x:0,z:0});drag=null;
+  if(!moved){if(back){update(true);return true;}return false;}camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);if(!back)toast(dup?`Line ${LET(li)} copied · the copy left in its old place is line ${LET(S.lines.length-1)}`:'Line moved · start points updated');return true;}
+function turnLine(li){const O0={...R.origin};const l=S.lines[li],was=l.dir,before=new Set(clashFind(R).map(p=>p.join('-')));l.dir=((+l.dir||0)+270)%360;R=resolve();
+  if(clashFind(R).some(p=>p.includes(li)&&!before.has(p.join('-')))){l.dir=was;R=resolve();toast(`Line ${LET(li)} can't turn there: it would overlap another line`);return;}
+  keepSite=true;
   camShift=V3(-(R.origin.x-O0.x)/1000,0,-(R.origin.z-O0.z)/1000);update(true);}
 // plan drawing
 const planEl=$('plan');let planFrame=null,planRaf=0;
@@ -771,7 +799,8 @@ stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==sce
   dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
   labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
 canvas.addEventListener('pointermove',e=>{if(!drag3||!drag)return;const g=groundAt(e);if(!g)return;dragTo(g.x*1000,g.z*1000);
-  run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li)run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);});});
+  run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li){run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);o.material.color.set(drag.bad?0xff6a5a:MODE[mode].opal);o.material.emissive.set(drag.bad?0xff2a10:(CCTCOL[S.cct]||CCTCOL.T930));}});
+  canvas.style.cursor=drag.bad?'not-allowed':'grabbing';});
 let last3={t:0,li:-1};
 const up3=()=>{if(!drag3)return;const li=drag3.li;drag3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');
   const moved=drag&&(drag.d.x||drag.d.z);if(drag)dragEnd();
@@ -799,7 +828,8 @@ function planSVG(o={}){
   if(!solo){const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
   // pieces, alternating tone so every joint reads
   const mv=o.screen?' style="cursor:grab"':'';
-  ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${i%2?grey:ink}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
+  const red=new Set((o.clash||(o.screen?clashFind(R):[])).flat());
+  ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${red.has(q.line)?(i%2?'#f07a6e':'#d93a2b'):(i%2?grey:ink)}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
   // joints and end caps
   ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
     const capped=i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
@@ -878,7 +908,8 @@ async function snapshot(o){
   return url;}
 function logoPNG(white){const svg=logoSVG().replace(/#10181f/g,white?'#ffffff':'#10181f').replace(/#777779/g,white?'#b9bcbf':'#777779');return svgToPng(svg,1000,216,true);}
 $('pdf').onclick=async()=>{
-  const btn=$('pdf');btn.textContent='Preparing PDF…';btn.disabled=true;
+  const btn=$('pdf');{const c=clashFind(R);if(c.length){toast(`Lines overlap (${clashTxt(c)}): move them apart before making the PDF`);return;}}
+  btn.textContent='Preparing PDF…';btn.disabled=true;
   try{
     const {jsPDF}=window.jspdf;
     // Book in the Phosforma types-book layout: landscape A4 cover, then double-width spreads
