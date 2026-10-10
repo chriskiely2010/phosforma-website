@@ -690,6 +690,9 @@ function viewFor(name){
   if(name==='walk'){const p=ps[0].pts[0],q=ps[Math.min(ps.length-1,Math.floor(ps.length/3))].mid;return {s:scene,pos:[p.x/1000-Math.cos(p.h)*1.6+Math.sin(p.h)*0.9,1.55,p.z/1000-Math.sin(p.h)*1.6-Math.cos(p.h)*0.9],tgt:[q.x/1000,0,q.z/1000]};}
   if(name==='aerial'){const ss=B?Math.max(B.x1-B.x0,B.z1-B.z0)+7:sz;const cx=B?(B.x0+B.x1)/2:0,cz=B?(B.z0+B.z1)/2:0;return {s:scene,pos:[cx-ss*0.42,ss*0.78+3,cz+ss*0.6],tgt:[cx,0,cz+0.4]};}
   if(name==='detail'){const c=ps.find(q=>q.d.ang)||ps[0],m=c.mid;return {s:scene,pos:[m.x/1000+0.32,0.2,m.z/1000+0.26],tgt:[m.x/1000,0,m.z/1000]};}
+  if(name==='shape'&&studioRun){studioRun.group.updateMatrixWorld(true);const bx=new THREE.Box3();studioRun.pgs.forEach(p=>{if(p.visible)bx.expandByObject(p);});
+    const c=bx.getCenter(V3()),z=bx.getSize(V3()),r=Math.max(0.45,Math.hypot(z.x,z.z)/2),dir=V3(-0.55,0.62,0.7).normalize();
+    return {s:studio,pos:c.clone().addScaledVector(dir,r/Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*0.62).toArray(),tgt:c.toArray()};}
   if(name==='parts'&&studioRun){ // frame the parts at the start of feed 1: profile, insert, end cap, leads, feed cable, driver
     studioRun.group.updateMatrixWorld(true);const A0=studioRun.pgs[0].userData.anch,A1=studioRun.pgs[1]?studioRun.pgs[1].userData.anch:{};
     const pts=[A0.prof,A0.ins,A0.cap,A0.male,A1.female,A0.feed,A0.drv].filter(Boolean).map(a=>a.obj?a.obj.localToWorld(a.p.clone()):a.getWorldPosition(V3()));
@@ -776,12 +779,15 @@ const up3=()=>{if(!drag3)return;const li=drag3.li;drag3=null;controls.enabled=tr
 canvas.addEventListener('pointerup',up3);canvas.addEventListener('pointercancel',up3);
 
 /* ======================= plan drawing (SVG, mm) ======================= */
+// o.only = one line drawn on its own (its own extents, no datum); o.key = layout plan (lines, types, start points; no piece labels);
+// o.paper = [w,h] mm of the paper box, so text and line weights come out the same size on every PDF page
 function planSVG(o={}){
-  const ps=R.pieces,all=ps.flatMap(q=>q.pts);
+  const solo=o.only!=null,ps=solo?R.pieces.filter(q=>q.line===o.only):R.pieces,all=ps.flatMap(q=>q.pts);
   const x0=Math.min(...all.map(p=>p.x)),x1=Math.max(...all.map(p=>p.x)),z0=Math.min(...all.map(p=>p.z)),z1=Math.max(...all.map(p=>p.z));
-  const dX=-R.origin.x,dZ=-R.origin.z,X0=Math.min(x0,dX),X1=Math.max(x1,dX),Z0=Math.min(z0,dZ),Z1=Math.max(z1,dZ); // datum in view
-  const pad=Math.max(900,Math.max(X1-X0,Z1-Z0)*0.12),vb=o.frame?o.frame.vb:[X0-pad,Z0-pad,X1-X0+2*pad,Z1-Z0+2*pad];
-  const k=Math.max(vb[2],vb[3])/1000; // mm per "unit" of line/label size
+  const dX=-R.origin.x,dZ=-R.origin.z,X0=solo?x0:Math.min(x0,dX),X1=solo?x1:Math.max(x1,dX),Z0=solo?z0:Math.min(z0,dZ),Z1=solo?z1:Math.max(z1,dZ); // datum in view
+  const pad=Math.max(900,Math.max(X1-X0,Z1-Z0)*0.12);let vb=o.frame?o.frame.vb:[X0-pad,Z0-pad,X1-X0+2*pad,Z1-Z0+2*pad];
+  if(o.paper&&!o.frame){const a=o.paper[0]/o.paper[1];if(vb[2]/vb[3]<a){const w=vb[3]*a;vb=[vb[0]-(w-vb[2])/2,vb[1],w,vb[3]];}else{const h=vb[2]/a;vb=[vb[0],vb[1]-(h-vb[3])/2,vb[2],h];}} // fill the paper box
+  const k=o.paper?(o.fsPaper||2.1)/(o.paper[0]/vb[2])/13:Math.max(vb[2],vb[3])/1000; // mm per "unit" of line/label size
   const sw=Math.max(33,k*3.2),fs=k*13,ink='#10181f',grey='#777779';
   let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(' ')}" preserveAspectRatio="xMidYMid meet" font-family="Helvetica Neue,Helvetica,Arial,sans-serif">`;
   s+=`<rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="#fff"/>`;
@@ -790,26 +796,32 @@ function planSVG(o={}){
   for(let gz=Math.ceil(vb[1]/1000)*1000;gz<vb[1]+vb[3];gz+=1000)s+=`<line x1="${vb[0]}" y1="${gz}" x2="${vb[0]+vb[2]}" y2="${gz}"/>`;s+='</g>';
   s+=o.frame?`<g transform="translate(${o.frame.tx} ${o.frame.tz})">`:'<g>';
   // datum: Line A start = (0, 0); start points of other lines are measured from here
-  {const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
+  if(!solo){const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
   // pieces, alternating tone so every joint reads
   const mv=o.screen?' style="cursor:grab"':'';
   ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${i%2?grey:ink}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
   // joints and end caps
   ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
     const capped=i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
-  R.runs.forEach(r=>{const q=r.at(-1),p=q.pts.at(-1),nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="#ff5000" stroke-width="${k*2.4}"/>`;});
+  R.runs.filter(r=>!solo||r[0].line===o.only).forEach(r=>{const q=r.at(-1),p=q.pts.at(-1),nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="#ff5000" stroke-width="${k*2.4}"/>`;});
   // piece numbers on the left-hand side of travel
-  ps.forEach(q=>{const m=q.mid,off=sw*0.5+fs*1.15,cx=m.x+Math.sin(m.h)*off,cz=m.z-Math.cos(m.h)*off;
+  if(!o.key)ps.forEach(q=>{const m=q.mid,off=sw*0.5+fs*1.15,cx=m.x+Math.sin(m.h)*off,cz=m.z-Math.cos(m.h)*off;
     s+=`<rect x="${cx-fs*1.15}" y="${cz-fs*0.75}" width="${fs*2.3}" height="${fs*1.5}" rx="${fs*0.75}" fill="#fff" stroke="${ink}" stroke-width="${k*0.9}"/><text x="${cx}" y="${cz}" font-size="${fs*0.8}" text-anchor="middle" dominant-baseline="central" fill="${ink}" font-weight="700">${q.label}</text>`;});
   // feeds
   ps.filter(q=>q.seg==='S'||q.seg==='I').forEach(q=>{const p=q.pts[0],bx=p.x-Math.cos(p.h)*fs*3.2,bz=p.z-Math.sin(p.h)*fs*3.2;
     s+=`<line x1="${bx}" y1="${bz}" x2="${p.x-Math.cos(p.h)*sw}" y2="${p.z-Math.sin(p.h)*sw}" stroke="#ff5000" stroke-width="${k*1.6}" stroke-dasharray="${k*5} ${k*3}"/><circle cx="${bx}" cy="${bz}" r="${fs*0.45}" fill="#ff5000"/>`;
     s+=`<text x="${bx}" y="${bz-fs*1.0}" font-size="${fs}" text-anchor="middle" fill="#ff5000" font-weight="700">${LET(q.line)} · FEED ${q.run+1}</text>`;});
   // step callouts: radius + angle for turns, length for straights (right-hand side)
-  S.lines.forEach((ln,li)=>ln.steps.forEach((st,si)=>{const mine=ps.filter(q=>q.line===li&&q.step===si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
+  if(!o.key)S.lines.forEach((ln,li)=>(solo&&li!==o.only)?0:ln.steps.forEach((st,si)=>{const mine=ps.filter(q=>q.line===li&&q.step===si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
     const off=sw*0.5+fs*1.6,cx=m.x-Math.sin(m.h)*off,cz=m.z+Math.cos(m.h)*off;
     const t=st.t==='S'?`${st._actual} mm`:`R${PIECE[st.r].r} · ${+st._actual.toFixed(2)}° ${st.t==='L'?'left':'right'}`;
     s+=`<text x="${cx}" y="${cz}" font-size="${fs*0.95}" text-anchor="middle" dominant-baseline="central" fill="${grey}" paint-order="stroke" stroke="#fff" stroke-width="${k*3}">${t}</text>`;}));
+  // layout plan: each line's outline, letter, type and start point from the datum
+  if(o.key)R.lines.forEach(ln=>{const P=ln.pieces.flatMap(q=>q.pts),a=Math.min(...P.map(p=>p.x)),b=Math.max(...P.map(p=>p.x)),c=Math.min(...P.map(p=>p.z)),d=Math.max(...P.map(p=>p.z)),m=fs*1.2;
+    const L=S.lines[ln.li],t=o.key[ln.li]||'';
+    s+=`<rect x="${a-m}" y="${c-m}" width="${b-a+2*m}" height="${d-c+2*m}" fill="none" stroke="${grey}" stroke-width="${k*0.7}" stroke-dasharray="${k*4} ${k*3}"/>`;
+    s+=`<text x="${(a+b)/2}" y="${(c+d)/2}" font-size="${fs*2.6}" text-anchor="middle" dominant-baseline="central" fill="${ink}" font-weight="700" paint-order="stroke" stroke="#fff" stroke-width="${k*4}">${LET(ln.li)}</text>`;
+    s+=`<text x="${a-m}" y="${d+m+fs*1.4}" font-size="${fs*0.9}" fill="${grey}">${t?t+' · ':''}start ${+L.x||0}, ${+L.y||0} · ${(ln.pieces.reduce((s,q)=>s+q.d.len,0)/1000).toFixed(2)} m</text>`;});
   // overall dimensions
   const dimY=z1+pad*0.55,dimX=x1+pad*0.55,tk=fs*0.6;
   s+=`<g stroke="${ink}" stroke-width="${k*0.9}" fill="none"><line x1="${x0}" y1="${dimY}" x2="${x1}" y2="${dimY}"/><line x1="${x0}" y1="${dimY-tk}" x2="${x0}" y2="${dimY+tk}"/><line x1="${x1}" y1="${dimY-tk}" x2="${x1}" y2="${dimY+tk}"/>
@@ -831,6 +843,10 @@ function logoSVG(){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 19
 async function snapshot(o){
   const keep={view:current,mode,cam:camera.position.clone(),tgt:controls.target.clone(),num:numbersOn,ex:explode,exTo:explodeTo};
   labels.forEach(l=>l.visible=false);setMode(o.mode||'twilight');
+  let solo=null;
+  if(o.only!=null&&studioRun){const qs=R.pieces.filter(q=>q.line===o.only),xs=qs.flatMap(q=>q.pts.map(p=>p.x/1000)),zs=qs.flatMap(q=>q.pts.map(p=>p.z/1000)),cx=(Math.min(...xs)+Math.max(...xs))/2,cz=(Math.min(...zs)+Math.max(...zs))/2;
+    solo=studioRun.pgs.map(pg=>({pg,vis:pg.visible,off:pg.userData.off.clone()}));
+    studioRun.pgs.forEach((pg,i)=>{const q=R.pieces[i];if(q.line!==o.only){pg.visible=false;return;}pg.userData.off.set((q.mid.x/1000-cx)*0.25,0,(q.mid.z/1000-cz)*0.25);});}
   if(o.explode!==undefined){explode=explodeTo=o.explode;applyExplode();studioRun&&studioRun.group.updateMatrixWorld(true);}
   const sb={bg:studio.background.getHex(),fog:studio.fog.color.getHex(),fl:sFloor.material.color.getHex(),near:studio.fog.near,far:studio.fog.far};
   if(o.light){studio.background.set(0xd9d9d9);studio.fog.color.set(0xd9d9d9);sFloor.material.color.set(0xd4d4d4);studio.fog.near*=1.6;studio.fog.far*=1.6;}
@@ -840,8 +856,21 @@ async function snapshot(o){
   if(o.view!=='walk'&&o.view!=='detail'&&asp<1.4)pos.sub(tgt).multiplyScalar(Math.pow(1.4/asp,0.85)).add(tgt); // portrait images: step back so the design fits
   camera.position.copy(pos);controls.target.copy(tgt);controls.update();
   renderer.setPixelRatio(1);renderer.setSize(W,H,false);composer.setSize(W,H);camera.aspect=asp;camera.updateProjectionMatrix();
+  if(o.view==='shape'&&studioRun){ // fit the whole exploded shape to the frame (using every part's own box, not the overall box), centred, no fog
+    studio.fog.near=1e4;studio.fog.far=2e4;studioRun.group.updateMatrixWorld(true);const cs=[],tb=new THREE.Box3();
+    studioRun.pgs.forEach(p=>{if(!p.visible)return;p.traverse(m=>{if(!m.isMesh)return;if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();const g=m.geometry.boundingBox;
+      for(const x of [g.min.x,g.max.x])for(const y of [g.min.y,g.max.y])for(const z of [g.min.z,g.max.z])cs.push(V3(x,y,z).applyMatrix4(m.matrixWorld));});});
+    cs.forEach(p=>tb.expandByPoint(p));let c=tb.getCenter(V3());const dir=pos.clone().sub(tgt).normalize();
+    const ext=()=>{camera.updateMatrixWorld();let a=[1e9,-1e9,1e9,-1e9];cs.forEach(p=>{const q=p.clone().project(camera);a=[Math.min(a[0],q.x),Math.max(a[1],q.x),Math.min(a[2],q.y),Math.max(a[3],q.y)];});return a;};
+    const fit=()=>{let lo=0.1,hi=400;for(let it=0;it<36;it++){const d=(lo+hi)/2;camera.position.copy(c).addScaledVector(dir,d);camera.lookAt(c);const e=ext();
+      if(Math.max(-e[0],e[1])>0.9||Math.max(-e[2],e[3])>0.72)lo=d;else hi=d;}camera.position.copy(c).addScaledVector(dir,hi);camera.lookAt(c);return hi;};
+    for(let k=0;k<3;k++){const d=fit(),e=ext(),th=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));   // pan so the parts sit in the middle of the frame
+      const rt=V3().setFromMatrixColumn(camera.matrixWorld,0),up=V3().setFromMatrixColumn(camera.matrixWorld,1);
+      c=c.clone().addScaledVector(rt,(e[0]+e[1])/2*d*th*camera.aspect).addScaledVector(up,(e[2]+e[3])/2*d*th);}
+    fit();controls.target.copy(c);}
   applyFrame();composer.render();const url=canvas.toDataURL('image/jpeg',0.9);
   snapshot.pts=o.probe?o.probe().map(v=>{if(!v)return null;const q=v.clone().project(camera);return {x:(q.x+1)/2,y:(1-q.y)/2};}):null;
+  if(solo)solo.forEach(x=>{x.pg.visible=x.vis;x.pg.userData.off.copy(x.off);});
   studio.background.set(sb.bg);studio.fog.color.set(sb.fog);sFloor.material.color.set(sb.fl);studio.fog.near=sb.near;studio.fog.far=sb.far;
   explode=keep.ex;explodeTo=keep.exTo;applyExplode();
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));setMode(keep.mode);numbersOn=keep.num;labels.forEach(l=>l.visible=l.element.classList.contains('feed')||numbersOn);
@@ -891,12 +920,19 @@ $('pdf').onclick=async()=>{
     const aerialDay=await snapshot({view:'aerial',mode:'day',w:1720,h:1050});
     const walkImg=await snapshot({view:'walk',mode:'twilight',w:1720,h:1050});
     const detailImg=await snapshot({view:'detail',mode:'twilight',w:1720,h:1050});
-    const asmImg=await snapshot({view:'parts',mode:'day',w:1782,h:1260,explode:0,light:true});
+    const asmImg=await snapshot({view:'parts',only:R.pieces[0].line,mode:'day',w:1782,h:1260,explode:0,light:true});
     const P0=studioRun.pgs[0].userData.anch,P1=(studioRun.pgs[1]&&R.pieces[1].run===R.pieces[0].run)?studioRun.pgs[1].userData.anch:{};
     const wp=a=>!a?null:a.obj?a.obj.localToWorld(a.p.clone()):a.getWorldPosition(V3());
     const KEY=[[P0.prof,'Stainless profile, EOP H100 (in the ground)'],[P0.ins,'LED insert with opal face'],[P0.cap,'End cap, screwed to the profile'],
       [P0.male,'T1X lead, male'],[P1.female,'T1X lead, female'],[P0.feed,'Feed lead out through the end cap, T1X female'],[P0.drv,`${st.v}V DC driver, lead with T1X male`]];
-    const expImg=await snapshot({view:'parts',mode:'day',w:1782,h:1260,explode:1,light:true,probe:()=>KEY.map(k=>wp(k[0]))});const expPts=snapshot.pts;
+    // shape types: lines with the same steps are the same shape (heading and position don't matter)
+    const sig=ln=>JSON.stringify(ln.steps.map(s=>s.t==='S'?['S',+s.len]:[s.t,s.r,+s.a]));const TYPES=[];
+    R.lines.forEach(ln=>{const k=sig(S.lines[ln.li]);let t=TYPES.find(t=>t.k===k);if(!t)TYPES.push(t={k,lines:[]});t.lines.push(ln.li);});
+    TYPES.forEach((t,i)=>{t.n=i+1;t.name=`Type ${i+1}`;});const typeOf=li=>TYPES.find(t=>t.lines.includes(li));
+    const keyFor=li=>{const i0=R.pieces.findIndex(q=>q.line===li),a=studioRun.pgs[i0].userData.anch,nx=R.pieces[i0+1],b=(nx&&nx.run===R.pieces[i0].run)?studioRun.pgs[i0+1].userData.anch:{};
+      return [[a.prof,'Stainless profile, EOP H100 (in the ground)'],[a.ins,'LED insert with opal face'],[a.cap,'End cap, screwed to the profile'],[a.male,'T1X lead, male'],[b.female,'T1X lead, female'],[a.feed,'Feed lead out through the end cap, T1X female'],[a.drv,`${st.v}V DC driver, lead with T1X male`]];};
+    for(const t of TYPES){const K=keyFor(t.lines[0]);t.exp=await snapshot({view:'shape',only:t.lines[0],mode:'day',w:2400,h:848,explode:1,light:true,probe:()=>K.map(k=>wp(k[0]))});t.pts=snapshot.pts;}
+    const expImg=await snapshot({view:'parts',only:R.pieces[0].line,mode:'day',w:1782,h:1260,explode:1,light:true,probe:()=>KEY.map(k=>wp(k[0]))});const expPts=snapshot.pts;
 
     // ---- cover (landscape A4)
     txt(proj.toUpperCase(),38,22,{s:20,b:true});
@@ -912,7 +948,7 @@ $('pdf').onclick=async()=>{
     title(proj,`Holectron Inground Radius · ${(L/1000).toFixed(2)} m · ${R.lines.length} line${R.lines.length>1?'s':''} · ${pieces.length} pieces · ${cctL}`);
     let y=section('Lines',RX,38,RW);
     R.lines.forEach((ln,i)=>{const s0=S.lines[ln.li],len=ln.pieces.reduce((a,q)=>a+q.d.len,0),cx=RX+(i%2)*(RW/2+6),cy=y+Math.floor(i/2)*6.2,w=RW/2-6;
-      dot(LET(ln.li),cx+1.9,cy-1);txt(`Line ${LET(ln.li)} · ${(len/1000).toFixed(2)} m · ${ln.pieces.length} pieces${ln.closed?' · closed':''}`,cx+6,cy,{s:8});
+      dot(LET(ln.li),cx+1.9,cy-1);txt(`Line ${LET(ln.li)} · ${typeOf(ln.li).name} · ${(len/1000).toFixed(2)} m · ${ln.pieces.length} pieces${ln.closed?' · closed':''}`,cx+6,cy,{s:8});
       txt(`start ${+s0.x||0}, ${+s0.y||0} · ${ln.runs.length} feed${ln.runs.length>1?'s':''}`,cx+w,cy,{s:7,c:GREY,a:'right'});rule(cx,cy+2.2,w);});
     y+=Math.ceil(R.lines.length/2)*6.2+5;
     txt('All lengths in mm on the centre line. Start points measured from the datum 0,0.',RX,y,{s:6,c:LIGHT});y+=4.2;
@@ -922,12 +958,35 @@ $('pdf').onclick=async()=>{
     table([{t:'Feed',w:12},{t:'Line',w:10},{t:'Pieces',w:col-12-10-18-14},{t:'Length',w:18,a:'right'},{t:'Load',w:14,a:'right'}],
       runs.map((r,i)=>[String(i+1),LET(r[0].line),`${r[0].label}-${r.at(-1).label}`,(r.reduce((a,q)=>a+q.d.len,0)/1000).toFixed(2)+' m',r.reduce((a,q)=>a+q.w,0).toFixed(1)+' W']),RX+RW/2+6,yr);
 
-    // ---- spread: drawings
+    // ---- spread: layout (key plan at a small scale: where each line sits, its type, start point from the datum)
     spread('Walkway view',`${proj} · twilight, at eye level · visualisation only`);inset(walkImg);
-    const svg=planSVG();const vb=svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
-    const bx=RX,by=36,bw=RW,bh=186-by,sc=Math.min(bw/vb[2],bh/vb[3]),pw=vb[2]*sc,ph=vb[3]*sc;
-    title('Drawings',`Plan · scale approx. 1:${Math.round(1/sc)} at A4 · mm on the centre line · end caps and feeds in orange`);
-    const plan=await svgToPng(svg,Math.round(pw*9),Math.round(ph*9));doc.addImage(plan,'PNG',bx+(bw-pw)/2,by+(bh-ph)/2,pw,ph,undefined,'FAST');
+    {const box=[RW,186-36],svg=planSVG({key:Object.fromEntries(R.lines.map(l=>[l.li,typeOf(l.li).name])),paper:box,fsPaper:2.0});const vb=svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);const sc=box[0]/vb[2];
+      title('Layout',`Key plan · scale approx. 1:${Math.round(1/sc)} · lines, shape types and start points from the datum 0,0 · each shape is drawn to a larger scale on its own spread`);
+      doc.addImage(await svgToPng(svg,Math.round(box[0]*9),Math.round(box[1]*9)),'PNG',RX,36,box[0],box[1],undefined,'FAST');}
+
+    // ---- per shape type: a drawing spread (shape drawn large, piece labels clear) and a full exploded-view spread
+    const whiteSpread=(head,desc,note)=>{doc.addPage([SW,H],'landscape');pg+=2;txt(head.toUpperCase(),M,13.5,{s:7.5,b:true});txt(desc,M+wid(head.toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});
+      txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
+      txt(pg,RX,199.5,{s:6.5,c:GREY});txt((note||'Drawn from the design. Verify site dimensions before installation.')+' · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);};
+    for(const t of TYPES){const li=t.lines[0],ln=R.lines.find(x=>x.li===li),q=t.lines.length,len=ln.pieces.reduce((a,p)=>a+p.d.len,0),w=ln.pieces.reduce((a,p)=>a+p.w,0);
+      const lines=t.lines.map(LET).join(', ');
+      whiteSpread('Drawing',`${t.name} · line${q>1?'s':''} ${lines}${q>1?` · ×${q} identical, line ${LET(li)} drawn`:''}`);
+      const TW=118,box=[SW-17-17-TW-10,186-30],svg=planSVG({only:li,paper:box,fsPaper:2.3});const vb=svg.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);const sc=box[0]/vb[2];
+      txt(t.name,17,23,{s:22,b:true});txt(`${(len/1000).toFixed(2)} m · ${ln.pieces.length} pieces · ${ln.runs.length} feed${ln.runs.length>1?'s':''} each · plan to scale approx. 1:${Math.round(1/sc)} on this spread · mm on the centre line`,17+wid(t.name,22,true)+5,23,{s:9,c:GREY});
+      doc.addImage(await svgToPng(svg,Math.round(box[0]*9),Math.round(box[1]*9)),'PNG',17,30,box[0],box[1],undefined,'FAST');
+      const tx=SW-17-TW;let ty=olabel('Pieces',q>1?`per shape and ×${q}`:'per shape',tx,36);
+      const g={};ln.pieces.forEach(p=>{const k=SEGNAME[p.seg]+' · '+p.d.name;(g[k]=g[k]||{n:0,l:[]}).n++;g[k].l.push(p);});
+      ty=table([{t:'Piece',w:TW-30},{t:'Each',w:14,a:'right'},{t:'×'+q,w:16,a:'right'}],Object.entries(g).map(([k,v])=>[k,String(v.n),String(v.n*q)]),tx,ty,true);
+      ty+=3;ty=olabel('Per shape','',tx,ty);
+      rows([['Length',`${len} mm`],['Load',`${w.toFixed(1)} W`],['Feeds',ln.runs.map((r,i)=>`${r[0].label}-${r.at(-1).label}`).join(' · ')],['Lines',lines]],tx,ty,TW,20);
+      // full exploded view of the whole shape across the spread
+      doc.addPage([SW,H],'landscape');pg+=2;img(t.exp,0,0,SW,H);
+      txt('EXPLODED VIEW',M,13.5,{s:7.5,b:true});txt(`${t.name} · line ${LET(li)} shown${q>1?` (same for ${lines})`:''} · every part modelled · parts separated for clarity, not to scale in separation`,M+wid('EXPLODED VIEW',7.5,true)+4,13.5,{s:7.5,c:GREY});
+      txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});
+      txt(pg,RX,199.5,{s:6.5,c:GREY});txt('Numbers as in the component key. · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);
+      t.pts.forEach((p,i)=>{if(!p||p.x<0.02||p.x>0.98||p.y<0.1||p.y>0.92)return;const x=p.x*SW,yy=p.y*H,ty2=Math.max(22,yy-12-(i%3)*6);
+        doc.setDrawColor(...ORANGE);doc.setLineWidth(0.35);doc.line(x,ty2+2,x,yy);doc.setFillColor(...ORANGE);doc.circle(x,yy,0.55,'F');dot(i+1,x,ty2,2.3);});
+    }
 
     // ---- spread: exploded view, component key, parts
     doc.addPage([SW,H],'landscape');pg+=2;img(expImg,0,0,HW,H);
