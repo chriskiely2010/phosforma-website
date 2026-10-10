@@ -121,7 +121,8 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
       <h2>Light</h2>
       <div class="row2">
         <label class="f">LED strip<select id="strip"></select></label>
-        <label class="f">Colour temperature<select id="cct"></select></label>
+        <label class="f" id="cctf">Colour temperature<select id="cct"></select></label>
+        <label class="f" id="rgbf" hidden>Light colour (preview)<span style="display:flex;gap:6px;align-items:center"><select id="rgbsel" style="flex:1"></select><input type="color" id="rgbpick" aria-label="Pick any colour" style="width:38px;height:34px;padding:0;border:1px solid var(--line);border-radius:4px;background:none"></span></label>
       </div>
     </section>
 
@@ -172,7 +173,7 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
         <button id="t-scene" aria-pressed="true" title="Show or hide the planters and trees around the paving">Planters &amp; trees</button>
         <button id="t-num" aria-pressed="true">Piece numbers</button>
       </div>
-      <div class="grp cctb" id="cctb" role="group" aria-label="Colour temperature"><button data-cct="922" aria-pressed="false">2200K</button><button data-cct="T927" aria-pressed="false">2700K</button><button data-cct="T930" aria-pressed="false">3000K</button><button data-cct="T940" aria-pressed="false">4000K</button>
+      <div class="grp cctb" id="cctb" role="group" aria-label="Light colour">
         <label class="exp" for="dim" title="Dimmer">Dimmer<input type="range" id="dim" min="0" max="100" value="100" aria-label="Dimmer level"><span id="dimv" style="min-width:34px;text-align:right">100%</span></label>
       </div>
     </div>
@@ -212,15 +213,12 @@ const PIECE={ // centre-line length (mm) and arc angle (deg), specification shee
   R272:{R:'R0272',L:'L0404',len:404,ang:90,name:'Curve R272 90°',r:272},
 };
 const CURVES=['R272','R515','R1000','R1975','R2950','R6100'];
-// white strips offered in the Inground Radius; max run from one side (Holectron spec sheet, MAX RUN chart)
-const STRIPS=[
-  {id:'FL112/Nx.48V 09W',label:'FL112 48V · 9.6 W/m',v:48,wm:9.6,max:22.5},
-  {id:'FL112/Nx.48V 04W',label:'FL112 48V · 4.8 W/m',v:48,wm:4.8,max:28.5},
-  {id:'FL56/Nx 09W',label:'FL56 24V · 9.6 W/m',v:24,wm:9.6,max:7.5},
-  {id:'FL56/Nx 04W',label:'FL56 24V · 4.8 W/m',v:24,wm:4.8,max:13},
-  {id:'FL56/Nx 02W',label:'FL56 24V · 2.4 W/m',v:24,wm:2.4,max:18.5},
-];
-const CCTS=[['922','2200K'],['T927','2700K'],['T930','3000K'],['T940','4000K']];
+// The product this page plans (one source, one page per product; see build_planner.py).
+// strips: max run from one side, Holectron specification sheet MAX RUN chart.
+const PRODUCT={"path": "inground-radius", "name": "Inground Radius", "store": "irplan", "cct0": "T930", "rgb": false, "ccts": [["922", "2200K"], ["T927", "2700K"], ["T930", "3000K"], ["T940", "4000K"]], "strips": [{"id": "FL112/Nx.48V 09W", "label": "FL112 48V · 9.6 W/m", "v": 48, "wm": 9.6, "max": 22.5}, {"id": "FL112/Nx.48V 04W", "label": "FL112 48V · 4.8 W/m", "v": 48, "wm": 4.8, "max": 28.5}, {"id": "FL56/Nx 09W", "label": "FL56 24V · 9.6 W/m", "v": 24, "wm": 9.6, "max": 7.5}, {"id": "FL56/Nx 04W", "label": "FL56 24V · 4.8 W/m", "v": 24, "wm": 4.8, "max": 13}, {"id": "FL56/Nx 02W", "label": "FL56 24V · 2.4 W/m", "v": 24, "wm": 2.4, "max": 18.5}]};
+const STRIPS=PRODUCT.strips,CCTS=PRODUCT.ccts,RGB=!!PRODUCT.rgb;
+const RGBSW=[['#ff2318','Red'],['#ff7a00','Amber'],['#ffd21f','Yellow'],['#22e05a','Green'],['#14d4ff','Cyan'],['#2c55ff','Blue'],['#9b3cff','Violet'],['#ff2fb4','Magenta'],['#fff1e6','White mix']];
+const rgbName=h=>(RGBSW.find(x=>x[0]===h)||[0,'Custom '+h])[1];
 const SEGNAME={S:'Start',M:'Middle',E:'End',I:'Individual',F:'Full'};
 const SEGDESC={S:'end cap at start, feed cable in',M:'no end caps, joins both sides',E:'end cap at end',I:'two end caps, single feed'};
 const codeOf=(p,seg,st,cct)=>{const [strip,ww]=st.id.split(' ');return `IngroundR ${seg} EOP H100 ${p.R} ${p.L} / ${strip} G5 ${ww} ${cct} / OR.T1x`;};
@@ -238,13 +236,14 @@ const PRESETS={
   'Planter surround with 90° corners':ONE([{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000},{t:'L',r:'R515',a:90},{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000}]),
 };
 const copyLines=l=>JSON.parse(JSON.stringify(l));
-let S={proj:'',client:'',strip:STRIPS[0].id,cct:'T930',scene:'plaza',lines:copyLines(PRESETS['S-bend walkway (10 m)'])};
+let S={proj:'',client:'',strip:STRIPS[0].id,cct:PRODUCT.cct0,rgb:'#ff2fb4',scene:'plaza',lines:copyLines(PRESETS['S-bend walkway (10 m)'])};
 // share links carry the plan in the address (#p=…); otherwise the last plan in this browser
 const clean=()=>JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);
 function enc(){return 'p='+encodeURIComponent(clean());}
-try{const h=location.hash.match(/#p=(.+)$/);if(h)S={...S,...JSON.parse(decodeURIComponent(h[1]))};else{const ls=localStorage.getItem('irplan');if(ls)S={...S,...JSON.parse(ls)};}}catch(e){}
+try{const h=location.hash.match(/#p=(.+)$/);if(h)S={...S,...JSON.parse(decodeURIComponent(h[1]))};else{const ls=localStorage.getItem(PRODUCT.store);if(ls)S={...S,...JSON.parse(ls)};}}catch(e){}
 if(S.steps){if(!S.lines||!S.lines.length)S.lines=ONE(S.steps);delete S.steps;} // plans saved before separate lines existed
-const save=()=>{try{localStorage.setItem('irplan',clean());}catch(e){}};
+if(!STRIPS.find(x=>x.id===S.strip))S.strip=STRIPS[0].id;if(!CCTS.find(c=>c[0]===S.cct))S.cct=PRODUCT.cct0;
+const save=()=>{try{localStorage.setItem(PRODUCT.store,clean());}catch(e){}};
 const LET=i=>String.fromCharCode(65+i);
 const DIRS=[[0,'→ Right'],[90,'↑ Up'],[180,'← Left'],[270,'↓ Down']];
 
@@ -315,6 +314,9 @@ const clashTxt=c=>c.map(([a,b])=>a===b?`line ${LET(a)} crosses itself`:`lines ${
 $('logo').innerHTML="<defs><clipPath id=\"lp\"><rect x=\"0\" y=\"0\" width=\"55.25\" height=\"60\"/></clipPath><clipPath id=\"lf\"><rect x=\"55.25\" y=\"0\" width=\"80\" height=\"60\"/></clipPath></defs><g clip-path=\"url(#lp)\" fill=\"var(--ink)\"><path d=\"M11.5,29a5.61,5.61,0,0,0-1.9-1.34,6.15,6.15,0,0,0-2.5-.49,5.77,5.77,0,0,0-2.4.5,3.89,3.890,0,0,0-1.77,1.61H2.88V27.44H0V45.21H3V38H3.11a4.3,4.3,0,0,0,.58.62,4.61,4.61,0,0,0,.86.59,5.23,5.23,0,0,0,1.16.45,5.9,5.9,0,0,0,1.52.18,5.72,5.72,0,0,0,2.38-.49A5.530,5.530,0,0,0,11.460,38a6.170,6.170,0,0,0,1.2-2,7.06,7.06,0,0,0,.43-2.48,7.47,7.47,0,0,0-.4-2.48A5.74,5.74,0,0,0,11.5,29ZM9.82,34.82A3.4,3.4,0,0,1,9.11,36a3.48,3.48,0,0,1-2.62,1.1A3.48,3.48,0,0,1,3.88,36a3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,3.88,31a3.48,3.48,0,0,1,2.62-1.1A3.48,3.48,0,0,1,9.11,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,9.82,34.82ZM26,28.59a3.89,3.89,0,0,0-1.38-1.05,4.78,4.78,0,0,0-2.06-.4,4,4,0,0,0-2.31.62A3.52,3.52,0,0,0,19,29.12H19V20.51h-3v19h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.910,2.910,0,0,1,1.28-.25,1.93,1.93,0,0,1,1.24.36,2.17,2.17,0,0,1,.67.9,4,4,0,0,1,.27,1.15Q24,32.89,24,33.39v6.1h3V31.88a6.88,6.88,0,0,0-.23-1.78A4,4,0,0,0,26,28.59Zm15.09.28A6.19,6.19,0,0,0,39,27.59a7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.07,6.07,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.18,6.18,0,0,0,2.1-1.28,6.07,6.070,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,41.11,28.87Zm-1.35,5.95A3.4,3.4,0,0,1,39,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,33.81,31,3.6,3.6,0,0,1,39,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,39.75,34.82ZM53,33a6.25,6.25,0,0,0-1.58-.58l-1.58-.36a5.28,5.28,0,0,1-1.21-.43.84.84,0,0,1-.48-.8,1,1,0,0,1,.58-1,2.55,2.55,0,0,1,1.19-.3,2.78,2.78,0,0,1,2.38,1.23l2-1.81a3.93,3.93,0,0,0-1.92-1.42,7.2,7.2,0,0,0-4.2-.19,4.77,4.77,0,0,0-1.57.7,3.65,3.65,0,0,0-1.1,1.22A3.5,3.5,0,0,0,45.15,31a3,3,0,0,0,.48,1.81,3.3,3.3,0,0,0,1.21,1,6.13,6.13,0,0,0,1.58.53q.85.16,1.58.35a4.29,4.29,0,0,1,1.21.49,1.12,1.12,0,0,1,.29,1.54,1.55,1.55,0,0,1-.49.44,2.23,2.23,0,0,1-.66.25,3.27,3.27,0,0,1-.68.08A3,3,0,0,1,48,37.12,5.67,5.67,0,0,1,46.79,36l-2,1.88a4.94,4.94,0,0,0,2.12,1.46,8.09,8.09,0,0,0,2.6.4,8.9,8.9,0,0,0,1.87-.2,5.4,5.4,0,0,0,1.68-.65,3.66,3.66,0,0,0,1.21-1.19,3.34,3.34,0,0,0,.47-1.82,3.17,3.17,0,0,0-.48-1.86A3.46,3.46,0,0,0,53,33Zm7.36-12.4A3.15,3.15,0,0,0,59,21.72a4.42,4.42,0,0,0-.67,1.75,13.28,13.28,0,0,0-.18,2.27v1.71h-2.5V30h2.5v9.49h3V30H64V27.44H61.2V25.26a6.86,6.86,0,0,1,.06-1,2,2,0,0,1,.28-.79A1.54,1.54,0,0,1,62.14,23a2.17,2.17,0,0,1,1-.2,3.92,3.92,0,0,1,.63,0l.63.13.2-2.56a9.86,9.86,0,0,0-1.92-.18A5.77,5.77,0,0,0,60.39,20.6Zm16.26,8.27a6.19,6.19,0,0,0-2.1-1.28,7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.06,6.06,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.19,6.19,0,0,0,2.1-1.28,6.07,6.07,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,76.65,28.87ZM75.3,34.82A3.4,3.4,0,0,1,74.59,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.94,3.94,0,0,1,0-2.71A3.4,3.4,0,0,1,69.36,31a3.6,3.6,0,0,1,5.23,0,3.41,3.41,0,0,1,.71,1.15A3.94,3.94,0,0,1,75.3,34.82Zm12.78-7.68a4,4,0,0,0-2.15.58,3.79,3.79,0,0,0-1.44,1.63H84.44V27.44h-3v12h3V33a3.75,3.75,0,0,1,.11-.75,3,3,0,0,1,.46-1,3.11,3.11,0,0,1,1-.89A3.28,3.28,0,0,1,87.7,30a4.32,4.32,0,0,1,.72.06q.37.06.75.16V27.31l-.54-.13A2.92,2.92,0,0,0,88.08,27.14Zm21.32,1.51a3.58,3.58,0,0,0-1.35-1.1,4.7,4.7,0,0,0-2-.4,4.83,4.83,0,0,0-2.35.54A4.27,4.27,0,0,0,102,29.37a3.69,3.69,0,0,0-3.79-2.23,4,4,0,0,0-2.41.67,4.08,4.08,0,0,0-1.3,1.52H94.45V27.44H91.56v12h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.91,2.91,0,0,1,1.28-.25,1.83,1.83,0,0,1,1.59.67,3,3,0,0,1,.48,1.79v7.18h3V33a4.75,4.75,0,0,1,.14-1.14,2.87,2.87,0,0,1,.45-1,2.34,2.34,0,0,1,.81-.7,2.52,2.52,0,0,1,1.2-.26,2.39,2.39,0,0,1,1.11.23,1.8,1.8,0,0,1,.68.61,2.55,2.55,0,0,1,.35.9,5.54,5.54,0,0,1,.1,1.07v6.83h3V32.31a8.59,8.59,0,0,0-.23-2A4.54,4.54,0,0,0,109.4,28.64ZM124,31.57a6.53,6.53,0,0,0-.16-1.17,4.83,4.83,0,0,0-.46-1.19,3.29,3.29,0,0,0-.9-1,4.81,4.81,0,0,0-1.47-.74,7.08,7.08,0,0,0-2.17-.29,8.76,8.76,0,0,0-2.79.45,5.89,5.89,0,0,0-2.36,1.48l1.59,1.58a4.55,4.55,0,0,1,1.44-.92,4.72,4.72,0,0,1,1.79-.34,3.33,3.33,0,0,1,2,.56,2,2,0,0,1,.78,1.69V32h-.76q-.76,0-1.62,0a14.64,14.64,0,0,0-1.71.18,9.52,9.52,0,0,0-1.63.41,4.82,4.82,0,0,0-1.38.74,3.43,3.43,0,0,0-.95,1.15,3.62,3.62,0,0,0-.35,1.67,3.19,3.19,0,0,0,.38,1.58,3.49,3.49,0,0,0,1,1.13,4.44,4.44,0,0,0,1.42.68,6,6,0,0,0,1.630.23,5.27,5.27,0,0,0,2.22-.46,3.9,3.9,0,0,0,1.67-1.49h.08v1.66H124V32.56Q124,32.13,124,31.57Zm-2.88,3.2a2.72,2.72,0,0,1-.75,2,3.17,3.17,0,0,1-2.31.74,3.32,3.32,0,0,1-.76-.09,2.08,2.08,0,0,1-.68-.29,1.71,1.71,0,0,1-.49-.49,1.27,1.27,0,0,1-.19-.72,1.2,1.2,0,0,1,.48-1,3.4,3.4,0,0,1,1.18-.55,7.5,7.5,0,0,1,1.48-.24q.78,0,1.42,0h.63v.68Z\"/></g><g clip-path=\"url(#lf)\" fill=\"var(--muted)\"><path d=\"M11.5,29a5.61,5.61,0,0,0-1.9-1.34,6.15,6.15,0,0,0-2.5-.49,5.77,5.77,0,0,0-2.4.5,3.89,3.890,0,0,0-1.77,1.61H2.88V27.44H0V45.21H3V38H3.11a4.3,4.3,0,0,0,.58.62,4.61,4.61,0,0,0,.86.59,5.23,5.23,0,0,0,1.16.45,5.9,5.9,0,0,0,1.52.18,5.72,5.72,0,0,0,2.38-.49A5.530,5.530,0,0,0,11.460,38a6.170,6.170,0,0,0,1.2-2,7.06,7.06,0,0,0,.43-2.48,7.47,7.47,0,0,0-.4-2.48A5.74,5.74,0,0,0,11.5,29ZM9.82,34.82A3.4,3.4,0,0,1,9.11,36a3.48,3.48,0,0,1-2.62,1.1A3.48,3.48,0,0,1,3.88,36a3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,3.88,31a3.48,3.48,0,0,1,2.62-1.1A3.48,3.48,0,0,1,9.11,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,9.82,34.82ZM26,28.59a3.89,3.89,0,0,0-1.38-1.05,4.78,4.78,0,0,0-2.06-.4,4,4,0,0,0-2.31.62A3.52,3.52,0,0,0,19,29.12H19V20.51h-3v19h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.910,2.910,0,0,1,1.28-.25,1.93,1.93,0,0,1,1.24.36,2.17,2.17,0,0,1,.67.9,4,4,0,0,1,.27,1.15Q24,32.89,24,33.39v6.1h3V31.88a6.88,6.88,0,0,0-.23-1.78A4,4,0,0,0,26,28.59Zm15.09.28A6.19,6.19,0,0,0,39,27.59a7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.07,6.07,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.18,6.18,0,0,0,2.1-1.28,6.07,6.070,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,41.11,28.87Zm-1.35,5.95A3.4,3.4,0,0,1,39,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.95,3.95,0,0,1,0-2.71A3.4,3.4,0,0,1,33.81,31,3.6,3.6,0,0,1,39,31a3.41,3.41,0,0,1,.71,1.15A3.95,3.95,0,0,1,39.75,34.82ZM53,33a6.25,6.25,0,0,0-1.58-.58l-1.58-.36a5.28,5.28,0,0,1-1.21-.43.84.84,0,0,1-.48-.8,1,1,0,0,1,.58-1,2.55,2.55,0,0,1,1.19-.3,2.78,2.78,0,0,1,2.38,1.23l2-1.81a3.93,3.93,0,0,0-1.92-1.42,7.2,7.2,0,0,0-4.2-.19,4.77,4.77,0,0,0-1.57.7,3.65,3.65,0,0,0-1.1,1.22A3.5,3.5,0,0,0,45.15,31a3,3,0,0,0,.48,1.81,3.3,3.3,0,0,0,1.21,1,6.13,6.13,0,0,0,1.58.53q.85.16,1.58.35a4.29,4.29,0,0,1,1.21.49,1.12,1.12,0,0,1,.29,1.54,1.55,1.55,0,0,1-.49.44,2.23,2.23,0,0,1-.66.25,3.27,3.27,0,0,1-.68.08A3,3,0,0,1,48,37.12,5.67,5.67,0,0,1,46.79,36l-2,1.88a4.94,4.94,0,0,0,2.12,1.46,8.09,8.09,0,0,0,2.6.4,8.9,8.9,0,0,0,1.87-.2,5.4,5.4,0,0,0,1.68-.65,3.66,3.66,0,0,0,1.21-1.19,3.34,3.34,0,0,0,.47-1.82,3.17,3.17,0,0,0-.48-1.86A3.46,3.46,0,0,0,53,33Zm7.36-12.4A3.15,3.15,0,0,0,59,21.72a4.42,4.42,0,0,0-.67,1.75,13.28,13.28,0,0,0-.18,2.27v1.71h-2.5V30h2.5v9.49h3V30H64V27.44H61.2V25.26a6.86,6.86,0,0,1,.06-1,2,2,0,0,1,.28-.79A1.54,1.54,0,0,1,62.14,23a2.17,2.17,0,0,1,1-.2,3.92,3.92,0,0,1,.63,0l.63.13.2-2.56a9.86,9.86,0,0,0-1.92-.18A5.77,5.77,0,0,0,60.39,20.6Zm16.26,8.27a6.19,6.19,0,0,0-2.1-1.28,7.58,7.58,0,0,0-5.16,0,6.19,6.19,0,0,0-2.1,1.28,6.06,6.06,0,0,0-1.4,2,6.77,6.77,0,0,0,0,5.2,6.06,6.06,0,0,0,1.4,2,6.18,6.18,0,0,0,2.1,1.28,7.58,7.58,0,0,0,5.16,0,6.19,6.19,0,0,0,2.1-1.28,6.07,6.07,0,0,0,1.4-2,6.77,6.77,0,0,0,0-5.2A6.08,6.08,0,0,0,76.65,28.87ZM75.3,34.82A3.4,3.4,0,0,1,74.59,36a3.6,3.6,0,0,1-5.23,0,3.39,3.39,0,0,1-.71-1.15,3.94,3.94,0,0,1,0-2.71A3.4,3.4,0,0,1,69.36,31a3.6,3.6,0,0,1,5.23,0,3.41,3.41,0,0,1,.71,1.15A3.94,3.94,0,0,1,75.3,34.82Zm12.78-7.68a4,4,0,0,0-2.15.58,3.79,3.79,0,0,0-1.44,1.63H84.44V27.44h-3v12h3V33a3.75,3.75,0,0,1,.11-.75,3,3,0,0,1,.46-1,3.11,3.11,0,0,1,1-.89A3.28,3.28,0,0,1,87.7,30a4.32,4.32,0,0,1,.72.06q.37.06.75.16V27.31l-.54-.13A2.92,2.92,0,0,0,88.08,27.14Zm21.32,1.51a3.58,3.58,0,0,0-1.35-1.1,4.7,4.7,0,0,0-2-.4,4.83,4.83,0,0,0-2.35.54A4.27,4.27,0,0,0,102,29.37a3.69,3.69,0,0,0-3.79-2.23,4,4,0,0,0-2.41.67,4.08,4.08,0,0,0-1.3,1.52H94.45V27.44H91.56v12h3V32.91a4.34,4.34,0,0,1,.15-1.15,2.69,2.69,0,0,1,.49-1,2.45,2.45,0,0,1,.86-.68,2.91,2.91,0,0,1,1.28-.25,1.83,1.83,0,0,1,1.59.67,3,3,0,0,1,.48,1.79v7.18h3V33a4.75,4.75,0,0,1,.14-1.14,2.87,2.87,0,0,1,.45-1,2.34,2.34,0,0,1,.81-.7,2.52,2.52,0,0,1,1.2-.26,2.39,2.39,0,0,1,1.11.23,1.8,1.8,0,0,1,.68.61,2.55,2.55,0,0,1,.35.9,5.54,5.54,0,0,1,.1,1.07v6.83h3V32.31a8.59,8.59,0,0,0-.23-2A4.54,4.54,0,0,0,109.4,28.64ZM124,31.57a6.53,6.53,0,0,0-.16-1.17,4.83,4.83,0,0,0-.46-1.19,3.29,3.29,0,0,0-.9-1,4.81,4.81,0,0,0-1.47-.74,7.08,7.08,0,0,0-2.17-.29,8.76,8.76,0,0,0-2.79.45,5.89,5.89,0,0,0-2.36,1.48l1.59,1.58a4.55,4.55,0,0,1,1.44-.92,4.72,4.72,0,0,1,1.79-.34,3.33,3.33,0,0,1,2,.56,2,2,0,0,1,.78,1.69V32h-.76q-.76,0-1.62,0a14.64,14.64,0,0,0-1.71.18,9.52,9.52,0,0,0-1.63.41,4.82,4.82,0,0,0-1.38.74,3.43,3.43,0,0,0-.95,1.15,3.62,3.62,0,0,0-.35,1.67,3.19,3.19,0,0,0,.38,1.58,3.49,3.49,0,0,0,1,1.13,4.44,4.44,0,0,0,1.42.68,6,6,0,0,0,1.630.23,5.27,5.27,0,0,0,2.22-.46,3.9,3.9,0,0,0,1.67-1.49h.08v1.66H124V32.56Q124,32.13,124,31.57Zm-2.88,3.2a2.72,2.72,0,0,1-.75,2,3.17,3.17,0,0,1-2.31.74,3.32,3.32,0,0,1-.76-.09,2.08,2.08,0,0,1-.68-.29,1.71,1.71,0,0,1-.49-.49,1.27,1.27,0,0,1-.19-.72,1.2,1.2,0,0,1,.48-1,3.4,3.4,0,0,1,1.18-.55,7.5,7.5,0,0,1,1.48-.24q.78,0,1.42,0h.63v.68Z\"/></g>";
 $('strip').innerHTML=STRIPS.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
 $('cct').innerHTML=CCTS.map(([c,l])=>`<option value="${c}">${l}</option>`).join('');
+// white ranges: colour temperature buttons; RGB: colour swatches (the colour is only a preview: the controller sets it on site)
+$('cctb').insertAdjacentHTML('afterbegin',RGB?RGBSW.map(([h,n])=>`<button data-rgb="${h}" title="${n}" aria-label="${n}" aria-pressed="false" style="padding:7px 9px"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${h};vertical-align:-2px;box-shadow:0 0 0 1px rgba(255,255,255,.5)"></span></button>`).join(''):CCTS.map(([c,l])=>`<button data-cct="${c}" aria-pressed="false">${l}</button>`).join(''));
+if(RGB){$('cctf').hidden=true;$('rgbf').hidden=false;$('rgbsel').innerHTML=RGBSW.map(([h,n])=>`<option value="${h}">${n}</option>`).join('')+'<option value="custom">Custom…</option>';}
 $('preset').innerHTML+=Object.keys(PRESETS).map(k=>`<option>${k}</option>`).join('');
 function stepHTML(s,l,i){
   const id=`${l}-${i}`,d=`data-l="${l}" data-i="${i}"`;
@@ -352,11 +354,11 @@ function labelsTxt(ps){const o=[];let a=null,b=null;const flush=()=>{if(a)o.push
 function renderSummary(){
   const {st,pieces,runs,ext}=R;
   const L=pieces.reduce((a,q)=>a+q.d.len,0),W=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0);
-  const cctL=CCTS.find(c=>c[0]===S.cct)[1];
+  const cctL=RGB?'RGB':CCTS.find(c=>c[0]===S.cct)[1];
   const runTxt=runs.map((r,i)=>{const w=r.reduce((a,q)=>a+q.w,0),l=r.reduce((a,q)=>a+q.d.len,0)/1000;return `Feed ${i+1} (line ${LET(r[0].line)}): ${l.toFixed(2)} m · ${w.toFixed(1)} W`;}).join('<br>');
   $('sum').innerHTML=[['Lines',R.lines.length],['Length (centre line)',(L/1000).toFixed(2)+' m'],['Overall footprint',`${(ext.w/1000).toFixed(2)} × ${(ext.d/1000).toFixed(2)} m`],['Pieces',pieces.length],
-    ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',W.toFixed(1)+' W'],['Delivered light',Math.round(LM).toLocaleString('en-AU')+' lm'],
-    ['Feeds',runs.length+` (max ${st.max} m per feed)`],['',runTxt],['Drivers',`${st.v}V DC, separate, one per feed`]].map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+    ['LED strip',`${st.label} · ${cctL}${RGB?'':' · CRI>90'}`],['Load',W.toFixed(1)+' W'],['Delivered light',Math.round(LM).toLocaleString('en-AU')+' lm'],
+    ['Feeds',runs.length+` (max ${st.max} m per feed)`],['',runTxt],['Drivers',`${st.v}V DC${RGB?' + RGB controller':''}, separate, one per feed`]].map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
   const w=[];
   R.lines.forEach(LL=>{if(LL.runs.length>1)w.push(`Line ${LET(LL.li)} is longer than one ${st.label} feed allows (${st.max} m), so it is split into ${LL.runs.length} runs, each with its own start piece and feed. Where two runs meet, end caps sit back to back.`);
     if(LL.closed)w.push(`Line ${LET(LL.li)} closes on itself. Its first and last pieces meet with their end caps together.`);});
@@ -464,8 +466,9 @@ const MAT={steel:new THREE.MeshStandardMaterial({color:0xb4b9be,metalness:1,roug
   endcap:new THREE.MeshStandardMaterial({color:0xa9afb4,metalness:1,roughness:0.38})};
 const CCTHEX={'922':'#ff8a2a','T927':'#ffa95a','T930':'#ffbf78','T940':'#fff3e4'};
 const CCTCOL=Object.fromEntries(Object.entries(CCTHEX).map(([k,v])=>[k,new THREE.Color(v)]));
+const lightHex=()=>RGB?(S.rgb||'#ff2fb4'):(lightHex()),lightCol=()=>new THREE.Color(lightHex());
 function buildRun(target,list,opts={}){
-  const group=new THREE.Group(),picks=[],pgs=[];const col=CCTCOL[S.cct]||CCTCOL.T930;MAT.strip.emissive.copy(col);
+  const group=new THREE.Group(),picks=[],pgs=[];const col=lightCol();MAT.strip.emissive.copy(col);
   list.forEach((q,n)=>{const prev=list[n-1],next=list[n+1];const pg=new THREE.Group();pgs.push(pg);group.add(pg);
     const capA=!prev||prev.run!==q.run,capB=!next||next.run!==q.run;
     const f=frames(q.pts,capA?0:0.4,capB?0:0.4);
@@ -513,7 +516,7 @@ function buildSite(){
   const GW=2048,GH=Math.max(64,Math.round(GW*D/W)),gc=document.createElement('canvas');gc.width=GW;gc.height=GH;const x=gc.getContext('2d'),sx=GW/W;
   x.fillStyle='#000';x.fillRect(0,0,GW,GH);x.lineCap='round';x.lineJoin='round';
   const path=()=>{x.beginPath();R.pieces.forEach((q,n)=>q.pts.forEach((p,k)=>{const X=(p.x/1000-B.x0)*sx,Y=(p.z/1000-B.z0)*sx;(k||(n&&R.pieces[n-1].line===q.line))?x.lineTo(X,Y):x.moveTo(X,Y);}));};
-  for(const [w,b,a] of [[1.1,220,0.30],[0.45,70,0.55],[0.12,18,0.9]]){x.filter=`blur(${b*sx/1000}px)`;const c=new THREE.Color(CCTHEX[S.cct]||CCTHEX.T930).convertLinearToSRGB();x.strokeStyle=`rgba(${c.r*255|0},${c.g*255|0},${c.b*255|0},${a})`;x.lineWidth=w*sx*0.25;path();x.stroke();}
+  for(const [w,b,a] of [[1.1,220,0.30],[0.45,70,0.55],[0.12,18,0.9]]){x.filter=`blur(${b*sx/1000}px)`;const c=new THREE.Color(lightHex()).convertLinearToSRGB();x.strokeStyle=`rgba(${c.r*255|0},${c.g*255|0},${c.b*255|0},${a})`;x.lineWidth=w*sx*0.25;path();x.stroke();}
   x.filter='none';const glow=new THREE.CanvasTexture(gc);glow.channel=1;
   // paving: plain large-format slabs over the whole site (plaza + surrounds); light spill mapped to the plaza
   const EX=16,GWd=W+2*EX,GDd=D+2*EX,cx=(B.x0+B.x1)/2,cz=(B.z0+B.z1)/2;
@@ -592,7 +595,7 @@ function connector(male){ // T1X: Ø23 body, Ø14 nose; male 57 mm, female 66 mm
   g.add(body,nose,ring,face);g.userData.len=L;return g;}
 function aim(obj,dir){obj.quaternion.setFromUnitVectors(V3(0,1,0),dir.clone().normalize());}
 function buildParts(target,list){
-  const group=new THREE.Group(),picks=[],pgs=[];const col=CCTCOL[S.cct]||CCTCOL.T930;
+  const group=new THREE.Group(),picks=[],pgs=[];const col=lightCol();
   list.forEach((q,n)=>{const prev=list[n-1],next=list[n+1];
     const pg=new THREE.Group(),prof=new THREE.Group(),ins=new THREE.Group();pg.add(prof,ins);group.add(pg);pgs.push(pg);
     const capA=!prev||prev.run!==q.run,capB=!next||next.run!==q.run;
@@ -698,6 +701,9 @@ $('m-day').onclick=()=>setMode('day');$('m-twi').onclick=()=>setMode('twilight')
 $('dim').oninput=e=>{dim=+e.target.value/100;$('dimv').textContent=e.target.value+'%';if(mode==='day'&&dim>0)setMode('twilight');else applyLight();};
 $('t-exp').oninput=e=>{explodeTo=+e.target.value/100;};
 document.querySelectorAll('[data-cct]').forEach(b=>b.onclick=()=>{S.cct=b.dataset.cct;if(!night)setMode('twilight');update(false);});
+const setRGB=h=>{S.rgb=h;if(!night)setMode('twilight');update(false);};
+document.querySelectorAll('[data-rgb]').forEach(b=>b.onclick=()=>setRGB(b.dataset.rgb));
+if(RGB){$('rgbsel').onchange=e=>{if(e.target.value==='custom')$('rgbpick').click();else setRGB(e.target.value);};$('rgbpick').oninput=e=>setRGB(e.target.value);}
 $('t-scene').onclick=()=>{S.scene=S.scene==='open'?'plaza':'open';$('t-scene').setAttribute('aria-pressed',S.scene!=='open');keepSite=true;save();buildSite();};
 $('t-scene').setAttribute('aria-pressed',S.scene!=='open');
 $('t-num').onclick=()=>{numbersOn=!numbersOn;applyExplode();$('t-num').setAttribute('aria-pressed',numbersOn);labels.forEach(l=>{if(!l.element.classList.contains('feed'))l.visible=numbersOn;});};
@@ -735,7 +741,7 @@ for(const v of ['walk','aerial','detail','studio','plan'])$('v-'+v).onclick=()=>
 /* ---------- hover ---------- */
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=$('tip');let hovered=null;
 function highlight(q){document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
-  run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):(CCTCOL[S.cct]||CCTCOL.T930));});}
+  run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):lightCol());});}
 canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run||drag3){tip.hidden=true;return;}
   if(!e.buttons)canvas.style.cursor=pickAt(e)?'grab':'';
   const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
@@ -799,7 +805,7 @@ stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==sce
   dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
   labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
 canvas.addEventListener('pointermove',e=>{if(!drag3||!drag)return;const g=groundAt(e);if(!g)return;dragTo(g.x*1000,g.z*1000);
-  run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li){run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);o.material.color.set(drag.bad?0xff6a5a:MODE[mode].opal);o.material.emissive.set(drag.bad?0xff2a10:(CCTCOL[S.cct]||CCTCOL.T930));}});
+  run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li){run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);o.material.color.set(drag.bad?0xff6a5a:MODE[mode].opal);o.material.emissive.set(drag.bad?0xff2a10:lightCol());}});
   canvas.style.cursor=drag.bad?'not-allowed':'grabbing';});
 let last3={t:0,li:-1};
 const up3=()=>{if(!drag3)return;const li=drag3.li;drag3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');
@@ -918,8 +924,8 @@ $('pdf').onclick=async()=>{
     const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});doc.setDisplayMode('fullpage','continuous');
     const INK=[16,24,31],GREY=[119,119,121],LIGHT=[160,162,164],LINE=[223,224,226],ORANGE=[255,80,0],PAGE=[229,229,229];
     const logoK=await logoPNG(false);
-    const {st,pieces,runs,ext}=R;const L=pieces.reduce((a,q)=>a+q.d.len,0),Wt=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0),cctL=CCTS.find(c=>c[0]===S.cct)[1];
-    const proj=S.proj||'Inground Radius run';const date=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+    const {st,pieces,runs,ext}=R;const L=pieces.reduce((a,q)=>a+q.d.len,0),Wt=pieces.reduce((a,q)=>a+q.w,0),LM=pieces.reduce((a,q)=>a+q.lm,0),cctL=RGB?`RGB (shown in ${rgbName(S.rgb).toLowerCase()})`:CCTS.find(c=>c[0]===S.cct)[1];
+    const proj=S.proj||PRODUCT.name+' run';const date=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
     const who=[proj,S.client].filter(Boolean).join(' · ');
     const clean=t=>String(t).replace(/–/g,'-').replace(/→/g,'>');
     const txt=(t,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.s||8);doc.setTextColor(...(o.c||INK));doc.text(clean(t),x,y,o.a?{align:o.a}:undefined);};
@@ -933,7 +939,7 @@ $('pdf').onclick=async()=>{
     // a spread: left picture page (grey) and right data page (white)
     const spread=(head,desc)=>{doc.addPage([SW,H],'landscape');doc.setFillColor(...PAGE);doc.rect(0,0,HW,H,'F');
       txt(head.toUpperCase(),M,13.5,{s:7.5,b:true});txt(desc,M+wid(head.toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});
-      pg+=2;txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
+      pg+=2;txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · '+PRODUCT.name,M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
       txt(pg,RX,199.5,{s:6.5,c:GREY});txt('Planning drawing, subject to Phosforma confirmation. Verify site dimensions before installation. · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);};
     const inset=(data)=>img(data,8,19,HW-16,172);
     const title=(t,sub)=>{txt(t,RX,21,{s:22,b:true});if(sub)txt(sub,RX,28,{s:9.5,c:GREY});};
@@ -955,19 +961,19 @@ $('pdf').onclick=async()=>{
     const P0=studioRun.pgs[0].userData.anch,P1=(studioRun.pgs[1]&&R.pieces[1].run===R.pieces[0].run)?studioRun.pgs[1].userData.anch:{};
     const wp=a=>!a?null:a.obj?a.obj.localToWorld(a.p.clone()):a.getWorldPosition(V3());
     const KEY=[[P0.prof,'Stainless profile, EOP H100 (in the ground)'],[P0.ins,'LED insert with opal face'],[P0.cap,'End cap, screwed to the profile'],
-      [P0.male,'T1X lead, male'],[P1.female,'T1X lead, female'],[P0.feed,'Feed lead out through the end cap, T1X female'],[P0.drv,`${st.v}V DC driver, lead with T1X male`]];
+      [P0.male,'T1X lead, male'],[P1.female,'T1X lead, female'],[P0.feed,'Feed lead out through the end cap, T1X female'],[P0.drv,`${st.v}V DC driver${RGB?' + RGB controller':''}, lead with T1X male`]];
     // shape types: lines with the same steps are the same shape (heading and position don't matter)
     const sig=ln=>JSON.stringify(ln.steps.map(s=>s.t==='S'?['S',+s.len]:[s.t,s.r,+s.a]));const TYPES=[];
     R.lines.forEach(ln=>{const k=sig(S.lines[ln.li]);let t=TYPES.find(t=>t.k===k);if(!t)TYPES.push(t={k,lines:[]});t.lines.push(ln.li);});
     TYPES.forEach((t,i)=>{t.n=i+1;t.name=`Type ${i+1}`;});const typeOf=li=>TYPES.find(t=>t.lines.includes(li));
     const keyFor=li=>{const i0=R.pieces.findIndex(q=>q.line===li),a=studioRun.pgs[i0].userData.anch,nx=R.pieces[i0+1],b=(nx&&nx.run===R.pieces[i0].run)?studioRun.pgs[i0+1].userData.anch:{};
-      return [[a.prof,'Stainless profile, EOP H100 (in the ground)'],[a.ins,'LED insert with opal face'],[a.cap,'End cap, screwed to the profile'],[a.male,'T1X lead, male'],[b.female,'T1X lead, female'],[a.feed,'Feed lead out through the end cap, T1X female'],[a.drv,`${st.v}V DC driver, lead with T1X male`]];};
+      return [[a.prof,'Stainless profile, EOP H100 (in the ground)'],[a.ins,'LED insert with opal face'],[a.cap,'End cap, screwed to the profile'],[a.male,'T1X lead, male'],[b.female,'T1X lead, female'],[a.feed,'Feed lead out through the end cap, T1X female'],[a.drv,`${st.v}V DC driver${RGB?' + RGB controller':''}, lead with T1X male`]];};
     for(const t of TYPES){const K=keyFor(t.lines[0]);t.exp=await snapshot({view:'shape',only:t.lines[0],mode:'day',w:2400,h:848,explode:1,light:true,probe:()=>K.map(k=>wp(k[0]))});t.pts=snapshot.pts;}
     const expImg=await snapshot({view:'parts',only:R.pieces[0].line,mode:'day',w:1782,h:1260,explode:1,light:true,probe:()=>KEY.map(k=>wp(k[0]))});const expPts=snapshot.pts;
 
     // ---- cover (landscape A4)
     txt(proj.toUpperCase(),38,22,{s:20,b:true});
-    txt('INGROUND RADIUS',38,30.5,{s:20,b:true,c:ORANGE});
+    txt(PRODUCT.name.toUpperCase(),38,30.5,{s:20,b:true,c:ORANGE});
     txt('Line to Light · drawings and order list',258.6,40,{s:8.5,c:GREY,a:'right'});
     img(coverImg,38,43,220.6,147);
     txt("Draw the line.",38,197,{s:8.5,b:true});txt("We'll give it form.",38+wid('Draw the line. ',8.5,true),197,{s:8.5,b:true,c:ORANGE});
@@ -976,7 +982,7 @@ $('pdf').onclick=async()=>{
 
     // ---- spread: overview
     spread('Aerial view',`${proj} · twilight · ${cctL} · visualisation only`);inset(coverImg);
-    title(proj,`Holectron Inground Radius · ${(L/1000).toFixed(2)} m · ${R.lines.length} line${R.lines.length>1?'s':''} · ${pieces.length} pieces · ${cctL}`);
+    title(proj,`Holectron ${PRODUCT.name} · ${(L/1000).toFixed(2)} m · ${R.lines.length} line${R.lines.length>1?'s':''} · ${pieces.length} pieces · ${cctL}`);
     let y=section('Lines',RX,38,RW);
     R.lines.forEach((ln,i)=>{const s0=S.lines[ln.li],len=ln.pieces.reduce((a,q)=>a+q.d.len,0),cx=RX+(i%2)*(RW/2+6),cy=y+Math.floor(i/2)*6.2,w=RW/2-6;
       dot(LET(ln.li),cx+1.9,cy-1);txt(`Line ${LET(ln.li)} · ${typeOf(ln.li).name} · ${(len/1000).toFixed(2)} m · ${ln.pieces.length} pieces${ln.closed?' · closed':''}`,cx+6,cy,{s:8});
@@ -985,7 +991,7 @@ $('pdf').onclick=async()=>{
     txt('All lengths in mm on the centre line. Start points measured from the datum 0,0.',RX,y,{s:6,c:LIGHT});y+=4.2;
     const col=RW/2-6;let yl=olabel('Run data',proj,RX,y),yr=olabel('Feeds',`${runs.length} × ${st.v}V DC · max ${st.max} m per feed`,RX+RW/2+6,y);
     rows([['Length',`${L} mm (${(L/1000).toFixed(2)} m) on the centre line`],['Footprint',`${Math.round(ext.w)} × ${Math.round(ext.d)} mm`],['Pieces',`${pieces.length} (${Object.keys(R.groups).length} order codes)`],
-      ['LED strip',`${st.label} · ${cctL} · CRI>90`],['Load',`${Wt.toFixed(1)} W`],['Delivered light',`${Math.round(LM)} lm`],['Drivers',`${runs.length} × ${st.v}V DC: to be advised`],['Prepared',[S.client&&('for '+S.client),date].filter(Boolean).join(' · ')]],RX,yl,col);
+      ['LED strip',`${st.label} · ${cctL}${RGB?'':' · CRI>90'}`],['Load',`${Wt.toFixed(1)} W`],['Delivered light',`${Math.round(LM)} lm`],['Drivers',`${runs.length} × ${st.v}V DC${RGB?' + RGB controller':''}: to be advised`],['Prepared',[S.client&&('for '+S.client),date].filter(Boolean).join(' · ')]],RX,yl,col);
     table([{t:'Feed',w:12},{t:'Line',w:10},{t:'Pieces',w:col-12-10-18-14},{t:'Length',w:18,a:'right'},{t:'Load',w:14,a:'right'}],
       runs.map((r,i)=>[String(i+1),LET(r[0].line),`${r[0].label}-${r.at(-1).label}`,(r.reduce((a,q)=>a+q.d.len,0)/1000).toFixed(2)+' m',r.reduce((a,q)=>a+q.w,0).toFixed(1)+' W']),RX+RW/2+6,yr);
 
@@ -997,7 +1003,7 @@ $('pdf').onclick=async()=>{
 
     // ---- per shape type: a drawing spread (shape drawn large, piece labels clear) and a full exploded-view spread
     const whiteSpread=(head,desc,note)=>{doc.addPage([SW,H],'landscape');pg+=2;txt(head.toUpperCase(),M,13.5,{s:7.5,b:true});txt(desc,M+wid(head.toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});
-      txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
+      txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · '+PRODUCT.name,M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
       txt(pg,RX,199.5,{s:6.5,c:GREY});txt((note||'Drawn from the design. Verify site dimensions before installation.')+' · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);};
     for(const t of TYPES){const li=t.lines[0],ln=R.lines.find(x=>x.li===li),q=t.lines.length,len=ln.pieces.reduce((a,p)=>a+p.d.len,0),w=ln.pieces.reduce((a,p)=>a+p.w,0);
       const lines=t.lines.map(LET).join(', ');
@@ -1013,7 +1019,7 @@ $('pdf').onclick=async()=>{
       // full exploded view of the whole shape across the spread
       doc.addPage([SW,H],'landscape');pg+=2;img(t.exp,0,0,SW,H);
       txt('EXPLODED VIEW',M,13.5,{s:7.5,b:true});txt(`${t.name} · line ${LET(li)} shown${q>1?` (same for ${lines})`:''} · every part modelled · parts separated for clarity, not to scale in separation`,M+wid('EXPLODED VIEW',7.5,true)+4,13.5,{s:7.5,c:GREY});
-      txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});
+      txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · '+PRODUCT.name,M+7,199.5,{s:6.5,c:GREY});
       txt(pg,RX,199.5,{s:6.5,c:GREY});txt('Numbers as in the component key. · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);
       t.pts.forEach((p,i)=>{if(!p||p.x<0.02||p.x>0.98||p.y<0.1||p.y>0.92)return;const x=p.x*SW,yy=p.y*H,ty2=Math.max(22,yy-12-(i%3)*6);
         doc.setDrawColor(...ORANGE);doc.setLineWidth(0.35);doc.line(x,ty2+2,x,yy);doc.setFillColor(...ORANGE);doc.circle(x,yy,0.55,'F');dot(i+1,x,ty2,2.3);});
@@ -1022,14 +1028,14 @@ $('pdf').onclick=async()=>{
     // ---- spread: exploded view, component key, parts
     doc.addPage([SW,H],'landscape');pg+=2;img(expImg,0,0,HW,H);
     txt('EXPLODED VIEW',M,13.5,{s:7.5,b:true});txt(`Start of feed 1 · pieces ${R.pieces[0].label}${P1.female?'-'+R.pieces[1].label:''} · parts separated for clarity, not to scale in separation`,M+wid('EXPLODED VIEW',7.5,true)+4,13.5,{s:7.5,c:GREY});
-    txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
+    txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · '+PRODUCT.name,M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);
     txt(pg,RX,199.5,{s:6.5,c:GREY});txt('Parts as in Holectron\'s installation guide. · '+who,RX+7,199.5,{s:6.5,c:GREY});logo(SW-17-24,195.2,24);
     const used=[];KEY.forEach((k,i)=>{const p=expPts[i];if(!p||p.x<0.03||p.x>0.97||p.y<0.1||p.y>0.92)return;used.push(i);
       const x=p.x*HW,yy=p.y*H,ty=Math.max(22,yy-12-(i%3)*6);doc.setDrawColor(...ORANGE);doc.setLineWidth(0.35);doc.line(x,ty+2,x,yy);doc.setFillColor(...ORANGE);doc.circle(x,yy,0.55,'F');dot(i+1,x,ty,2.3);});
     const [sCode,sStrip]=codeOf(PIECE.L1000,'M',st,S.cct).split(' / ');
-    title('Inground Radius',`Holectron · stainless profile EOP H100 · ${st.label} · ${cctL} · ${pieces.length} pieces · ${runs.length} feed${runs.length>1?'s':''}`);
+    title(PRODUCT.name,`Holectron · stainless profile EOP H100 · ${st.label} · ${cctL} · ${pieces.length} pieces · ${runs.length} feed${runs.length>1?'s':''}`);
     y=section('Component key',RX,38,RW);
-    const KC=['IngroundR … EOP H100','FL'+sStrip.split('FL')[1],'with start and end pieces','OR.T1x','OR.T1x','with each start piece','to be advised'];
+    const KC=['IngroundR … EOP H100',sStrip,'with start and end pieces','OR.T1x','OR.T1x','with each start piece','to be advised'];
     KEY.forEach((k,i)=>{const cx=RX+(i<4?0:RW/2+6),cy=y+(i%4)*6.2,w=RW/2-6;dot(i+1,cx+1.9,cy-1);txt(k[1],cx+6,cy,{s:8});txt(KC[i],cx+w,cy,{s:7,c:GREY,a:'right'});rule(cx,cy+2.2,w);});
     y+=4*6.2+4;txt('Numbers on the drawing opposite mark these parts. Every piece is ordered as one code: profile, LED insert and T1X leads together.',RX,y,{s:6,c:LIGHT});y+=4.2;
     yl=olabel('Run data','per line',RX,y);yr=olabel('Parts','for the whole design',RX+RW/2+6,y);
@@ -1041,8 +1047,8 @@ $('pdf').onclick=async()=>{
 
     // ---- spread(s): order list
     const OR=Object.entries(R.groups);const per=17;const lefts=[[asmImg,'Assembled view',`Start of feed 1 · every part modelled · lifted out of the ground`,true],[aerialDay,'Aerial view',`${proj} · daytime · visualisation only`],[detailImg,'Detail view',`${proj} · twilight · close up`]];
-    for(let k=0;k*per<OR.length;k++){const lf=lefts[k%lefts.length];spread(lf[1],lf[2]);if(lf[3]){img(lf[0],0,0,HW,H);txt(lf[1].toUpperCase(),M,13.5,{s:7.5,b:true});txt(lf[2],M+wid(lf[1].toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · Inground Radius',M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);}else inset(lf[0]);
-      title(k?'Order list (continued)':'Order list',`${pieces.length} pieces · ${OR.length} order codes · Holectron Inground Radius · ${cctL}`);
+    for(let k=0;k*per<OR.length;k++){const lf=lefts[k%lefts.length];spread(lf[1],lf[2]);if(lf[3]){img(lf[0],0,0,HW,H);txt(lf[1].toUpperCase(),M,13.5,{s:7.5,b:true});txt(lf[2],M+wid(lf[1].toUpperCase(),7.5,true)+4,13.5,{s:7.5,c:GREY});txt(pg-1,M,199.5,{s:6.5,c:GREY});txt(who+' · Line to Light · '+PRODUCT.name,M+7,199.5,{s:6.5,c:GREY});logo(HW-M-24,195.2,24);}else inset(lf[0]);
+      title(k?'Order list (continued)':'Order list',`${pieces.length} pieces · ${OR.length} order codes · Holectron ${PRODUCT.name} · ${cctL}`);
       const yy=olabel('Parts',`page ${k+1} of ${Math.ceil(OR.length/per)}`,RX,38);
       table([{t:'Code',w:112},{t:'Description',w:RW-112-52-12},{t:'Pieces',w:52},{t:'Qty',w:12,a:'right'}],
         OR.slice(k*per,(k+1)*per).map(([code,g])=>{const pcs=labelsTxt(g.list);return [code,`${SEGNAME[g.p.seg]} · ${g.p.d.name} · ${g.p.w} W`,pcs.length>34?pcs.slice(0,33)+'…':pcs,String(g.q)];}),RX,yy,true);
@@ -1054,7 +1060,7 @@ $('pdf').onclick=async()=>{
     {const x0=HW/2-wid("Draw the line. We'll give it form.",8.5,true)/2;txt('Draw the line.',x0,184,{s:8.5,b:true});txt("We'll give it form.",x0+wid('Draw the line. ',8.5,true),184,{s:8.5,b:true,c:ORANGE});}
     logo(HW/2-13,195,26);
     txt('info@phosforma.com.au · phosforma.com.au',HW/2,190.5,{s:6.5,c:GREY,a:'center'});
-    doc.save(`${(S.proj||'Inground Radius run').replace(/[^\w\- ]+/g,'').trim()||'Inground Radius run'} - Phosforma.pdf`);
+    doc.save(`${(S.proj||PRODUCT.name+' run').replace(/[^\w\- ]+/g,'').trim()||PRODUCT.name+' run'} - Phosforma.pdf`);
     toast('PDF downloaded');
   }catch(e){console.error(e);toast('The PDF could not be made: '+e.message);}
   btn.textContent='Download PDF';btn.disabled=false;
@@ -1075,7 +1081,8 @@ renderer.setAnimationLoop(t=>{
 let rebuildT=0;
 function update(redrawSteps,reframe){
   R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();
-  $('strip').value=S.strip;$('cct').value=S.cct;document.querySelectorAll('[data-cct]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cct===S.cct));$('proj').value=S.proj;$('client').value=S.client;
+  $('strip').value=S.strip;$('cct').value=S.cct;document.querySelectorAll('[data-cct]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cct===S.cct));
+  if(RGB){document.querySelectorAll('[data-rgb]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.rgb===S.rgb));$('rgbsel').value=RGBSW.find(x=>x[0]===S.rgb)?S.rgb:'custom';$('rgbpick').value=S.rgb;}$('proj').value=S.proj;$('client').value=S.client;
   $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · drag a line to move it · Alt-drag to copy · double-click to turn it';
   clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(camShift){anim=0;camera.position.add(camShift);controls.target.add(camShift);camShift=null;}if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
 }
