@@ -1231,7 +1231,7 @@ function viewProduct(f){
       <p class="tag">${esc(f.tagline)}</p>
       </div>
       <dl class="quick">${quick.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
-      <div class="p-actions">${cfgFor(f)?'<a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models & downloads</a>':'<a class="btn solid" href="#codes" data-jump="codes">Models & downloads</a>'}<button class="btn" data-dl="Product brochure">Product brochure</button>${({'Inground Radius':'inground-radius','Inground Radius RGB':'inground-radius-rgb'})[f.family]?`<a class="btn" href="/planner/${({'Inground Radius':'inground-radius','Inground Radius RGB':'inground-radius-rgb'})[f.family]}/">Line to Light</a>`:''}</div>
+      <div class="p-actions">${cfgFor(f)?'<a class="btn solid" href="#config" data-jump="config">Configure</a><a class="btn" href="#codes" data-jump="codes">Models & downloads</a>':'<a class="btn solid" href="#codes" data-jump="codes">Models & downloads</a>'}<button class="btn" data-dl="Product brochure">Product brochure</button>${({'Inground Radius':'inground-radius','Inground Radius RGB':'inground-radius-rgb','Inground Radius RGBW':'inground-radius-rgbw','Inground Radius Pixel RGBW':'inground-radius-pixel'})[f.family]?`<a class="btn" href="/planner/${({'Inground Radius':'inground-radius','Inground Radius RGB':'inground-radius-rgb','Inground Radius RGBW':'inground-radius-rgbw','Inground Radius Pixel RGBW':'inground-radius-pixel'})[f.family]}/">Line to Light</a>`:''}</div>
       
     </div></div></div>
   

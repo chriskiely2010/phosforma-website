@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Line to Light · Inground Radius RGB · Phosforma</title>
+<title>Line to Light · Inground Radius RGBW · Phosforma</title>
 <style>
 /* Layout: spec panel docked left (path editor, options, order list), full-height 3D / plan stage right; stacks on phones */
 :root{
@@ -105,8 +105,8 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
       <span class="tag">Line to Light</span>
     </div>
     <div>
-      <h1>Inground Radius RGB</h1>
-      <p class="lede"><b>Draw the line. We'll give it form.</b> Set out a line of Holectron Inground Radius RGB from straights and turns. Line to Light picks the catalogue pieces, splits feeds by maximum run, and gives you the drawings and order list.</p>
+      <h1>Inground Radius RGBW</h1>
+      <p class="lede"><b>Draw the line. We'll give it form.</b> Set out a line of Holectron Inground Radius RGBW from straights and turns. Line to Light picks the catalogue pieces, splits feeds by maximum run, and gives you the drawings and order list.</p>
     </div>
 
     <section>
@@ -203,7 +203,7 @@ import {Sky} from 'three/addons/objects/Sky.js';
 const $=id=>document.getElementById(id);
 /* ======================= catalogue ======================= */
 // [power W, delivered lm] per piece / strip / CCT, from Holectron's configurator (Phosforma products sheet)
-const TABLE={"R0000 L0505|RGB48/Nx 07W RGB_RGB_":[3.6,73.0],"R0000 L0505|RGB48/Nx 11W RGB_RGB_":[5.75,110.0],"R0000 L1005|RGB48/Nx 07W RGB_RGB_":[7.2,145.0],"R0000 L1005|RGB48/Nx 11W RGB_RGB_":[11.5,221.0],"R0272 L0404|RGB48/Nx 07W RGB_RGB_":[2.7,55.0],"R0272 L0404|RGB48/Nx 11W RGB_RGB_":[4.3125,83.0],"R0515 L0393|RGB48/Nx 07W RGB_RGB_":[2.7,55.0],"R0515 L0393|RGB48/Nx 11W RGB_RGB_":[4.3125,83.0],"R1000 L0387|RGB48/Nx 07W RGB_RGB_":[2.7,55.0],"R1000 L0387|RGB48/Nx 11W RGB_RGB_":[4.3125,83.0],"R1975 L0385|RGB48/Nx 07W RGB_RGB_":[2.7,55.0],"R1975 L0385|RGB48/Nx 11W RGB_RGB_":[4.3125,83.0],"R2950 L0384|RGB48/Nx 07W RGB_RGB_":[2.7,55.0],"R2950 L0384|RGB48/Nx 11W RGB_RGB_":[4.3125,83.0],"R6100 L0382|RGB48/Nx 07W RGB_RGB_":[2.7,55.0],"R6100 L0382|RGB48/Nx 11W RGB_RGB_":[4.3125,83.0]};
+const TABLE={"R0000 L0505|RGBW48/NN 09W RGB_RGB_922":[4.8,118.0],"R0000 L0505|RGBW48/NN 09W RGB_RGB_T927":[4.8,142.0],"R0000 L0505|RGBW48/NN 09W RGB_RGB_T930":[4.8,145.0],"R0000 L0505|RGBW48/NN 09W RGB_RGB_T940":[4.8,148.0],"R0000 L1005|RGBW48/NN 09W RGB_RGB_922":[9.6,236.0],"R0000 L1005|RGBW48/NN 09W RGB_RGB_T927":[9.6,283.0],"R0000 L1005|RGBW48/NN 09W RGB_RGB_T930":[9.6,290.0],"R0000 L1005|RGBW48/NN 09W RGB_RGB_T940":[9.6,296.0],"R0272 L0404|RGBW48/NN 09W RGB_RGB_922":[3.6,88.0],"R0272 L0404|RGBW48/NN 09W RGB_RGB_T927":[3.6,106.0],"R0272 L0404|RGBW48/NN 09W RGB_RGB_T930":[3.6,109.0],"R0272 L0404|RGBW48/NN 09W RGB_RGB_T940":[3.6,111.0],"R0515 L0393|RGBW48/NN 09W RGB_RGB_922":[3.6,88.0],"R0515 L0393|RGBW48/NN 09W RGB_RGB_T927":[3.6,106.0],"R0515 L0393|RGBW48/NN 09W RGB_RGB_T930":[3.6,109.0],"R0515 L0393|RGBW48/NN 09W RGB_RGB_T940":[3.6,111.0],"R1000 L0387|RGBW48/NN 09W RGB_RGB_922":[3.6,88.0],"R1000 L0387|RGBW48/NN 09W RGB_RGB_T927":[3.6,106.0],"R1000 L0387|RGBW48/NN 09W RGB_RGB_T930":[3.6,109.0],"R1000 L0387|RGBW48/NN 09W RGB_RGB_T940":[3.6,111.0],"R1975 L0385|RGBW48/NN 09W RGB_RGB_922":[3.6,88.0],"R1975 L0385|RGBW48/NN 09W RGB_RGB_T927":[3.6,106.0],"R1975 L0385|RGBW48/NN 09W RGB_RGB_T930":[3.6,109.0],"R1975 L0385|RGBW48/NN 09W RGB_RGB_T940":[3.6,111.0],"R2950 L0384|RGBW48/NN 09W RGB_RGB_922":[3.6,88.0],"R2950 L0384|RGBW48/NN 09W RGB_RGB_T927":[3.6,106.0],"R2950 L0384|RGBW48/NN 09W RGB_RGB_T930":[3.6,109.0],"R2950 L0384|RGBW48/NN 09W RGB_RGB_T940":[3.6,111.0],"R6100 L0382|RGBW48/NN 09W RGB_RGB_922":[3.6,88.0],"R6100 L0382|RGBW48/NN 09W RGB_RGB_T927":[3.6,106.0],"R6100 L0382|RGBW48/NN 09W RGB_RGB_T930":[3.6,109.0],"R6100 L0382|RGBW48/NN 09W RGB_RGB_T940":[3.6,111.0]};
 const PIECE={ // centre-line length (mm) and arc angle (deg), specification sheet
   L1000:{R:'R0000',L:'L1005',len:1005,ang:0,name:'Straight 1005'},
   L500:{R:'R0000',L:'L0505',len:505,ang:0,name:'Straight 505'},
@@ -217,7 +217,7 @@ const PIECE={ // centre-line length (mm) and arc angle (deg), specification shee
 const CURVES=['R272','R515','R1000','R1975','R2950','R6100'];
 // The product this page plans (one source, one page per product; see build_planner.py).
 // strips: max run from one side, Holectron specification sheet MAX RUN chart.
-const PRODUCT={"path": "inground-radius-rgb", "name": "Inground Radius RGB", "store": "irrgbplan", "cct0": "RGB_RGB_", "rgb": true, "ctrl": "RGB controller", "ccts": [["RGB_RGB_", "RGB"]], "strips": [{"id": "RGB48/Nx 07W", "label": "RGB48 24V · 7.2 W/m", "v": 24, "wm": 7.2, "max": 9}, {"id": "RGB48/Nx 11W", "label": "RGB48 24V · 11.5 W/m", "v": 24, "wm": 11.5, "max": 6.5}]};
+const PRODUCT={"path": "inground-radius-rgbw", "name": "Inground Radius RGBW", "store": "irrgbwplan", "cct0": "RGB_RGB_T930", "rgb": true, "w": true, "ctrl": "RGBW controller", "ccts": [["RGB_RGB_922", "2200K"], ["RGB_RGB_T927", "2700K"], ["RGB_RGB_T930", "3000K"], ["RGB_RGB_T940", "4000K"]], "strips": [{"id": "RGBW48/NN 09W", "label": "RGBW48 24V · 9.6 W/m", "v": 24, "wm": 9.6, "max": 8}]};
 const STRIPS=PRODUCT.strips,CCTS=PRODUCT.ccts,RGB=!!PRODUCT.rgb,NCH=RGB?(PRODUCT.w?4:3):0,PIX=!!PRODUCT.pixel,CTRL=PRODUCT.ctrl||'';
 // white channel colour of an RGBW strip: from the code (RGB_RGB_T930 -> T930) or a neutral mixed white for pixel strips
 const whiteHexOf=()=>({'922':'#ff8a2a','T927':'#ffa95a','T930':'#ffbf78','T940':'#fff3e4'})[String(S.cct).replace(/^RGB_RGB_/,'')]||'#fff3e4';
