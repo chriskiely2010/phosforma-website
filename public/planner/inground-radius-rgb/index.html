@@ -466,7 +466,7 @@ const MAT={steel:new THREE.MeshStandardMaterial({color:0xb4b9be,metalness:1,roug
   endcap:new THREE.MeshStandardMaterial({color:0xa9afb4,metalness:1,roughness:0.38})};
 const CCTHEX={'922':'#ff8a2a','T927':'#ffa95a','T930':'#ffbf78','T940':'#fff3e4'};
 const CCTCOL=Object.fromEntries(Object.entries(CCTHEX).map(([k,v])=>[k,new THREE.Color(v)]));
-const lightHex=()=>RGB?(S.rgb||'#ff2fb4'):(lightHex()),lightCol=()=>new THREE.Color(lightHex());
+const lightHex=()=>RGB?(S.rgb||'#ff2fb4'):(CCTHEX[S.cct]||CCTHEX.T930),lightCol=()=>new THREE.Color(lightHex());
 function buildRun(target,list,opts={}){
   const group=new THREE.Group(),picks=[],pgs=[];const col=lightCol();MAT.strip.emissive.copy(col);
   list.forEach((q,n)=>{const prev=list[n-1],next=list[n+1];const pg=new THREE.Group();pgs.push(pg);group.add(pg);
