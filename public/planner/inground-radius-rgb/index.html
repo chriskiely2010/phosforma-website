@@ -215,6 +215,8 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {CSS2DRenderer,CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
 import {Sky} from 'three/addons/objects/Sky.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $=id=>document.getElementById(id);
 /* ======================= catalogue ======================= */
@@ -846,10 +848,26 @@ function junctionModel(c,hM,mat){const g=new THREE.Group(),JH=PRODUCT.junction/1
   c.arms.forEach(a=>{const L=JH-R_+0.004,sl=new THREE.Mesh(new THREE.BoxGeometry(L,hM*0.96,w+0.002),mat);sl.position.set(Math.cos(a)*(R_-0.002+L/2),hM*0.5,Math.sin(a)*(R_-0.002+L/2));sl.rotation.y=-a;g.add(sl);
     const ln=new THREE.Mesh(new THREE.BoxGeometry(0.0012,hM*0.97,w+0.0025),MAT.ijoint);ln.position.set(Math.cos(a)*(JH-0.0006),hM*0.5,Math.sin(a)*(JH-0.0006));ln.rotation.y=-a;g.add(ln);});
   g.position.set(c.x/1000,0,c.z/1000);return g;}
+/* ---------- Esse-Ci Twos bodies and junctions from Phosforma's 3-D models (GLB, compressed for the web, loaded as needed) ----------
+   One model serves several optics that look the same: PG and CLD share the profile (CLD shows its own screen), PC 60°, PC 110° and
+   the asymmetric lens share the PC model. The procedural model is shown until a file has loaded (and if it can't load). */
+const GLB={},gltf=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder),GLBDIR='/planner/models/';
+const GLBLEN={DK:[1128,1401,1681,1961,2241,2801],PG:[1121,1401,1681,1961,2241,2801],PC:[1128,1688,2248,2808]};
+const glbFam=o=>o==='DK'?'DK':(o==='PG'||o==='CLD')?'PG':'PC';let glbT=0;
+function glbGet(key){const g=GLB[key];if(g&&g!=='loading'&&g!=='fail')return g;
+  if(!g){GLB[key]='loading';gltf.load(GLBDIR+key+'.glb',r=>{GLB[key]=r.scene;clearTimeout(glbT);glbT=setTimeout(()=>{if(drag||angDrag)return;keepSite=true;buildSite();},80);},undefined,()=>{GLB[key]='fail';});}return null;}
+function bodyModel(o,len){if(!INT||PRODUCT.mount==='recessed')return null;const f=glbFam(o),L=GLBLEN[f].reduce((a,b)=>Math.abs(b-len)<Math.abs(a-len)?b:a),m=glbGet(`twos-${f}-${L}`);return m?{m,L,f}:null;}
+const louvreW=new THREE.MeshStandardMaterial({color:0xe9e9e7,roughness:0.6});
+// parts that light up, and how bright against the procedural face they stand in for
+const GLOWK={LED_Lens_Emissive:1.6,Diffuser_Frosted_PMMA:0.9};
+function glbMats(root,glow,lit){root.traverse(o=>{if(!o.isMesh)return;const fix=m=>{const n=m.name||'';
+    if(n.startsWith('Finish_Body'))return finM();if(n.startsWith('Louvre')&&S.fin!=='C8')return louvreW;
+    if(GLOWK[n]){const c=m.clone();c.userData.k=GLOWK[n];c.emissive=lightCol();c.emissiveIntensity=lit*c.userData.k;if(glow)glow.push(c);return c;}return m;};
+    o.material=Array.isArray(o.material)?o.material.map(fix):fix(o.material);});}
 function buildTwos(target,list,studioMode){const group=new THREE.Group(),picks=[],pgs=[],col=lightCol(),sec=SEC(),hM=PRODUCT.sec.h/1000,JH=PRODUCT.junction/2,rec=PRODUCT.mount==='recessed',y0=yLine();
   list.forEach((q,n)=>{const pg=new THREE.Group(),prof=new THREE.Group(),ins=new THREE.Group();pg.add(prof,ins);group.add(pg);pgs.push(pg);const f=q.pts;
-    prof.add(new THREE.Mesh(sweep(sec.housing,f,true,true),finM()),new THREE.Mesh(sweep(sec.trim,f,true,true),finM()));
-    if(sec.grooves.length)prof.add(new THREE.Mesh(sweep(sec.grooves,f,false,false),MAT.ijoint));
+    const proc=[new THREE.Mesh(sweep(sec.housing,f,true,true),finM()),new THREE.Mesh(sweep(sec.trim,f,true,true),finM())];
+    if(sec.grooves.length)proc.push(new THREE.Mesh(sweep(sec.grooves,f,false,false),MAT.ijoint));prof.add(...proc);
     const om=opticMat(col,S.opt,studioMode?1.3:0);const face=new THREE.Mesh(faceStrip(f,sec.face.hw,sec.face.y,false),om);face.userData.piece=q;picks.push(face);ins.add(face);
     if(sec.top){const tm=opticMat(col,'PG',studioMode?1.3:0);const tf=new THREE.Mesh(faceStrip(f,sec.top.hw,sec.top.y,true),tm);prof.add(tf);face.userData.top=tf;}
     const T=V3(Math.cos(f[0].h),0,Math.sin(f[0].h)),extras=[],anch={},prev=list[n-1],next=list[n+1];
@@ -857,20 +875,33 @@ function buildTwos(target,list,studioMode){const group=new THREE.Group(),picks=[
     const atNode=pt=>R.nodes.some(c=>(c.jn||c.type==='inline')&&Math.hypot(c.x-pt.x,c.z-pt.z)<JH+30);
     for(const [on,pt,sg] of [[!sameA&&!atNode(f[0]),f[0],-1],[!sameB&&!atNode(f[1]),f[1],1]])if(on){
       const cap=new THREE.Mesh(new THREE.BoxGeometry(0.003,rec?0.0018:hM+0.0006,(rec?(PRODUCT.sec.flange||58):PRODUCT.sec.w)/1000+0.0006),finM());
-      cap.position.copy(V3(pt.x/1000,rec?-0.0011:hM/2,pt.z/1000).addScaledVector(T,sg*0.0015));cap.rotation.y=-pt.h;prof.add(cap);
+      cap.position.copy(V3(pt.x/1000,rec?-0.0011:hM/2,pt.z/1000).addScaledVector(T,sg*0.0015));cap.rotation.y=-pt.h;prof.add(cap);proc.push(cap);
       if(studioMode){cap.userData.dir=T.clone().multiplyScalar(sg*0.14);extras.push(cap);}anch.cap=anch.cap||cap;}
     if(studioMode&&sameB){const j=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.022,0.032),MAT.ijoint);j.position.set(f[1].x/1000,hM*0.55,f[1].z/1000);j.rotation.y=-f[1].h;prof.add(j);j.userData.dir=V3(0,0.16,0);extras.push(j);anch.male=j;}
     if(studioMode&&(q.seg==='S'||q.seg==='I')){const P=(t)=>V3((f[0].x+(f[1].x-f[0].x)*t)/1000,hM,(f[0].z+(f[1].z-f[0].z)*t)/1000),a=P(0.06);
       prof.add(new THREE.Mesh(loomGeo([a,a.clone().add(V3(0,0.22,0)),a.clone().add(V3(0,0.22,0)).addScaledVector(T,-0.14)],0.0035),new THREE.MeshStandardMaterial({color:0xe8e8e6,roughness:0.6})));anch.feed={obj:prof,p:a.clone().add(V3(0,0.12,0))};}
     anch.prof={obj:prof,p:V3((f[0].x*0.7+f[1].x*0.3)/1000-Math.sin(f[0].h)*PRODUCT.sec.w/2000,hM*0.6,(f[0].z*0.7+f[1].z*0.3)/1000+Math.cos(f[0].h)*PRODUCT.sec.w/2000)};
     anch.ins={obj:ins,p:V3((f[0].x*0.4+f[1].x*0.6)/1000,sec.face.y/1000,(f[0].z*0.4+f[1].z*0.6)/1000)};
+    const BM=bodyModel(S.opt,q.d.len);
+    if(BM){const capA=!sameA&&!atNode(f[0]),capB=!sameB&&!atNode(f[1]);
+      proc.forEach(c=>c.visible=false);if(face.userData.top)face.userData.top.position.y+=0.0012;
+      const mid={x:(f[0].x+f[1].x)/2000,z:(f[0].z+f[1].z)/2000},mk=()=>{const g=new THREE.Group();g.position.set(mid.x,hM,mid.z);g.rotation.y=-f[0].h;g.scale.set(q.d.len/BM.L,1,1);return g;};
+      const gb=mk(),go=mk(),src=BM.m.getObjectByName('Luminaire')||BM.m,glow=[];
+      src.children.forEach(ch=>{const c=ch.clone(true),n=ch.name;if(n==='EndCap_A'&&!capA)return;if(n==='EndCap_B'&&!capB)return;if(n==='Diffuser'&&S.opt==='CLD')return;
+        (/^(Body|EndCap_A|EndCap_B|GearTray)$/.test(n)?gb:go).add(c);});
+      glbMats(gb,null,0);glbMats(go,glow,studioMode?1.3:0);prof.add(gb);ins.add(go);face.userData.glow=glow;
+      if(S.opt!=='CLD'){face.material.colorWrite=false;face.material.depthWrite=false;}}
     pg.userData.prof=prof;pg.userData.ins=ins;pg.userData.extras=extras;pg.userData.anch=anch;});
   // suspensions: equal spacing along each straight and one at each junction; each hangs from the body below it
   if(!rec)(R.susp||[]).forEach(sp=>{let k=-1,bd=1e9;list.forEach((q,i)=>{const a=q.pts[0],b=q.pts[1],dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((sp.x-a.x)*dx+(sp.z-a.z)*dz)/L2)),d=Math.hypot(a.x+dx*t-sp.x,a.z+dz*t-sp.z);if(d<bd){bd=d;k=i;}});
     const len=studioMode?0.36:S.ceil/1000-y0,s=suspension(len);s.position.set(sp.x/1000,0,sp.z/1000);
     if(k>=0&&pgs[k]){const pr=pgs[k].userData.prof;pr.add(s);if(studioMode){s.userData.dir=V3(0,0.22,0);pgs[k].userData.extras.push(s);}if(!pgs[k].userData.anch.drv)pgs[k].userData.anch.drv=s.userData.grip;}else group.add(s);});
-  R.nodes.forEach(c=>{if(!c.jn)return;let m;if(rec){m=new THREE.Mesh(new THREE.BoxGeometry(PRODUCT.junction/1000,0.002,PRODUCT.junction/1000),finM());m.position.set(c.x/1000,-0.001,c.z/1000);m.rotation.y=-c.arms[0];}else m=junctionModel(c,hM,finM());
-    group.add(m);const k=list.findIndex(q=>q.pts.some(p=>Math.hypot(p.x-c.x,p.z-c.z)<JH+30));if(k>=0)pgs[k].userData.anch.junc=rec?m:m.children[0];});
+  R.nodes.forEach(c=>{if(!c.jn)return;let m;const JG=!rec&&c.arms.length>=2&&c.arms.length<=4?glbGet(`twos-J${c.arms.length}`):null;
+    if(JG){m=JG.clone(true);glbMats(m,null,0);const arms=[1,2,3,4].map(i=>m.getObjectByName('Arm_'+i)).filter(Boolean);
+      arms.forEach((a,i)=>{if(c.arms[i]==null)return;const b=new THREE.Box3().setFromObject(a),ctr=b.getCenter(V3()),a0=Math.atan2(ctr.z,ctr.x),pv=new THREE.Group();a.parent.add(pv);pv.attach(a);pv.rotation.y=a0-c.arms[i];});
+      m.position.set(c.x/1000,hM,c.z/1000);}
+    else if(rec){m=new THREE.Mesh(new THREE.BoxGeometry(PRODUCT.junction/1000,0.002,PRODUCT.junction/1000),finM());m.position.set(c.x/1000,-0.001,c.z/1000);m.rotation.y=-c.arms[0];}else m=junctionModel(c,hM,finM());
+    group.add(m);const k=list.findIndex(q=>q.pts.some(p=>Math.hypot(p.x-c.x,p.z-c.z)<JH+30));if(k>=0)pgs[k].userData.anch.junc=JG?(m.getObjectByName('Drum')||m):rec?m:m.children[0];});
   if(!studioMode)group.position.y=y0;group.traverse(o=>{if(o.isMesh){o.receiveShadow=true;if(studioMode)o.castShadow=true;}});target.add(group);return {group,picks,pgs};}
 function buildRunInt(target,list){return buildTwos(target,list,false);}
 function buildPartsInt(target,list){return buildTwos(target,list,true);}
@@ -1138,7 +1169,7 @@ function setMode(m){if(m===true||m==='night')m='twilight';if(m===false)m='day';m
   else sun.position.copy(sun.target.position).addScaledVector(sunDir(m),60);
   groundMats.forEach(g=>g.envMapIntensity=M.env);applyLight();}
 function applyLight(){const M=MODE[mode],k=night?dim:0;
-  if(INT){run&&run.picks.forEach(o=>{o.material.emissiveIntensity=2.1*dim;o.material.color.set(0xffffff);if(o.userData.top)o.userData.top.material.emissiveIntensity=1.1*dim;});rects.forEach(r=>{r.intensity=r.userData.base*dim;r.color.copy(lightCol());});return;}
+  if(INT){run&&run.picks.forEach(o=>{o.material.emissiveIntensity=2.1*dim;o.material.color.set(0xffffff);if(o.userData.top)o.userData.top.material.emissiveIntensity=1.1*dim;});glowSync();rects.forEach(r=>{r.intensity=r.userData.base*dim;r.color.copy(lightCol());});return;}
   run&&run.picks.forEach(o=>{o.material.emissiveIntensity=1.2*k;o.material.envMapIntensity=night?0.03:1;o.material.color.set(M.opal);});
   if(plazaMat)plazaMat.lightMapIntensity=M.glow*k;}
 if(INT){$('m-twi').textContent='Evening';$('t-scene').textContent='Furniture';$('t-scene').title='Show or hide the desks and chairs';$('v-walk').textContent='Eye level';}
@@ -1570,7 +1601,8 @@ function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSiz
 new ResizeObserver(resize).observe(stage);resize();
 function applyFrame(){const st=activeScene===studio;const dist=camera.position.distanceTo(controls.target);
   const M=MODE[mode];renderer.toneMappingExposure=st?0.82:M.exp;bloom.strength=st?0.1:M.bloom*(0.25+0.75*dim)*Math.min(1,Math.max(0.2,dist/4));MAT.steel.envMapIntensity=st?0.45:mode==='night'?0.12:mode==='twilight'?0.3:0.6;}
-renderer.setAnimationLoop(t=>{
+function glowSync(){if(INT&&run)run.picks.forEach(o=>{const g=o.userData.glow;if(g)g.forEach(m=>{m.emissive.copy(o.material.emissive);m.emissiveIntensity=o.material.emissiveIntensity*m.userData.k;});});}
+renderer.setAnimationLoop(t=>{glowSync();
   if(current==='plan')return;
   if(anim){const k=Math.min(1,(t-anim.t0)/1100),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(anim.from.p,anim.to.p,e);controls.target.lerpVectors(anim.from.t,anim.to.t,e);if(k>=1)anim=0;}
   const dt=Math.min(100,t-(window.__lt||t));window.__lt=t;if(explode!==explodeTo){const d=explodeTo-explode,stp=Math.max(dt/650,Math.abs(d)*dt/120);explode=Math.abs(d)<=stp?explodeTo:explode+Math.sign(d)*stp;applyExplode();}
