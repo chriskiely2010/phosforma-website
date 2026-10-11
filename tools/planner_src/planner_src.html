@@ -152,6 +152,13 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
       </div>
     </section>
 
+    <section id="roomsec" hidden>
+      <h2><span>Room</span><span>furniture</span></h2>
+      <div class="adds" style="margin-top:0"><select id="furn-add" aria-label="Add furniture" style="flex:1"><option value="">+ Add furniture…</option></select></div>
+      <div id="furn-list" class="lines" style="gap:4px;margin-top:8px"></div>
+      <p class="note" style="margin-top:6px">Drag furniture in the 3D view to place it · double-click to turn it 90° · the Furniture button shows or hides it all.</p>
+    </section>
+
     <section>
       <h2>Run</h2>
       <dl class="kv" id="sum"></dl>
@@ -287,9 +294,15 @@ if(INT){for(const k of Object.keys(PRESETS))delete PRESETS[k];Object.assign(PRES
   'Grid, two cells (5.8 × 2.9 m)':[G(TP(2801,TC('teeR',[TP(2801,TC('corner',[TP(2801,TC('corner',[TP(2801,TC('teeR',[TP(2801,TC('corner',[{link:true,len:0,next:null}],'R')),{link:true,len:0,next:null}]))],'R'))],'R')),null])))],
   'Spine with three branches':[G(TP(1500,TC('teeR',[TP(2400,TC('teeR',[TP(2400,TC('corner',[TP(3000)],'R')),TP(3000)])),TP(3000)])))],
 });}
+// office furniture models (Room section)
+const FURN={desk:{n:'Executive desk + side unit',f:'office-Executive-Desk-Set'},table:{n:'Meeting table, 2.8 m',f:'office-Meeting-Table'},chair:{n:'Executive chair',f:'office-Executive-Chair'},
+  book:{n:'Glass bookcase',f:'office-Glass-Bookcase'},book4:{n:'Glass bookcases, run of 4',f:'office-Glass-Bookcase-Run-4'},acc:{n:'Desk accessories (laptop, tablet, books)',f:'office-Desk-Accessories',up:741}};
+const FURNSETS={'Executive office (desk, meeting table, bookcases, chairs)':[['desk',-2300,0,0],['acc',-2300,0,0],['chair',-2350,-920,0],['table',2150,-1050,0],['book4',1900,-2750,0],['chair',1780,-2020,0],['chair',2480,-20,158]],
+  'Meeting room (table for eight)':[['table',0,0,0],['chair',-900,-850,0],['chair',0,-850,0],['chair',900,-850,0],['chair',-900,850,180],['chair',0,850,180],['chair',900,850,180]],
+  'Private office (desk and bookcase)':[['desk',0,0,0],['acc',0,0,0],['chair',-50,-920,0],['book',0,-1900,0]]};
 const copyLines=l=>JSON.parse(JSON.stringify(l));
 let S={proj:'',client:'',strip:(STRIPS[0]||{}).id,cct:PRODUCT.cct0,rgb:'#ff2fb4',scene:'plaza',lines:INT?[G(null)]:copyLines(PRESETS['S-bend walkway (10 m)'])};
-if(INT)Object.assign(S,{desks:false,opt:PRODUCT.optics[0].id,emis:'D',pw:'LP',dali:false,fin:'B',ceil:3000,drop:600});
+if(INT)Object.assign(S,{furn:[],showFurn:true,opt:PRODUCT.optics[0].id,emis:'D',pw:'LP',dali:false,fin:'B',ceil:3000,drop:600});
 // share links carry the plan in the address (#p=…); otherwise the last plan in this browser
 const clean=()=>JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);
 function enc(){return 'p='+encodeURIComponent(clean());}
@@ -534,6 +547,8 @@ if(RGB){$('mixf').hidden=false;$('mixf').innerHTML=[['r','Red','#ff2318'],['g','
     `<label style="display:grid;grid-template-columns:52px 1fr 56px;align-items:center;gap:8px;font-size:12px;color:var(--muted)"><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:${c}"></span>${n}</span><input type="range" min="0" max="100" step="1" id="mix-${k}" data-ch="${i}" aria-label="${n} %" style="accent-color:${c}"><input type="number" min="0" max="100" step="1" id="mixn-${k}" data-ch="${i}" aria-label="${n} % value" style="padding:4px 5px;font-size:12px;text-align:right"></label>`).join('')+
     `<div style="font-size:11px;color:var(--muted)">Mix for the ${CTRL}, 0–100% per channel. Shown in the drawings.</div>`;
   $('cctf').hidden=NCH!==4||PIX;$('cctf').firstChild.textContent='White channel';$('rgbf').hidden=false;$('rgbsel').innerHTML=RGBSW.map(([h,n])=>`<option value="${h}">${n}</option>`).join('')+'<option value="custom">Custom…</option>';}
+if(INT){$('roomsec').hidden=false;$('furn-add').innerHTML+=`<optgroup label="Pieces">${Object.entries(FURN).map(([k,f])=>`<option value="${k}">${f.n}</option>`).join('')}</optgroup><optgroup label="Layouts">${Object.keys(FURNSETS).map(k=>`<option value="set:${k}">${k}</option>`).join('')}</optgroup><option value="clear">Remove all furniture</option>`;}
+function renderFurn(){if(!INT)return;const L=S.furn||[];$('furn-list').innerHTML=L.length?L.map((it,i)=>`<div class="lhead" style="border:1px solid var(--line);border-radius:6px;padding:5px 8px"><span style="font-size:12.5px">${FURN[it.k]?FURN[it.k].n:it.k}</span><span style="display:flex;gap:2px"><button class="ib" data-frot="${i}" title="Turn 90°" aria-label="Turn">↻</button><button class="ib" data-fdel="${i}" title="Remove" aria-label="Remove">✕</button></span></div>`).join(''):'<p class="note">No furniture yet. Add pieces or a whole layout to see how the light sits over desks and tables.</p>';}
 $('preset').innerHTML+=Object.keys(PRESETS).map(k=>`<option>${k}</option>`).join('');
 if(INT){$('strip').closest('label').hidden=true;$('cctf').firstChild.textContent='Colour temperature';
   $('mixf').insertAdjacentHTML('beforebegin',`<label class="f">Optic<select id="i-opt">${PRODUCT.optics.map(o=>`<option value="${o.id}">${o.name}${o.ugr?' · '+o.ugr:''}</option>`).join('')}</select></label>
@@ -687,6 +702,12 @@ $('client').oninput=e=>{S.client=e.target.value;save();};
 $('chooser').addEventListener('click',chooserPick);
 addEventListener('keydown',e=>{if(e.key==='Escape')closeChooser();});
 addEventListener('pointerdown',e=>{const c=$('chooser');if(!c.hidden&&!c.contains(e.target)&&!e.target.closest('[data-tadd],[data-open],.lbl.plus,#add-line'))closeChooser();},true);
+if(INT){$('furn-add').onchange=e=>{const v=e.target.value;e.target.value='';if(!v)return;S.furn=S.furn||[];const O=R.origin,n=S.furn.length;
+    if(v==='clear'){S.furn=[];}else if(v.startsWith('set:')){FURNSETS[v.slice(4)].forEach(([k,x,z,r])=>S.furn.push({k,x:Math.round(O.x+x),z:Math.round(O.z+z),r}));}
+    else S.furn.push({k:v,x:Math.round(O.x+(n%4)*600),z:Math.round(O.z+Math.floor(n/4)*600),r:0});
+    S.showFurn=true;$('t-scene').setAttribute('aria-pressed',true);save();renderFurn();buildSite();toast(v==='clear'?'Furniture removed':'Added · drag it in the 3D view to place it');};
+  $('furn-list').onclick=e=>{const d=e.target.closest('[data-fdel]'),r=e.target.closest('[data-frot]');if(d){S.furn.splice(+d.dataset.fdel,1);}else if(r){const it=S.furn[+r.dataset.frot];it.r=((it.r||0)+90)%360;}else return;save();renderFurn();keepSite=true;buildSite();};
+  renderFurn();}
 function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200);}
 async function copyText(t,msg){try{await navigator.clipboard.writeText(t);toast(msg);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();try{document.execCommand('copy');toast(msg);}catch(_){toast('Select and copy the text manually');}ta.remove();}}
 $('copy').onclick=()=>copyText(Object.entries(R.groups).map(([c,g])=>`${g.q}\t${c}`).concat(INT?R.acc.map(a=>`${a.q}\t${a.code}\t${a.name}`):[]).join('\n'),'Order list copied');
@@ -931,25 +952,35 @@ function carpetTex(){return canvasTex(512,(x,N)=>{const r=rng(21);x.fillStyle='#
   for(let i=0;i<60000;i++){const v=110+r()*40|0;x.fillStyle=`rgba(${v},${v+2},${v+5},0.18)`;x.fillRect(r()*N,r()*N,1.4,1.4);}
   x.strokeStyle='rgba(60,62,66,0.35)';x.lineWidth=2;for(let k=0;k<=4;k++){x.beginPath();x.moveTo(k*N/4,0);x.lineTo(k*N/4,N);x.stroke();x.beginPath();x.moveTo(0,k*N/4);x.lineTo(N,k*N/4);x.stroke();}});}
 let winMat=null;
+/* ---------- office furniture (Phosforma 3-D models): add pieces from the list, drag them in 3D, double-click to turn ---------- */
+let furnG=null;const FBOX={};
+function furnPoly(it){const b=furnBox(it.k);if(!b)return null;const a=(it.r||0)*Math.PI/180,c=Math.cos(a),sn=Math.sin(a),cx=it.x-R.origin.x,cz=it.z-R.origin.z;
+  return [[b.min.x,b.min.z],[b.max.x,b.min.z],[b.max.x,b.max.z],[b.min.x,b.max.z]].map(([x,z])=>[cx+(x*c+z*sn)*1000,cz+(-x*sn+z*c)*1000]);}
+function furnBox(k){if(FBOX[k])return FBOX[k];const m=glbGet(FURN[k].f);if(!m)return null;m.updateMatrixWorld(true);return FBOX[k]=new THREE.Box3().setFromObject(m);}
+function buildFurniture(){furnG=new THREE.Group();furnG.visible=S.showFurn!==false;site.add(furnG);
+  (S.furn||[]).forEach((it,i)=>{const F=FURN[it.k];if(!F)return;const m=glbGet(F.f);if(!m)return;const o=m.clone(true);
+    o.position.set((it.x-R.origin.x)/1000,(F.up||0)/1000,(it.z-R.origin.z)/1000);o.rotation.y=(it.r||0)*Math.PI/180;o.userData.fi=i;
+    o.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;c.userData.fi=i;}});furnG.add(o);});}
 function buildOffice(){
   disposeGroup(site);site.clear();labels.forEach(l=>l.removeFromParent());labels=[];groundMats=[];
-  const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)).concat(R.opens.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000)).concat(R.opens.map(p=>p.z/1000));if(!xs.length){xs.push(0);zs.push(0);}
+  const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)).concat(R.opens.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000)).concat(R.opens.map(p=>p.z/1000));(S.furn||[]).forEach(it=>{const x=(it.x-R.origin.x)/1000,z=(it.z-R.origin.z)/1000;xs.push(x-1.2,x+1.2);zs.push(z-1.2,z+1.2);});if(!xs.length){xs.push(0);zs.push(0);}
   const m=2.6,ox=R.origin.x/1000,oz=R.origin.z/1000;
   const fit={x0:Math.floor(Math.min(...xs)+ox-m),x1:Math.ceil(Math.max(...xs)+ox+m),z0:Math.floor(Math.min(...zs)+oz-m),z1:Math.ceil(Math.max(...zs)+oz+m)};
   siteFrame=keepSite&&siteFrame?{x0:Math.min(siteFrame.x0,fit.x0),x1:Math.max(siteFrame.x1,fit.x1),z0:Math.min(siteFrame.z0,fit.z0),z1:Math.max(siteFrame.z1,fit.z1)}:fit;keepSite=false;
   B={x0:siteFrame.x0-ox,x1:siteFrame.x1-ox,z0:siteFrame.z0-oz,z1:siteFrame.z1-oz};
   const W=B.x1-B.x0,D=B.z1-B.z0,cx=(B.x0+B.x1)/2,cz=(B.z0+B.z1)/2,H=S.ceil/1000;
   // a plain grey room: satin floor, matt walls (single-sided, so the room opens like a dollhouse from outside), ceiling
-  const fm=new THREE.MeshStandardMaterial({color:0x76787b,roughness:0.42,metalness:0});groundMats.push(fm);
+  const fm=new THREE.MeshStandardMaterial({color:0xcfccc8,roughness:0.32,metalness:0});groundMats.push(fm);
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(W,D).rotateX(-Math.PI/2),fm);fl.position.set(cx,0,cz);fl.receiveShadow=true;site.add(fl);
-  const wm=new THREE.MeshStandardMaterial({color:0xc4c5c6,roughness:0.9});groundMats.push(wm);
+  const wm=new THREE.MeshStandardMaterial({color:0xdcd9d5,roughness:0.92});groundMats.push(wm);
   const wall=(w,rot,x,z)=>{const g=new THREE.Mesh(new THREE.PlaneGeometry(w,H),wm);g.rotation.y=rot;g.position.set(x,H/2,z);g.receiveShadow=true;site.add(g);};
   wall(W,0,cx,B.z0);wall(W,Math.PI,cx,B.z1);wall(D,Math.PI/2,B.x0,cz);wall(D,-Math.PI/2,B.x1,cz);
   winMat=null; // plain room for now: no glazed facade
-  const cm=new THREE.MeshStandardMaterial({color:0xd0d1d2,roughness:0.95});groundMats.push(cm);
+  const cm=new THREE.MeshStandardMaterial({color:0xe7e5e2,roughness:0.95});groundMats.push(cm);
   const ce=new THREE.Mesh(new THREE.PlaneGeometry(W,D).rotateX(Math.PI/2),cm);ce.position.set(cx,H,cz);site.add(ce);
   // workstations: benches of desks facing each other, chairs and screens
-  if(S.desks){const dk=[];for(let z=B.z0+1.9;z<=B.z1-1.7;z+=3.1)for(let x=B.x0+1.4;x+1.6<=B.x1-1.2;x+=1.7)dk.push([x+0.8,z]);
+  buildFurniture();
+  if(false){const dk=[];for(let z=B.z0+1.9;z<=B.z1-1.7;z+=3.1)for(let x=B.x0+1.4;x+1.6<=B.x1-1.2;x+=1.7)dk.push([x+0.8,z]);
     const n=dk.length*2;if(n){const mT=new THREE.MeshStandardMaterial({color:0xd9c6a5,roughness:0.6}),mL=new THREE.MeshStandardMaterial({color:0xe9e9e7,roughness:0.5}),mC=new THREE.MeshStandardMaterial({color:0x2c2f34,roughness:0.8}),mS=new THREE.MeshStandardMaterial({color:0x121315,roughness:0.4});
       groundMats.push(mT,mL,mC,mS);const I=(g,mat,k)=>{const im=new THREE.InstancedMesh(g,mat,n*k);im.receiveShadow=true;site.add(im);return im;};
       const top=I(new THREE.BoxGeometry(1.6,0.025,0.8),mT,1),leg=I(new THREE.BoxGeometry(0.03,0.7,0.7),mL,2),seat=I(new THREE.BoxGeometry(0.5,0.07,0.48),mC,1),back=I(new THREE.BoxGeometry(0.48,0.5,0.06),mC,1),scr=I(new THREE.BoxGeometry(0.6,0.36,0.025),mS,1),stand=I(new THREE.BoxGeometry(0.06,0.18,0.04),mS,1);
@@ -1198,8 +1229,8 @@ if(RGB)$('mixf').addEventListener('input',e=>{const ch=+e.target.dataset.ch;if(N
 if(RGB)$('fxsel').onchange=e=>{S.fx=e.target.value;if(!night)setMode('twilight');update(false);};
 document.querySelectorAll('[data-rgb]').forEach(b=>b.onclick=()=>setRGB(b.dataset.rgb));
 if(RGB){$('rgbsel').onchange=e=>{if(e.target.value==='custom')$('rgbpick').click();else setRGB(e.target.value);};$('rgbpick').oninput=e=>setRGB(e.target.value);}
-$('t-scene').onclick=INT?()=>{S.desks=!S.desks;$('t-scene').setAttribute('aria-pressed',!!S.desks);keepSite=true;save();buildSite();}:()=>{S.scene=S.scene==='open'?'plaza':'open';$('t-scene').setAttribute('aria-pressed',S.scene!=='open');keepSite=true;save();buildSite();};
-$('t-scene').setAttribute('aria-pressed',INT?!!S.desks:S.scene!=='open');
+$('t-scene').onclick=INT?()=>{S.showFurn=S.showFurn===false;$('t-scene').setAttribute('aria-pressed',S.showFurn!==false);if(furnG)furnG.visible=S.showFurn!==false;save();}:()=>{S.scene=S.scene==='open'?'plaza':'open';$('t-scene').setAttribute('aria-pressed',S.scene!=='open');keepSite=true;save();buildSite();};
+$('t-scene').setAttribute('aria-pressed',INT?S.showFurn!==false:S.scene!=='open');
 $('t-num').onclick=()=>{numbersOn=!numbersOn;applyExplode();$('t-num').setAttribute('aria-pressed',numbersOn);labels.forEach(l=>{if(!l.element.classList.contains('feed'))l.visible=numbersOn;});};
 
 /* ---------- views ---------- */
@@ -1318,10 +1349,20 @@ function pickAt(e){const g=groundAt(e);if(!g)return null;const tol=Math.min(0.6,
   R.pieces.forEach(q=>{for(let k=1;k<q.pts.length;k++){const a=q.pts[k-1],b=q.pts[k],dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((g.x*1000-a.x)*dx+(g.z*1000-a.z)*dz)/L2));
     const d=Math.hypot(a.x+dx*t-g.x*1000,a.z+dz*t-g.z*1000);if(d<bd){bd=d;best=q;}}});return best;}
 let ang3=null;
+let fdrag=null,lastF={t:0,fi:-1};const floorP=new THREE.Plane(new THREE.Vector3(0,1,0),0),fp=new THREE.Vector3();
+function floorAt(e){const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);return ray.ray.intersectPlane(floorP,fp)?fp.clone():null;}
+function furnAt(e){if(!INT||!furnG||!furnG.visible||!furnG.children.length)return null;const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
+  const h=ray.intersectObject(furnG,true).find(x=>x.object.userData.fi!=null);return h?h.object.userData.fi:null;}
+canvas.addEventListener('pointermove',e=>{if(!fdrag)return;const p=floorAt(e);if(!p)return;const it=S.furn[fdrag.fi];it.x=Math.round((fdrag.s0.x+(p.x-fdrag.p0.x)*1000)/25)*25;it.z=Math.round((fdrag.s0.z+(p.z-fdrag.p0.z)*1000)/25)*25;
+  if(fdrag.obj)fdrag.obj.position.set((it.x-R.origin.x)/1000,fdrag.obj.position.y,(it.z-R.origin.z)/1000);});
+const fUp=()=>{if(!fdrag)return;fdrag=null;controls.enabled=true;canvas.style.cursor='';save();keepSite=true;buildSite();};canvas.addEventListener('pointerup',fUp);canvas.addEventListener('pointercancel',fUp);
 stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||e.button||current==='plan')return;
   if(INT){const g=groundAt(e);if(g){const tol=Math.max(110,camera.position.distanceTo(g)*28);let hit=-1;R.turns.forEach((t,ti)=>{if(Math.hypot(t.c.x-g.x*1000,t.c.z-g.z*1000)<tol)hit=ti;});
     if(hit>=0&&angBegin(hit,null)){e.stopPropagation();e.preventDefault();ang3=e.pointerId;canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='alias';tip.hidden=true;labels.forEach(l=>l.element.style.visibility='hidden');return;}}}
-  const q=pickAt(e);if(!q)return;const g=groundAt(e);if(!g)return;e.stopPropagation();e.preventDefault();
+  const q=pickAt(e);if(!q){const fi=furnAt(e);if(fi!=null&&floorAt(e)){e.stopPropagation();e.preventDefault();const now=performance.now();
+      if(lastF.fi===fi&&now-lastF.t<400){lastF={t:0,fi:-1};const it=S.furn[fi];it.r=((it.r||0)+90)%360;save();renderFurn();keepSite=true;buildSite();return;}lastF={t:now,fi};
+      const p=floorAt(e),it=S.furn[fi];fdrag={fi,id:e.pointerId,p0:{x:p.x,z:p.z},s0:{x:it.x,z:it.z},obj:furnG.children.find(o=>o.userData.fi===fi)};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;}return;}
+  const g=groundAt(e);if(!g)return;e.stopPropagation();e.preventDefault();
   dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
   labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
 canvas.addEventListener('pointermove',e=>{if(ang3!==null&&angDrag){const g=groundAt(e);if(!g)return;
@@ -1341,6 +1382,7 @@ canvas.addEventListener('pointerup',up3);canvas.addEventListener('pointercancel'
 // o.paper = [w,h] mm of the paper box, so text and line weights come out the same size on every PDF page
 function planSVG(o={}){
   const solo=o.only!=null,ps=solo?R.pieces.filter(q=>q.line===o.only):R.pieces,all=ps.flatMap(q=>q.pts);if(!all.length)all.push(...(R.opens||[]).map(p=>({x:p.x,z:p.z})),{x:-R.origin.x,z:-R.origin.z});
+  if(INT&&!solo&&!o.key)(S.furn||[]).forEach(it=>{const P=furnPoly(it);if(P)P.forEach(([x,z])=>all.push({x,z}));});
   const x0=Math.min(...all.map(p=>p.x)),x1=Math.max(...all.map(p=>p.x)),z0=Math.min(...all.map(p=>p.z)),z1=Math.max(...all.map(p=>p.z));
   const dX=-R.origin.x,dZ=-R.origin.z,X0=solo?x0:Math.min(x0,dX),X1=solo?x1:Math.max(x1,dX),Z0=solo?z0:Math.min(z0,dZ),Z1=solo?z1:Math.max(z1,dZ); // datum in view
   const pad=Math.max(900,Math.max(X1-X0,Z1-Z0)*0.12);let vb=o.frame?o.frame.vb:[X0-pad,Z0-pad,X1-X0+2*pad,Z1-Z0+2*pad];
@@ -1355,6 +1397,8 @@ function planSVG(o={}){
   s+=o.frame?`<g transform="translate(${o.frame.tx} ${o.frame.tz})">`:'<g>';
   // datum: Line A start = (0, 0); start points of other lines are measured from here
   if(!solo){const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
+  if(INT&&!solo&&!o.key)(S.furn||[]).forEach(it=>{const P=furnPoly(it);if(!P)return;
+    s+=`<polygon points="${P.map(p=>p.join(',')).join(' ')}" fill="#f2f1ef" stroke="#c9c7c3" stroke-width="${k*0.8}"/>`;});
   // pieces, alternating tone so every joint reads
   const mv=o.screen?' style="cursor:grab"':'';
   const red=new Set((o.clash||(o.screen?clashFind(R):[])).flat());
