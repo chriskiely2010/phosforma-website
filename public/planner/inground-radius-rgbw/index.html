@@ -314,8 +314,9 @@ function intChoices(){const B=PRODUCT.bodies,o=B.filter(b=>b.o===S.opt);if(!o.le
   const es=[...new Set(B.filter(b=>b.o===S.opt).map(b=>b.e))];if(!es.includes(S.emis))S.emis=es[0];
   const ps=[...new Set(B.filter(b=>b.o===S.opt&&b.e===S.emis).map(b=>b.p))];if(!ps.includes(S.pw))S.pw=ps[0];return {es,ps};}
 function intBodies(){intChoices();return PRODUCT.bodies.filter(b=>b.o===S.opt&&b.e===S.emis&&b.p===S.pw).sort((a,b)=>a.len-b.len);}
-const bodyCode=b=>b.t.replace('{w}',b.w).replace('{c}',S.cct)+(S.dali?'D':'')+(S.fin||'B');
-const bodyName=b=>`${b.o==='PC60'?'PC 60°':b.o==='PC110'?'PC 110°':b.o}${b.e==='DI'?' direct/indirect':''} ${b.len}`;
+const BLIND=[1000,2000].map(len=>({o:'MC',e:'',p:'',len,w:0,wl:'0',lm:[0,0],t:'54MC'+len,blind:true}));
+const bodyCode=b=>b.blind?b.t:b.t.replace('{w}',b.w).replace('{c}',S.cct)+(S.dali?'D':'')+(S.fin||'B');
+const bodyName=b=>b.blind?`Blind module ${b.len}`:`${b.o==='PC60'?'PC 60°':b.o==='PC110'?'PC 110°':b.o}${b.e==='DI'?' direct/indirect':''} ${b.len}`;
 // fewest bodies whose total is closest to the length available (running long counts 1.6×: rows often stop at a wall) (catalogue lengths only; a longer row is a run of bodies with linear joints)
 function fillRun(U,list){if(!list.length||U<list[0].len*0.6)return [];let lv=new Map([[0,[]]]),best=null;const mx=list.at(-1).len;
   for(let n=1;n<=80;n++){const nx=new Map();for(const [s0,c] of lv)for(const b of list){const t=s0+b.len;if(t>U+mx)continue;if(!nx.has(t))nx.set(t,c.concat(b));}
@@ -346,7 +347,7 @@ function resolveInt(){
     if(!ln.tree){opens.push({li,path:[],kind:'start',x:x0,z:z0,h:h0});return;}
     const n0={x:x0,z:z0,arms:[h0],type:'end',jn:false,li};cl.push(n0);opens.push({li,path:[],kind:'head',x:x0,z:z0,h:h0+Math.PI,node:n0});
     const walk=(pc,path,x,z,h,fromJ,from)=>{pc._cl=false;pc._a=from;pc._h=h;pc._b=null;if(pc.next)pc.next._tk=[];if(pc.link){links.push({li,pc,path,x,z,h,o0:fromJ?JH:0,from});return;}const cn=pc.next,t=cn?CONN[cn.k].t:'end',toJ=/^J/.test(t),o0=fromJ?JH:0,o1=toJ?JH:0;
-      const bl=fillRun(Math.max(0,+pc.len||0),list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
+      const bl=fillRun(Math.max(0,+pc.len||0),pc.blind?BLIND:list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
       const g={li,si:si++,s:pc,path,h,len:o0+act+o1,bodies:bl.length};segs.push(g);emit(g,x,z,h,o0,bl);
       const ex=x+Math.cos(h)*g.len,ez=z+Math.sin(h)*g.len,node={x:ex,z:ez,arms:[h+Math.PI],type:t,jn:toJ,li};cl.push(node);pc._b=node;
       if(!cn){opens.push({li,path,kind:'end',x:ex,z:ez,h,pc,node});return;}
@@ -360,15 +361,16 @@ function resolveInt(){
     if(pc.to){const T=opens.find(o=>o.li===L.li&&o.kind===pc.to.k&&o.path.join('.')===pc.to.p);if(T)t=linkFind(L,[T],JH);}
     else{t=linkFind(L,opens,JH);if(t)pc.to={k:t.o.kind,p:t.o.path.join('.')};}
     if(t){o1=t.mode==='inline'?0:t.mode==='arm'?(t.o.node.jn?JH:0):JH;pc.len=Math.max(0,Math.round(t.along-L.o0-o1));pc._to=t.mode;opens.splice(opens.indexOf(t.o),1);const T=t.o;if(T.kind==='arm')T.conn._tk.push(T.path.at(-1));else if(T.kind==='end')T.pc._cl=true;else S.lines[T.li]._hc=true;}else pc._to=null;
-    const bl=fillRun(Math.max(0,+pc.len||0),list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
+    const bl=fillRun(Math.max(0,+pc.len||0),pc.blind?BLIND:list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
     const g={li:L.li,si:1000+k,s:pc,path:L.path,h:L.h,len:L.o0+act+o1,bodies:bl.length,link:true};segs.push(g);emit(g,L.x,L.z,L.h,L.o0,bl);
     if(!t){lost.push(L.li);const ln_={x:L.x+Math.cos(L.h)*g.len,z:L.z+Math.sin(L.h)*g.len,arms:[L.h+Math.PI],type:'end',jn:false,li:L.li};cl.push(ln_);pc._b=ln_;return;}
     const n=t.o.node;pc._b=n;if(t.mode==='inline'){n.type='inline';n.arms.push(L.h+Math.PI);}
     else if(t.mode==='corner'){n.x=t.C.x;n.z=t.C.z;n.type='J2';n.jn=true;n.arms=[t.o.h+Math.PI,L.h+Math.PI];}});
   cl.forEach(c=>{if(!c.jn)return;let mn=7;const k=c.arms.length;for(let i=0;i<k;i++)for(let j=i+1;j<k;j++)mn=Math.min(mn,Math.abs(Math.atan2(Math.sin(c.arms[i]-c.arms[j]),Math.cos(c.arms[i]-c.arms[j]))));if(mn<Math.PI/6-0.01)c.bad=true;});
   const lines=[],runs=[];
-  [...new Set(all.map(q=>q.line))].forEach(li=>{const out=all.filter(q=>q.line===li),lr=[];for(let i=0;i<out.length;i+=PRODUCT.perCircuit)lr.push(out.slice(i,i+PRODUCT.perCircuit));
+  [...new Set(all.map(q=>q.line))].forEach(li=>{const out=all.filter(q=>q.line===li),lit=out.filter(q=>!q.b.blind),lr=[];for(let i=0;i<lit.length;i+=PRODUCT.perCircuit)lr.push(lit.slice(i,i+PRODUCT.perCircuit));
     lr.forEach(r=>{const ri=runs.length;runs.push(r);r.forEach((q,k)=>{q.run=ri;q.seg=r.length===1?'I':k===0?'S':k===r.length-1?'E':'M';});});
+    let rr=lr.length?runs.length-lr.length:0;out.forEach(q=>{if(q.b.blind){q.run=rr;q.seg='M';}else rr=q.run;});
     out.forEach((q,k)=>q.label=LET(li)+(k+1));lines.push({li,pieces:out,runs:lr,closed:false});});
   all.forEach((q,i)=>q.i=i);
   const A=PRODUCT.acc,acc=[],cnt=t=>cl.filter(c=>c.type===t).length,joints=segs.reduce((a,g)=>a+Math.max(0,g.bodies-1),0)+cnt('inline'),ends=cnt('end');
@@ -406,7 +408,8 @@ function openChooser(li,path,kind,px,py){const el=$('chooser'),ln=S.lines[li];if
     h+=`<div class="ch-g">${opts.map(k=>k==='corner'?`<button class="btn" data-chc="corner" data-side="L">Corner · left</button><button class="btn" data-chc="corner" data-side="R">Corner · right</button>`:`<button class="btn" data-chc="${k}">${CONN[k].short}</button>`).join('')}</div>`;
     if(rec)h+=`<p class="note">${PRODUCT.name} joins in straight rows only (no corner or T junctions listed by ${BRAND}).</p>`;
     h+=`<p class="note">Or leave it: an open end gets an end cap.</p>`;}
-  else{h+=`<div class="ch-g">${list.map(b=>`<button class="btn" data-chp="${b.len}">${b.len} mm<small> · ${b.wl} W</small></button>`).join('')}</div>
+  else{h+=`<div class="ch-g">${BLIND.map(b=>`<button class="btn" data-chp="${b.len}" data-blind="1">Blind ${b.len} mm<small> · no light</small></button>`).join('')}</div>`;
+    h+=`<div class="ch-g">${list.map(b=>`<button class="btn" data-chp="${b.len}">${b.len} mm<small> · ${b.wl} W</small></button>`).join('')}</div>
     <div class="ch-f"><label class="f">Or a run length, filled with bodies (mm)<span style="display:flex;gap:6px"><input type="number" id="ch-len" min="500" step="50" value="${list.at(-1).len*2}"><button class="btn" data-chp="custom">Add</button></span></label></div>`;}
   el.innerHTML=h;el.hidden=false;el.dataset.li=li;el.dataset.path=path.join('.');el.dataset.kind=kind;
   const W=320,r=document.body.getBoundingClientRect();el.style.left=Math.max(8,Math.min(px,innerWidth-W-8))+'px';el.style.top=Math.max(8,Math.min(py,innerHeight-el.offsetHeight-8))+'px';}
@@ -461,8 +464,8 @@ function chooserPick(e){const el=$('chooser'),li=+el.dataset.li,path=el.dataset.
     if(pc.next.outs.length===1)openChooser(li,path.concat(0),'arm',r.left,r.top);else{closeChooser();toast(`${CONN[pc.next.k].name} added · use + on each arm to add pieces`);}return;}
   const p=e.target.closest('[data-chp]');if(p){const len=p.dataset.chp==='custom'?Math.max(500,+$('ch-len').value||0):+p.dataset.chp;const slot=tSlot(ln,path);if(!slot)return;
     if(kind==='headpiece'&&ln.tree){const r0=ln.tree,hin=-(+ln.dir||0)*Math.PI/180,d=rootGeo(r0.len,r0.next)-rootGeo(len,r0.next);ln.x=Math.round((+ln.x||0)+Math.cos(hin)*d);ln.y=Math.round((+ln.y||0)-Math.sin(hin)*d);}
-    const prev=slot.o[slot.k];slot.o[slot.k]={len,next:prev&&prev.next||null};closeChooser();update(true,kind==='start');
-    toast(`${len} mm added · click + at the open end to carry on`);}}
+    const prev=slot.o[slot.k];slot.o[slot.k]={len,next:prev&&prev.next||null,...(p.dataset.blind?{blind:true}:{})};closeChooser();update(true,kind==='start');
+    toast(`${p.dataset.blind?'Blind module ':''}${len} mm added · click + at the open end to carry on`);}}
 function resolveRad(){
   const st=STRIPS.find(s=>s.id===S.strip)||STRIPS[0];
   const all=[],runs=[],lines=[];
@@ -559,7 +562,7 @@ function stepHTML(s,l,i){
 const PP=t=>t?t.split('.').map(Number):[];
 function treeHTML(l,pc,path){const list=intBodies(),pd=`data-l="${l}" data-p="${path.join('.')}"`,id=`${l}-${path.join('_')}`;
   if(pc.link)return `<li class="step"><span class="n" title="Closing piece">⇥</span><div class="body"><b style="font-size:12.5px">Closing run ${pc._to==='arm'?'into the junction ahead':pc._to==='inline'?'onto the open end ahead (linear joint)':pc._to==='corner'?'onto the open end ahead (corner junction)':'· nothing ahead to join'}</b><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove closing run" title="Remove this closing run">✕</button></div></li>`;
-  let h=`<li class="step"><span class="n" title="Piece">▬</span><div class="body"><div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Piece · body length (mm)<input type="number" min="300" step="50" ${pd} data-tk="len" value="${pc.len}"></label><label class="f">Or one body<select ${pd} data-tk="body"><option value="">Pick a length…</option>${list.map(b=>`<option value="${b.len}"${b.len===+pc.len?' selected':''}>${b.len} mm · ${b.wl} W</option>`).join('')}</select></label></div><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove piece" title="Remove this piece (everything else stays where it is)">✕</button></div></li>`;
+  let h=`<li class="step"><span class="n" title="Piece">▬</span><div class="body"><div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Piece · body length (mm)<input type="number" min="300" step="50" ${pd} data-tk="len" value="${pc.len}"></label><label class="f">${pc.blind?'Or one module':'Or one body'}<select ${pd} data-tk="body"><option value="">Pick a length…</option>${(pc.blind?BLIND:list).map(b=>`<option value="${b.len}"${b.len===+pc.len?' selected':''}>${b.len} mm${pc.blind?'':' · '+b.wl+' W'}</option>`).join('')}</select></label><label class="f" style="grid-column:1/-1">Type<select ${pd} data-tk="blind"><option value="0"${pc.blind?'':' selected'}>Lit bodies</option><option value="1"${pc.blind?' selected':''}>Blind modules (no light, joined with linear joints)</option></select></label></div><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove piece" title="Remove this piece (everything else stays where it is)">✕</button></div></li>`;
   const cn=pc.next;if(!cn&&pc._cl)return h+`<li class="tadd note">Joined here by a closing run</li>`;if(!cn)return h+`<li class="tadd"><button class="btn dash" data-tadd="end" ${pd}>+ Add after this piece</button></li>`;
   h+=`<li class="step"><span class="n j" title="Junction">◆</span><div class="body"><b style="font-size:12.5px">${CONN[cn.k].name}</b>${cn.k==='corner'?`<div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Turn<select ${pd} data-tk="side"><option value="L"${cn.side==='L'?' selected':''}>Left</option><option value="R"${cn.side!=='L'?' selected':''}>Right</option></select></label><label class="f">Angle (°)<input type="number" min="0" max="150" step="5" ${pd} data-tk="a" value="${cn.a==null?90:cn.a}"></label></div>`:''}<div class="res" id="cres-${id}"></div></div><div class="ctl"><button class="ib" data-cdel ${pd} aria-label="Remove junction" title="Remove this junction and everything after it">✕</button></div></li>`;
   cn.outs.forEach((o,i)=>{const p2=path.concat(i),inner=o.p?treeHTML(l,o.p,p2):(cn._tk||[]).includes(i)?`<li class="tadd note">Joined here by a closing run</li>`:`<li class="tadd"><button class="btn dash" data-tadd="arm" data-l="${l}" data-p="${p2.join('.')}">+ Add a piece</button></li>`;
@@ -646,6 +649,7 @@ $('lines').addEventListener('input',e=>{const t=e.target,l=+t.dataset.l;if(Numbe
   if(INT){const k=t.dataset.tk;if(!k)return;const pc=tGet(ln,PP(t.dataset.p));if(!pc)return;
     if(k==='len'||k==='a')return; // applied when the typing is finished (change), so half-typed numbers never reshape the design
     if(k==='body'){if(!t.value)return;pc.len=+t.value;update(true);return;}
+    if(k==='blind'){if(t.value==='1')pc.blind=true;else delete pc.blind;update(true);return;}
     if(!pc.next)return;if(k==='side'){pc.next.side=t.value;update(true);return;}
     if(k==='a'){const v=parseFloat(t.value);if(!(v>=0&&v<=150))return;pc.next.a=v;update(false);return;}return;}
   if(!t.dataset.k)return;const s=ln.steps[+t.dataset.i];
@@ -856,6 +860,15 @@ const GLBLEN={DK:[1128,1401,1681,1961,2241,2801],PG:[1121,1401,1681,1961,2241,28
 const glbFam=o=>o==='DK'?'DK':(o==='PG'||o==='CLD')?'PG':'PC';let glbT=0;
 function glbGet(key){const g=GLB[key];if(g&&g!=='loading'&&g!=='fail')return g;
   if(!g){GLB[key]='loading';gltf.load(GLBDIR+key+'.glb',r=>{GLB[key]=r.scene;clearTimeout(glbT);glbT=setTimeout(()=>{if(drag||angDrag)return;keepSite=true;buildSite();},80);},undefined,()=>{GLB[key]='fail';});}return null;}
+// suspension from the model: ceiling gripper (as photographed) at the ceiling, wire insert on the profile, 1.5 mm steel wire between
+const wireM=new THREE.MeshStandardMaterial({color:0xc4c8cc,metalness:1,roughness:0.3});
+function suspGLB(len){if(!INT||PRODUCT.mount==='recessed')return null;const m=glbGet('twos-susp');if(!m)return null;const gr=m.getObjectByName('CeilingGripper_A'),wi=m.getObjectByName('WireInsert_A');if(!gr||!wi)return null;
+  m.updateMatrixWorld(true);const bg=new THREE.Box3().setFromObject(gr),bi=new THREE.Box3().setFromObject(wi),ox=bg.getCenter(V3()).x,oz=bg.getCenter(V3()).z,hM=PRODUCT.sec.h/1000;
+  const g=new THREE.Group(),a=gr.clone(true),b=wi.clone(true);a.applyMatrix4(gr.parent.matrixWorld);b.applyMatrix4(wi.parent.matrixWorld);glbMats(a,null,0);glbMats(b,null,0);
+  const ga=new THREE.Group(),gb=new THREE.Group();ga.add(a);gb.add(b);ga.position.set(-ox,len-1,-oz);gb.position.set(-ox,hM,-oz);
+  const top=len-1+bg.min.y,bot=hM+bi.max.y,w=new THREE.Mesh(new THREE.CylinderGeometry(0.00075,0.00075,Math.max(0.001,top-bot),8),wireM);w.position.y=(top+bot)/2;
+  g.add(ga,gb,w);g.userData.grip=a;return g;}
+function blindModel(len){if(!INT||PRODUCT.mount==='recessed')return null;const L=len>=1500?2000:1000,m=glbGet(`twos-MC-${L}`);return m?{m,L,f:'MC'}:null;}
 function bodyModel(o,len){if(!INT||PRODUCT.mount==='recessed')return null;const f=glbFam(o),L=GLBLEN[f].reduce((a,b)=>Math.abs(b-len)<Math.abs(a-len)?b:a),m=glbGet(`twos-${f}-${L}`);return m?{m,L,f}:null;}
 const louvreW=new THREE.MeshStandardMaterial({color:0xe9e9e7,roughness:0.6});
 // parts that light up, and how bright against the procedural face they stand in for
@@ -875,26 +888,27 @@ function buildTwos(target,list,studioMode){const group=new THREE.Group(),picks=[
     const atNode=pt=>R.nodes.some(c=>(c.jn||c.type==='inline')&&Math.hypot(c.x-pt.x,c.z-pt.z)<JH+30);
     for(const [on,pt,sg] of [[!sameA&&!atNode(f[0]),f[0],-1],[!sameB&&!atNode(f[1]),f[1],1]])if(on){
       const cap=new THREE.Mesh(new THREE.BoxGeometry(0.003,rec?0.0018:hM+0.0006,(rec?(PRODUCT.sec.flange||58):PRODUCT.sec.w)/1000+0.0006),finM());
-      cap.position.copy(V3(pt.x/1000,rec?-0.0011:hM/2,pt.z/1000).addScaledVector(T,sg*0.0015));cap.rotation.y=-pt.h;prof.add(cap);proc.push(cap);
+      cap.position.copy(V3(pt.x/1000,rec?-0.0011:hM/2,pt.z/1000).addScaledVector(T,sg*0.0015));cap.rotation.y=-pt.h;prof.add(cap);proc.push(cap);cap.userData.isCap=true;
       if(studioMode){cap.userData.dir=T.clone().multiplyScalar(sg*0.14);extras.push(cap);}anch.cap=anch.cap||cap;}
     if(studioMode&&sameB){const j=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.022,0.032),MAT.ijoint);j.position.set(f[1].x/1000,hM*0.55,f[1].z/1000);j.rotation.y=-f[1].h;prof.add(j);j.userData.dir=V3(0,0.16,0);extras.push(j);anch.male=j;}
     if(studioMode&&(q.seg==='S'||q.seg==='I')){const P=(t)=>V3((f[0].x+(f[1].x-f[0].x)*t)/1000,hM,(f[0].z+(f[1].z-f[0].z)*t)/1000),a=P(0.06);
       prof.add(new THREE.Mesh(loomGeo([a,a.clone().add(V3(0,0.22,0)),a.clone().add(V3(0,0.22,0)).addScaledVector(T,-0.14)],0.0035),new THREE.MeshStandardMaterial({color:0xe8e8e6,roughness:0.6})));anch.feed={obj:prof,p:a.clone().add(V3(0,0.12,0))};}
     anch.prof={obj:prof,p:V3((f[0].x*0.7+f[1].x*0.3)/1000-Math.sin(f[0].h)*PRODUCT.sec.w/2000,hM*0.6,(f[0].z*0.7+f[1].z*0.3)/1000+Math.cos(f[0].h)*PRODUCT.sec.w/2000)};
     anch.ins={obj:ins,p:V3((f[0].x*0.4+f[1].x*0.6)/1000,sec.face.y/1000,(f[0].z*0.4+f[1].z*0.6)/1000)};
-    const BM=bodyModel(S.opt,q.d.len);
+    if(q.b.blind){face.material=finM().clone();face.material.emissiveIntensity=0;}
+    const BM=q.b.blind?blindModel(q.d.len):bodyModel(S.opt,q.d.len);
     if(BM){const capA=!sameA&&!atNode(f[0]),capB=!sameB&&!atNode(f[1]);
-      proc.forEach(c=>c.visible=false);if(face.userData.top)face.userData.top.position.y+=0.0012;
+      proc.forEach(c=>c.visible=BM.f==='MC'&&!!c.userData.isCap);if(face.userData.top)face.userData.top.position.y+=0.0012;
       const mid={x:(f[0].x+f[1].x)/2000,z:(f[0].z+f[1].z)/2000},mk=()=>{const g=new THREE.Group();g.position.set(mid.x,hM,mid.z);g.rotation.y=-f[0].h;g.scale.set(q.d.len/BM.L,1,1);return g;};
-      const gb=mk(),go=mk(),src=BM.m.getObjectByName('Luminaire')||BM.m,glow=[];
+      const gb=mk(),go=mk(),src=BM.f==='MC'?(BM.m.children[0]||BM.m):(BM.m.getObjectByName('Luminaire')||BM.m),glow=[];
       src.children.forEach(ch=>{const c=ch.clone(true),n=ch.name;if(n==='EndCap_A'&&!capA)return;if(n==='EndCap_B'&&!capB)return;if(n==='Diffuser'&&S.opt==='CLD')return;
-        (/^(Body|EndCap_A|EndCap_B|GearTray)$/.test(n)?gb:go).add(c);});
+        (BM.f==='MC'||/^(Body|EndCap_A|EndCap_B|GearTray)$/.test(n)?gb:go).add(c);});
       glbMats(gb,null,0);glbMats(go,glow,studioMode?1.3:0);prof.add(gb);ins.add(go);face.userData.glow=glow;
       if(S.opt!=='CLD'){face.material.colorWrite=false;face.material.depthWrite=false;}}
     pg.userData.prof=prof;pg.userData.ins=ins;pg.userData.extras=extras;pg.userData.anch=anch;});
   // suspensions: equal spacing along each straight and one at each junction; each hangs from the body below it
   if(!rec)(R.susp||[]).forEach(sp=>{let k=-1,bd=1e9;list.forEach((q,i)=>{const a=q.pts[0],b=q.pts[1],dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((sp.x-a.x)*dx+(sp.z-a.z)*dz)/L2)),d=Math.hypot(a.x+dx*t-sp.x,a.z+dz*t-sp.z);if(d<bd){bd=d;k=i;}});
-    const len=studioMode?0.36:S.ceil/1000-y0,s=suspension(len);s.position.set(sp.x/1000,0,sp.z/1000);
+    const len=studioMode?0.36:S.ceil/1000-y0,s=suspGLB(len)||suspension(len);s.position.set(sp.x/1000,0,sp.z/1000);
     if(k>=0&&pgs[k]){const pr=pgs[k].userData.prof;pr.add(s);if(studioMode){s.userData.dir=V3(0,0.22,0);pgs[k].userData.extras.push(s);}if(!pgs[k].userData.anch.drv)pgs[k].userData.anch.drv=s.userData.grip;}else group.add(s);});
   R.nodes.forEach(c=>{if(!c.jn)return;let m;const JG=!rec&&c.arms.length>=2&&c.arms.length<=4?glbGet(`twos-J${c.arms.length}`):null;
     if(JG){m=JG.clone(true);glbMats(m,null,0);const arms=[1,2,3,4].map(i=>m.getObjectByName('Arm_'+i)).filter(Boolean);
