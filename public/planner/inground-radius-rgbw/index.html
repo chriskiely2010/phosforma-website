@@ -57,6 +57,20 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 .btn:hover{border-color:var(--ink)}
 .btn.solid{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 .btn.solid:hover{opacity:.9}
+.chooser{position:fixed;z-index:8;width:320px;max-width:calc(100vw - 16px);background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.28);padding:10px;display:grid;gap:8px;color:var(--ink)}
+.chooser[hidden]{display:none}
+.ch-h{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:13px}
+.ch-g{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ch-g .btn{text-align:center;padding:7px 6px;font-size:12px}
+.ch-g small{color:var(--muted)}
+.ch-f input{flex:1}
+.btn.dash{border-style:dashed;color:var(--accent);font-size:12px;padding:6px 10px}
+.tadd{list-style:none}
+.step .n.j{background:#ff5000}
+.tarm{list-style:none;border-left:2px solid #ff5000;padding-left:8px;margin-left:10px;display:grid;gap:6px}
+.tarm-h{font-size:11px;color:#ff5000;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.lbl.plus{background:#ff5000;color:#fff;cursor:pointer;pointer-events:auto;font-size:13px;padding:1px 8px;border-radius:10px;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.4)}
+.lbl.plus:hover{background:#10181f}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin:0}
 .kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
 .warn{background:var(--warnbg);color:var(--warn);border-radius:5px;padding:8px 10px;font-size:12px;line-height:1.45}
@@ -184,6 +198,7 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
   </main>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="chooser" id="chooser" hidden role="dialog" aria-label="Add to the design"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="importmap">
@@ -258,17 +273,18 @@ const PRESETS={
   'Planter surround with 90° corners':ONE([{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000},{t:'L',r:'R515',a:90},{t:'S',len:3000},{t:'L',r:'R515',a:90},{t:'S',len:2000}]),
 };
 // interior profiles: straights are filled with catalogue bodies; a turn is a 90° corner junction; lines meeting at a point form 3- and 4-way junctions
+const TC=(k,ps,side)=>({k,...(k==='corner'?{side:side||'R',a:90}:{}),outs:ps.map((p,i)=>({rel:{joint:[0],corner:[90],tee:[-90,90],teeL:[0,-90],teeR:[0,90],cross:[0,-90,90]}[k][i],p}))}),TP=(len,next)=>({len,next:next||null}),G=(tree,x,y,dir)=>({x:x||0,y:y||0,dir:dir||0,tree});
 if(INT){for(const k of Object.keys(PRESETS))delete PRESETS[k];Object.assign(PRESETS,{
-  'Straight row (6 m)':ONE([{t:'S',len:6000}]),
-  'Two parallel rows, 2.4 m apart':[{x:0,y:0,dir:0,steps:[{t:'S',len:6000}]},{x:0,y:-2400,dir:0,steps:[{t:'S',len:6000}]}],
-  'L-shape (4 × 3 m)':ONE([{t:'S',len:4000},{t:'R'},{t:'S',len:3000}]),
-  'U-shape (3 × 4 × 3 m)':ONE([{t:'S',len:3000},{t:'R'},{t:'S',len:4000},{t:'R'},{t:'S',len:3000}]),
-  'Rectangle (6 × 3 m)':ONE([{t:'S',len:6000},{t:'R'},{t:'S',len:3000},{t:'R'},{t:'S',len:6000},{t:'R'},{t:'S',len:3000},{t:'R'}]),
-  'T junction':[{x:0,y:0,dir:0,steps:[{t:'S',len:3000},{t:'S',len:3000}]},{x:3000,y:0,dir:270,steps:[{t:'S',len:3000}]}],
-  'Cross (4-way)':[{x:0,y:0,dir:0,steps:[{t:'S',len:3000},{t:'S',len:3000}]},{x:3000,y:3000,dir:270,steps:[{t:'S',len:3000},{t:'S',len:3000}]}],
+  'Straight row (6 m)':[G(TP(6000))],
+  'Two parallel rows, 2.4 m apart':[G(TP(6000)),G(TP(6000),0,-2400)],
+  'L-shape (4 × 3 m)':[G(TP(4000,TC('corner',[TP(3000)],'R')))],
+  'U-shape (3 × 4 × 3 m)':[G(TP(3000,TC('corner',[TP(4000,TC('corner',[TP(3000)],'R'))],'R')))],
+  'T junction':[G(TP(3000,TC('teeR',[TP(3000),TP(3000)])))],
+  'Cross (4-way)':[G(TP(3000,TC('cross',[TP(3000),TP(3000),TP(3000)])))],
+  'Spine with three branches':[G(TP(1500,TC('teeR',[TP(2400,TC('teeR',[TP(2400,TC('corner',[TP(3000)],'R')),TP(3000)])),TP(3000)])))],
 });}
 const copyLines=l=>JSON.parse(JSON.stringify(l));
-let S={proj:'',client:'',strip:(STRIPS[0]||{}).id,cct:PRODUCT.cct0,rgb:'#ff2fb4',scene:'plaza',lines:copyLines(INT?PRESETS['L-shape (4 × 3 m)']:PRESETS['S-bend walkway (10 m)'])};
+let S={proj:'',client:'',strip:(STRIPS[0]||{}).id,cct:PRODUCT.cct0,rgb:'#ff2fb4',scene:'plaza',lines:INT?[G(null)]:copyLines(PRESETS['S-bend walkway (10 m)'])};
 if(INT)Object.assign(S,{opt:PRODUCT.optics[0].id,emis:'D',pw:'LP',dali:false,fin:'B',ceil:3000,drop:600});
 // share links carry the plan in the address (#p=…); otherwise the last plan in this browser
 const clean=()=>JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);
@@ -301,46 +317,78 @@ function fillRun(U,list){if(!list.length||U<list[0].len*0.6)return [];let lv=new
   for(let n=1;n<=80;n++){const nx=new Map();for(const [s0,c] of lv)for(const b of list){const t=s0+b.len;if(t>U+mx)continue;if(!nx.has(t))nx.set(t,c.concat(b));}
     if(!nx.size)break;for(const [t,c] of nx){const d=t>U?(t-U)*1.6:U-t;if(!best||d<best.d-20)best={d,c};}lv=nx;if(best.d<1)break;}
   return best?best.c.slice().sort((a,b)=>b.len-a.len):[];}
+/* ---------- interior: connected structures ----------
+   Each design item is a structure grown from a start point: tree = piece | null; piece = {len, next: connector | null};
+   connector = {k: joint|corner|tee|teeL|teeR|cross, side, a, outs:[{rel (deg, + = right), p: piece | null}]}.
+   A piece's len is the length of its bodies; junctions add their own size, so catalogue bodies come out exact. */
+const CONN={joint:{name:'Linear joint · straight on',short:'Straight on',outs:[0],t:'inline'},corner:{name:'Corner (2-way adjustable)',short:'Corner',outs:[90],t:'J2'},
+  tee:{name:'T junction · left and right',short:'T · left + right',outs:[-90,90],t:'J3'},teeL:{name:'T junction · straight on + branch left',short:'T · straight + left',outs:[0,-90],t:'J3'},
+  teeR:{name:'T junction · straight on + branch right',short:'T · straight + right',outs:[0,90],t:'J3'},cross:{name:'4-way junction',short:'4-way',outs:[0,-90,90],t:'J4'}};
+function mkConn(k,side){const c={k,outs:CONN[k].outs.map(r=>({rel:r,p:null}))};if(k==='corner'){c.side=side||'R';c.a=90;}return c;}
+function tGet(ln,path){let p=ln.tree;for(const i of path){if(!p||!p.next||!p.next.outs[i])return null;p=p.next.outs[i].p;}return p;}
+function tSlot(ln,path){if(!path.length)return {o:ln,k:'tree'};const par=tGet(ln,path.slice(0,-1));return par&&par.next?{o:par.next.outs[path.at(-1)],k:'p'}:null;}
+const armName=r=>r===0?'straight on':r<0?`left ${-r}°`:`right ${r}°`;
+// plans saved with the older line + steps format become a chain of pieces and corners
+function stepsToTree(steps){let root=null,last=null;(steps||[]).forEach(s=>{if(s.t==='S'){const p={len:+s.len||1121,next:null};if(!last)root=p;else if(last.next)last.next.outs[0].p=p;else{last.next=mkConn('joint');last.next.outs[0].p=p;}last=p;}
+  else if(last&&!last.next){last.next=mkConn('corner',s.t);last.next.a=s.a==null?90:+s.a;}});return root;}
 function resolveInt(){
-  const JH=PRODUCT.junction/2,list=intBodies(),TOL=60,K4=S.cct==='K4',O=optOf(S.opt);
+  const JH=PRODUCT.junction/2,list=intBodies(),K4=S.cct==='K4',O=optOf(S.opt);
   const st={label:`${O.name}${S.emis==='DI'?' · direct/indirect':''} · ${S.pw==='HP'?'40':'20'} W/m`,v:230,max:PRODUCT.perCircuit};
-  const nodes=[],segs=[];
-  S.lines.forEach((ln,li)=>{let x=+ln.x||0,z=-(+ln.y||0),h=-(+ln.dir||0)*Math.PI/180;const node=()=>{nodes.push({x,z,li,arms:[]});return nodes.length-1;};let cur=node();
-    ln.steps.forEach((s,si)=>{if(s.t==='S'){const L=Math.max(0,+s.len||0);if(!L)return;nodes[cur].arms.push(h);const a=cur;x+=Math.cos(h)*L;z+=Math.sin(h)*L;cur=node();nodes[cur].arms.push(h+Math.PI);segs.push({li,si,a,b:cur,h,len:L,s});}
-      else{s._node=cur;s._hin=h;h+=(s.t==='L'?-1:1)*(s.a==null?90:+s.a)*Math.PI/180;}});});
-  const cl=[],na=a=>((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
-  nodes.forEach(n=>{if(!n.arms.length)return;let c=cl.find(c=>Math.hypot(c.x-n.x,c.z-n.z)<TOL);if(!c){c={x:n.x,z:n.z,arms:[],lines:new Set()};cl.push(c);}n.c=c;c.lines.add(n.li);
-    n.arms.forEach(a=>{a=na(a);if(!c.arms.some(b=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<0.2))c.arms.push(a);});});
-  // junction type from the number of arms; the junctions are adjustable, so any angle works as long as arms stay at least 30° apart
-  cl.forEach(c=>{const k=c.arms.length;let mn=7;for(let i=0;i<k;i++)for(let j=i+1;j<k;j++)mn=Math.min(mn,Math.abs(Math.atan2(Math.sin(c.arms[i]-c.arms[j]),Math.cos(c.arms[i]-c.arms[j]))));
-    c.type=k<=1?'end':k>4||mn<Math.PI/6-0.01?'bad':k===2?(Math.abs(Math.cos(c.arms[0]-c.arms[1])+1)<0.002?'inline':'J2'):k===3?'J3':'J4';c.jn=/^J/.test(c.type);});
-  S.lines.forEach(ln=>ln.steps.forEach(s=>{if(s.t!=='S'&&s._node!=null)s._c=nodes[s._node]&&nodes[s._node].c;}));
-  const all=[];segs.forEach(g=>{const ca=nodes[g.a].c,cb=nodes[g.b].c,o0=ca&&ca.jn?JH:0,o1=cb&&cb.jn?JH:0,U=g.len-o0-o1,bl=fillRun(U,list);
-    g.s._list=bl;g.s._actual=bl.reduce((a,b)=>a+b.len,0);g.s._U=Math.round(U);g.bodies=bl.length;let d=o0;const sx=nodes[g.a].x,sz=nodes[g.a].z;
-    bl.forEach(b=>{const p0={x:sx+Math.cos(g.h)*d,z:sz+Math.sin(g.h)*d,h:g.h};d+=b.len;const p1={x:sx+Math.cos(g.h)*d,z:sz+Math.sin(g.h)*d,h:g.h};
-      all.push({b,line:g.li,step:g.si,pts:[p0,p1],mid:{x:(p0.x+p1.x)/2,z:(p0.z+p1.z)/2,h:g.h},d:{len:b.len,ang:0,name:bodyName(b)},w:b.w,lm:b.lm[K4?1:0],code:bodyCode(b)});});});
-  if(!all.length){const b=list[0];all.push({b,line:0,step:0,pts:[{x:0,z:0,h:0},{x:b.len,z:0,h:0}],mid:{x:b.len/2,z:0,h:0},d:{len:b.len,ang:0,name:bodyName(b)},w:b.w,lm:b.lm[K4?1:0],code:bodyCode(b)});}
+  const cl=[],segs=[],turns=[],opens=[],all=[];
+  S.lines.forEach((ln,li)=>{if(ln.steps&&ln.tree===undefined){ln.tree=stepsToTree(ln.steps);delete ln.steps;}
+    const x0=+ln.x||0,z0=-(+ln.y||0),h0=-(+ln.dir||0)*Math.PI/180;let si=0;
+    if(!ln.tree){opens.push({li,path:[],kind:'start',x:x0,z:z0,h:h0});return;}
+    cl.push({x:x0,z:z0,arms:[h0],type:'end',jn:false,li});
+    const walk=(pc,path,x,z,h,fromJ)=>{const cn=pc.next,t=cn?CONN[cn.k].t:'end',toJ=/^J/.test(t),o0=fromJ?JH:0,o1=toJ?JH:0;
+      const bl=fillRun(Math.max(0,+pc.len||0),list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
+      const g={li,si:si++,s:pc,path,h,len:o0+act+o1,bodies:bl.length};segs.push(g);let d=o0;
+      bl.forEach(b=>{const p0={x:x+Math.cos(h)*d,z:z+Math.sin(h)*d,h};d+=b.len;const p1={x:x+Math.cos(h)*d,z:z+Math.sin(h)*d,h};
+        all.push({b,line:li,step:g.si,pts:[p0,p1],mid:{x:(p0.x+p1.x)/2,z:(p0.z+p1.z)/2,h},d:{len:b.len,ang:0,name:bodyName(b)},w:b.w,lm:b.lm[K4?1:0],code:bodyCode(b)});});
+      const ex=x+Math.cos(h)*g.len,ez=z+Math.sin(h)*g.len,node={x:ex,z:ez,arms:[h+Math.PI],type:t,jn:toJ,li};cl.push(node);
+      if(!cn){opens.push({li,path,kind:'end',x:ex,z:ez,h,pc});return;}
+      if(cn.k==='corner')cn.outs[0].rel=(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a);
+      cn._c=node;cn._hin=h;if(cn.k==='corner')turns.push({conn:cn,c:node,li,hin:h});
+      cn.outs.forEach((o,i)=>{const h2=h+o.rel*Math.PI/180;node.arms.push(h2);if(o.p)walk(o.p,path.concat(i),ex,ez,h2,toJ);else opens.push({li,path:path.concat(i),kind:'arm',x:ex,z:ez,h:h2,conn:cn});});};
+    walk(ln.tree,[],x0,z0,h0,false);});
+  cl.forEach(c=>{if(!c.jn)return;let mn=7;const k=c.arms.length;for(let i=0;i<k;i++)for(let j=i+1;j<k;j++)mn=Math.min(mn,Math.abs(Math.atan2(Math.sin(c.arms[i]-c.arms[j]),Math.cos(c.arms[i]-c.arms[j]))));if(mn<Math.PI/6-0.01)c.bad=true;});
   const lines=[],runs=[];
   [...new Set(all.map(q=>q.line))].forEach(li=>{const out=all.filter(q=>q.line===li),lr=[];for(let i=0;i<out.length;i+=PRODUCT.perCircuit)lr.push(out.slice(i,i+PRODUCT.perCircuit));
     lr.forEach(r=>{const ri=runs.length;runs.push(r);r.forEach((q,k)=>{q.run=ri;q.seg=r.length===1?'I':k===0?'S':k===r.length-1?'E':'M';});});
-    out.forEach((q,k)=>q.label=LET(li)+(k+1));const ns=nodes.filter(n=>n.li===li&&n.c);
-    lines.push({li,pieces:out,runs:lr,closed:ns.length>2&&ns[0].c===ns.at(-1).c});});
+    out.forEach((q,k)=>q.label=LET(li)+(k+1));lines.push({li,pieces:out,runs:lr,closed:false});});
   all.forEach((q,i)=>q.i=i);
-  // accessories
   const A=PRODUCT.acc,acc=[],cnt=t=>cl.filter(c=>c.type===t).length,joints=segs.reduce((a,g)=>a+Math.max(0,g.bodies-1),0)+cnt('inline'),ends=cnt('end');
   const add=(code,name,q,note)=>{if(q>0)acc.push({code:code||'to be advised',name,q,note});};
-  add(A.joint,'Linear joint',joints);if(PRODUCT.mount!=='recessed'){add(A.j2,'2-way junction (90° corner)',cnt('J2'));add(A.j3,'3-way junction',cnt('J3'));add(A.j4,'4-way junction',cnt('J4'));}
+  add(A.joint,'Linear joint',joints);if(PRODUCT.mount!=='recessed'){add(A.j2,'2-way adjustable junction',cnt('J2'));add(A.j3,'3-way junction',cnt('J3'));add(A.j4,'4-way junction',cnt('J4'));}
   add(A.caps,'End caps kit',Math.ceil(ends/2),'2 caps per kit (to confirm)');
-  // suspension points: equal spacing along each straight (first and last 200 mm in from the ends, no more than 1.8 m apart) and one at each junction
   const susp=[];if(PRODUCT.mount==='suspended'){segs.forEach(g=>{const qs=all.filter(q=>q.line===g.li&&q.step===g.si);if(!qs.length)return;const a=qs[0].pts[0],b=qs.at(-1).pts[1],L=Math.hypot(b.x-a.x,b.z-a.z),E=Math.min(200,L/4);
       const n=Math.max(2,Math.ceil((L-2*E)/1800)+1);for(let i=0;i<n;i++){const t=(E+(L-2*E)*i/(n-1))/L;susp.push({x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t});}});
     cl.filter(c=>c.jn).forEach(c=>susp.push({x:c.x,z:c.z}));}
   if(PRODUCT.mount==='suspended')add(+S.drop>1400?A.susp3:A.susp,`Suspension kit, ${+S.drop>1400?3000:1500} mm cable, ceiling grip`,susp.length,'equal spacing ≤ 1.8 m, one at each junction (to confirm)');
   add('','Mains supply point (power entry)',runs.length,'one per circuit');
-  const xs=all.flatMap(q=>q.pts.map(p=>p.x)).concat(cl.map(c=>c.x)),zs=all.flatMap(q=>q.pts.map(p=>p.z)).concat(cl.map(c=>c.z));
+  const xs=all.flatMap(q=>q.pts.map(p=>p.x)).concat(cl.map(c=>c.x),opens.map(o=>o.x)),zs=all.flatMap(q=>q.pts.map(p=>p.z)).concat(cl.map(c=>c.z),opens.map(o=>o.z));
+  if(!xs.length){xs.push(0);zs.push(0);}
   const b={x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)},ox=(b.x0+b.x1)/2,oz=(b.z0+b.z1)/2;
-  all.forEach(q=>{q.pts.forEach(p=>{p.x-=ox;p.z-=oz;});q.mid.x-=ox;q.mid.z-=oz;});cl.forEach(c=>{c.x-=ox;c.z-=oz;});susp.forEach(p=>{p.x-=ox;p.z-=oz;});
-  return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0},nodes:cl,acc,segs,susp};}
+  all.forEach(q=>{q.pts.forEach(p=>{p.x-=ox;p.z-=oz;});q.mid.x-=ox;q.mid.z-=oz;});cl.forEach(c=>{c.x-=ox;c.z-=oz;});susp.forEach(p=>{p.x-=ox;p.z-=oz;});opens.forEach(p=>{p.x-=ox;p.z-=oz;});
+  return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0},nodes:cl,acc,segs,susp,turns,opens,empty:!all.length};}
+/* ---------- the chooser: what joins at an open end, or which piece goes on an open arm ---------- */
+function closeChooser(){const c=$('chooser');if(c)c.hidden=true;}
+function openChooser(li,path,kind,px,py){const el=$('chooser'),ln=S.lines[li];if(!ln)return;const list=intBodies(),rec=PRODUCT.mount==='recessed';
+  let h=`<div class="ch-h">${kind==='end'?'What joins here?':kind==='start'?'Choose the first piece':'Choose the next piece'}<button class="ib" data-chx aria-label="Close">✕</button></div>`;
+  if(kind==='end'){const opts=rec?['joint']:['joint','corner','tee','teeL','teeR','cross'];
+    h+=`<div class="ch-g">${opts.map(k=>k==='corner'?`<button class="btn" data-chc="corner" data-side="L">Corner · left</button><button class="btn" data-chc="corner" data-side="R">Corner · right</button>`:`<button class="btn" data-chc="${k}">${CONN[k].short}</button>`).join('')}</div>`;
+    if(rec)h+=`<p class="note">${PRODUCT.name} joins in straight rows only (no corner or T junctions listed by ${BRAND}).</p>`;
+    h+=`<p class="note">Or leave it: an open end gets an end cap.</p>`;}
+  else{h+=`<div class="ch-g">${list.map(b=>`<button class="btn" data-chp="${b.len}">${b.len} mm<small> · ${b.wl} W</small></button>`).join('')}</div>
+    <div class="ch-f"><label class="f">Or a run length, filled with bodies (mm)<span style="display:flex;gap:6px"><input type="number" id="ch-len" min="500" step="50" value="${list.at(-1).len*2}"><button class="btn" data-chp="custom">Add</button></span></label></div>`;}
+  el.innerHTML=h;el.hidden=false;el.dataset.li=li;el.dataset.path=path.join('.');el.dataset.kind=kind;
+  const W=320,r=document.body.getBoundingClientRect();el.style.left=Math.max(8,Math.min(px,innerWidth-W-8))+'px';el.style.top=Math.max(8,Math.min(py,innerHeight-el.offsetHeight-8))+'px';}
+function chooserPick(e){const el=$('chooser'),li=+el.dataset.li,path=el.dataset.path?el.dataset.path.split('.').map(Number):[],kind=el.dataset.kind,ln=S.lines[li];if(!ln)return;
+  if(e.target.closest('[data-chx]')){closeChooser();return;}
+  const c=e.target.closest('[data-chc]');if(c){const pc=tGet(ln,path);if(!pc)return;pc.next=mkConn(c.dataset.chc,c.dataset.side);const r=el.getBoundingClientRect();update(true);
+    if(pc.next.outs.length===1)openChooser(li,path.concat(0),'arm',r.left,r.top);else{closeChooser();toast(`${CONN[pc.next.k].name} added · use + on each arm to add pieces`);}return;}
+  const p=e.target.closest('[data-chp]');if(p){const len=p.dataset.chp==='custom'?Math.max(500,+$('ch-len').value||0):+p.dataset.chp;const slot=tSlot(ln,path);if(!slot)return;
+    const prev=slot.o[slot.k];slot.o[slot.k]={len,next:prev&&prev.next||null};closeChooser();update(true,kind==='start');
+    toast(`${len} mm added · click + at the open end to carry on`);}}
 function resolveRad(){
   const st=STRIPS.find(s=>s.id===S.strip)||STRIPS[0];
   const all=[],runs=[],lines=[];
@@ -434,7 +482,24 @@ function stepHTML(s,l,i){
     <label class="f">Radius<select id="rad-${id}" ${d} data-k="r">${CURVES.map(c=>`<option value="${c}"${s.r===c?' selected':''}>R${PIECE[c].r}</option>`).join('')}</select></label>
     <label class="f">Angle (°)<input type="number" min="0" step="any" id="ang-${id}" ${d} data-k="a" value="${s.a}"></label></div><div class="res" id="res-${id}"></div></div>${ctl}</li>`;
 }
-function renderSteps(){
+const PP=t=>t?t.split('.').map(Number):[];
+function treeHTML(l,pc,path){const list=intBodies(),pd=`data-l="${l}" data-p="${path.join('.')}"`,id=`${l}-${path.join('_')}`;
+  let h=`<li class="step"><span class="n" title="Piece">▬</span><div class="body"><div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Piece · body length (mm)<input type="number" min="300" step="50" ${pd} data-tk="len" value="${pc.len}"></label><label class="f">Or one body<select ${pd} data-tk="body"><option value="">Pick a length…</option>${list.map(b=>`<option value="${b.len}"${b.len===+pc.len?' selected':''}>${b.len} mm · ${b.wl} W</option>`).join('')}</select></label></div><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove piece" title="Remove this piece and everything after it">✕</button></div></li>`;
+  const cn=pc.next;if(!cn)return h+`<li class="tadd"><button class="btn dash" data-tadd="end" ${pd}>+ Add after this piece</button></li>`;
+  h+=`<li class="step"><span class="n j" title="Junction">◆</span><div class="body"><b style="font-size:12.5px">${CONN[cn.k].name}</b>${cn.k==='corner'?`<div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Turn<select ${pd} data-tk="side"><option value="L"${cn.side==='L'?' selected':''}>Left</option><option value="R"${cn.side!=='L'?' selected':''}>Right</option></select></label><label class="f">Angle (°)<input type="number" min="0" max="150" step="5" ${pd} data-tk="a" value="${cn.a==null?90:cn.a}"></label></div>`:''}<div class="res" id="cres-${id}"></div></div><div class="ctl"><button class="ib" data-cdel ${pd} aria-label="Remove junction" title="Remove this junction and everything after it">✕</button></div></li>`;
+  cn.outs.forEach((o,i)=>{const p2=path.concat(i),inner=o.p?treeHTML(l,o.p,p2):`<li class="tadd"><button class="btn dash" data-tadd="arm" data-l="${l}" data-p="${p2.join('.')}">+ Add a piece</button></li>`;
+    h+=cn.outs.length===1?inner:`<li class="tarm"><div class="tarm-h">Arm · ${armName(o.rel)}</div><ol class="steps">${inner}</ol></li>`;});
+  return h;}
+function renderTree(){$('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
+    <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div><div style="display:flex;gap:6px">${ln.tree?`<button class="btn" data-dupline="${l}" style="padding:4px 9px;font-size:11.5px" title="Copy this line and place the copy beside it">Duplicate</button>`:''}${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px" title="Remove this line">Remove</button>`:''}</div></div>
+    <div class="lstart">
+      <label class="f">Start X (mm)<input type="number" step="10" data-l="${l}" data-lk="x" value="${ln.x}"${l===0?' title="Measured from the datum (0, 0)"':''}></label>
+      <label class="f">Start Y (mm)<input type="number" step="10" data-l="${l}" data-lk="y" value="${ln.y}"></label>
+      <label class="f">Heading<select data-l="${l}" data-lk="dir">${DIRS.map(([v,t])=>`<option value="${v}"${+ln.dir===v?' selected':''}>${t}</option>`).join('')}</select></label>
+    </div>
+    <ol class="steps">${ln.tree?treeHTML(l,ln.tree,[]):`<li class="tadd"><button class="btn dash" data-tadd="start" data-l="${l}" data-p="">+ Choose the first piece</button></li>`}</ol>
+  </div>`).join('');}
+function renderSteps(){if(INT){renderTree();return;}
   $('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
     <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div><div style="display:flex;gap:6px"><button class="btn" data-dupline="${l}" style="padding:4px 9px;font-size:11.5px" title="Copy this line and place the copy beside it">Duplicate</button>${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px" title="Remove this line">Remove</button>`:''}</div></div>
     <div class="lstart">
@@ -447,12 +512,13 @@ function renderSteps(){
   </div>`).join('');
 }
 function renderResults(){
-  if(INT){S.lines.forEach((ln,l)=>{ln.steps.forEach((s,i)=>{const el=$(`res-${l}-${i}`);if(!el)return;
-      if(s.t==='S'){const L=s._list||[];if(!L.length){el.className='res off';el.textContent=`Too short for a ${PRODUCT.name} body (shortest ${intBodies()[0].len} mm)`;return;}
-        const c={};L.forEach(b=>c[b.len]=(c[b.len]||0)+1);const off=Math.abs(s._actual-s._U)>40;el.className='res'+(off?' off':'');
-        el.innerHTML=`<b>${Object.entries(c).sort((a,b)=>b[0]-a[0]).map(([n,k])=>`${k} × ${n}`).join(' + ')}</b> = ${s._actual} mm${off?` (${s._U} mm available${s._U!==+s.len?' between junctions':''}; bodies come in fixed lengths)`:''}`;}
-      else{const a=s.a==null?90:+s.a,c=s._c;el.className='res'+(c&&c.type==='bad'?' off':'');el.innerHTML=`<b>${a}° ${s.t==='L'?'left':'right'}</b> · ${c&&c.jn?c.type[1]+'-way adjustable junction':c&&c.type==='inline'?'straight on (linear joint)':'junction'}${c&&c.type==='bad'?' · arms closer than 30°':''} · drag it in the plan or 3D to set the angle`;}});
-    const LL=R.lines.find(x=>x.li===l);const el=$('lsum-'+l);if(el&&LL)el.textContent=`${(LL.pieces.reduce((a,q)=>a+q.d.len,0)/1000).toFixed(2)} m · ${LL.pieces.length} bodies · ${LL.runs.length} circuit${LL.runs.length>1?'s':''}`;});return;}
+  if(INT){R.segs.forEach(g=>{const pc=g.s,id=`${g.li}-${g.path.join('_')}`,el=$('tres-'+id);
+      if(el){const L=pc._list||[];if(!L.length){el.className='res off';el.textContent=`Too short for a ${PRODUCT.name} body (shortest ${intBodies()[0].len} mm)`;}
+        else{const c={};L.forEach(b=>c[b.len]=(c[b.len]||0)+1);const off=Math.abs(pc._actual-pc.len)>40;el.className='res'+(off?' off':'');
+          el.innerHTML=`<b>${Object.entries(c).sort((a,b)=>b[0]-a[0]).map(([n,k])=>`${k} × ${n}`).join(' + ')}</b> = ${pc._actual} mm${off?` (asked for ${pc.len} mm; bodies come in fixed lengths)`:''}`;}}
+      const cn=pc.next,ce=$('cres-'+id);if(ce&&cn&&cn._c){const c=cn._c;ce.className='res'+(c.bad?' off':'');
+        ce.innerHTML=(c.jn?`<b>${c.type[1]}-way junction</b> · ${c.type==='J2'?'adjustable':'arms at 90°'}`:'<b>Linear joint</b> · straight on')+(c.bad?' · arms closer than 30°':'')+(cn.k==='corner'?' · drag it in the plan or 3D to set the angle':'');}});
+    S.lines.forEach((ln,l)=>{const LL=R.lines.find(x=>x.li===l),el=$('lsum-'+l);if(el)el.textContent=LL?`${(LL.pieces.reduce((a,q)=>a+q.d.len,0)/1000).toFixed(2)} m · ${LL.pieces.length} bod${LL.pieces.length===1?'y':'ies'} · ${LL.runs.length} circuit${LL.runs.length>1?'s':''}`:'empty';});return;}
   S.lines.forEach((ln,l)=>{ln.steps.forEach((s,i)=>{const el=$(`res-${l}-${i}`);if(!el||!s._list&&s.t==='S')return;
     if(s.t==='S'){const c={};s._list.forEach(p=>c[p]=(c[p]||0)+1);const txt=Object.entries(c).map(([p,n])=>`${n} × ${PIECE[p].len}`).join(' + ');
       const off=Math.abs(s._actual-s.len)>6*s._list.length;el.className='res'+(off?' off':'');el.innerHTML=`<b>${txt}</b> = ${s._actual} mm${off?` (asked for ${s.len} mm; nearest with 505/1005 straights)`:''}`;}
@@ -490,7 +556,8 @@ function renderSummaryInt(){const {st,pieces,runs,ext}=R,O=optOf(S.opt);
     ['Load',W.toFixed(0)+' W'],['Light output',Math.round(LM).toLocaleString('en-AU')+' lm'],['Junctions',J.length?['J2','J3','J4'].map(t=>[t,J.filter(c=>c.type===t).length]).filter(x=>x[1]).map(([t,n])=>`${n} × ${t[1]}-way`).join(', '):'none'],
     ['Circuits',runs.length+` (through-wired, max ${PRODUCT.perCircuit} bodies each, to be confirmed)`],['Driver',`Built in · 220–240V${S.dali?' · DALI':''}`],
     ['Mounting',PRODUCT.mount==='suspended'?`Suspended ${S.drop} mm below a ${S.ceil} mm ceiling`:`Recessed, ${S.ceil} mm ceiling`]].map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
-  const w=[];if(R.nodes.some(c=>c.type==='bad'))w.push('<b>Junction not possible:</b> lines meet at an angle that isn\'t 90°, or more than four arms meet at one point.');
+  const w=[];if(R.empty)w.push('<b>Start here:</b> choose the first piece (the <b>+</b> in the panel, the plan or the 3D view). At each open end, <b>+</b> asks what joins there: straight on, a corner, a T or a 4-way junction.');
+  if(R.nodes.some(c=>c.bad))w.push('<b>Junction not possible:</b> two arms are closer than 30°. Open the corner angle out.');
   if(PRODUCT.mount==='recessed'&&J.length)w.push(`<b>${PRODUCT.name} runs in straight rows.</b> ${BRAND} lists no corner or T junctions for the recessed version, so each corner here is shown for planning only: confirm the detail with Phosforma, or use separate rows.`);
   R.lines.forEach(LL=>{if(LL.runs.length>1)w.push(`Line ${LET(LL.li)} has more than ${PRODUCT.perCircuit} bodies, so it is split into ${LL.runs.length} circuits.`);});
   R.clash=clashFind(R);if(R.clash.length)w.unshift(`<b>Lines overlap:</b> ${clashTxt(R.clash)}. Keep at least ${CLEAR} mm between rows, except where they meet at a junction.`);
@@ -500,19 +567,28 @@ function renderSummaryInt(){const {st,pieces,runs,ext}=R,O=optOf(S.opt);
     R.acc.map(a=>`<tr><td class="q">${a.q}×</td><td><code>${a.code}</code><small>${a.name}${a.note?' · '+a.note:''}</small></td></tr>`).join('');}
 $('lines').addEventListener('input',e=>{const t=e.target,l=+t.dataset.l;if(Number.isNaN(l))return;const ln=S.lines[l];
   if(t.dataset.lk){const v=t.dataset.lk==='dir'?+t.value:parseFloat(t.value);if(Number.isNaN(v))return;ln[t.dataset.lk]=v;update(false);return;}
+  if(INT){const k=t.dataset.tk;if(!k)return;const pc=tGet(ln,PP(t.dataset.p));if(!pc)return;
+    if(k==='len'){const v=parseFloat(t.value);if(!(v>=300&&v<=60000))return;pc.len=v;update(false);return;}
+    if(k==='body'){if(!t.value)return;pc.len=+t.value;update(true);return;}
+    if(!pc.next)return;if(k==='side'){pc.next.side=t.value;update(true);return;}
+    if(k==='a'){const v=parseFloat(t.value);if(!(v>=0&&v<=150))return;pc.next.a=v;update(false);return;}return;}
   if(!t.dataset.k)return;const s=ln.steps[+t.dataset.i];
   const v=t.dataset.k==='len'||t.dataset.k==='a'?parseFloat(t.value):t.value; if(t.type==='number'&&!(v>0||(INT&&t.dataset.k==='a'&&v===0)))return; if(INT&&t.dataset.k==='a'&&v>150)return; s[t.dataset.k]=v; update(false);});
 $('lines').addEventListener('click',e=>{
   const du=e.target.closest('[data-dupline]');if(du){dupLine(+du.dataset.dupline);return;}
   const rm=e.target.closest('[data-rmline]');if(rm){S.lines.splice(+rm.dataset.rmline,1);update(true,true);return;}
+  if(INT){const ta=e.target.closest('[data-tadd]');if(ta){const r=ta.getBoundingClientRect();openChooser(+ta.dataset.l,PP(ta.dataset.p),ta.dataset.tadd,r.left,r.bottom+4);e.stopPropagation();return;}
+    const td=e.target.closest('[data-tdel]');if(td){const ln=S.lines[+td.dataset.l],sl=tSlot(ln,PP(td.dataset.p));if(sl){sl.o[sl.k]=null;closeChooser();update(true);}return;}
+    const cd=e.target.closest('[data-cdel]');if(cd){const pc=tGet(S.lines[+cd.dataset.l],PP(cd.dataset.p));if(pc){pc.next=null;closeChooser();update(true);}return;}return;}
   const ad=e.target.closest('[data-add]');if(ad){const ln=S.lines[+ad.dataset.l],t=ad.dataset.add;ln.steps.push(t==='S'?{t:'S',len:INT?3000:1000}:INT?{t,a:90}:{t,r:'R1000',a:90});update(true);return;}
   const b=e.target.closest('.ib');if(!b)return;const st=S.lines[+b.dataset.l].steps,i=+b.dataset.i,a=b.dataset.a;
   if(a==='del'){if(st.length>1)st.splice(i,1);}else{const j=a==='up'?i-1:i+1;if(j<0||j>=st.length)return;[st[i],st[j]]=[st[j],st[i]];}
   update(true);});
-$('add-line').onclick=()=>{const b=R.raw;S.lines.push({x:Math.round(b.x0/10)*10,y:-Math.round((b.z1+1500)/10)*10,dir:0,steps:[{t:'S',len:3000}]});update(true,true);toast(`Line ${LET(S.lines.length-1)} added below the design. Set its start and heading.`);};
+$('add-line').onclick=e=>{const b=R.raw;if(INT){const r=e.currentTarget.getBoundingClientRect();S.lines.push(G(null,Math.round(b.x0/10)*10,-Math.round((b.z1+2400)/10)*10));update(true,true);openChooser(S.lines.length-1,[],'start',r.left,r.bottom+4);e.stopPropagation();return;}S.lines.push({x:Math.round(b.x0/10)*10,y:-Math.round((b.z1+1500)/10)*10,dir:0,steps:[{t:'S',len:3000}]});update(true,true);toast(`Line ${LET(S.lines.length-1)} added below the design. Set its start and heading.`);};
 // Ready-made shapes are added beside the design (2.5 m to the right of it, centred on it); nothing already drawn is removed.
 $('preset').onchange=e=>{const p=PRESETS[e.target.value];e.target.value='';if(!p)return;
-  const add=copyLines(p);if(S.lines.length+add.length>26){toast('Up to 26 lines (A–Z) in one design');return;}
+  const add=copyLines(p);if(INT&&S.lines.every(l=>!l.tree)){S.lines=add;closeChooser();update(true,true);toast(`Added · drag it to place it · + at an open end adds more`);return;}
+  if(S.lines.length+add.length>26){toast('Up to 26 lines (A–Z) in one design');return;}
   const keep=S.lines,cur=R.raw;S.lines=add;const r=resolve().raw;S.lines=keep;
   const dx=cur.x1+2500-r.x0,dz=(cur.z0+cur.z1)/2-(r.z0+r.z1)/2;
   add.forEach(l=>{l.x=Math.round(((+l.x||0)+dx)/10)*10;l.y=Math.round(((+l.y||0)-dz)/10)*10;});
@@ -521,11 +597,14 @@ $('preset').onchange=e=>{const p=PRESETS[e.target.value];e.target.value='';if(!p
 // Clear all asks for a second click so a design can't be lost by accident
 let clearArm=0;$('clear-all').onclick=e=>{const b=e.currentTarget;
   if(Date.now()-clearArm>3000){clearArm=Date.now();b.textContent='Click again to clear';setTimeout(()=>{b.textContent='Clear all';},3000);return;}
-  clearArm=0;b.textContent='Clear all';S.lines=[{x:0,y:0,dir:0,steps:[{t:'S',len:3000}]}];update(true,true);toast('Cleared · one 3 m straight to start from');};
+  clearArm=0;b.textContent='Clear all';if(INT){S.lines=[G(null)];closeChooser();update(true,true);toast('Cleared · choose the first piece');return;}S.lines=[{x:0,y:0,dir:0,steps:[{t:'S',len:3000}]}];update(true,true);toast('Cleared · one 3 m straight to start from');};
 $('strip').onchange=e=>{S.strip=e.target.value;update(false);};
 $('cct').onchange=e=>{S.cct=e.target.value;update(false);};
 $('proj').oninput=e=>{S.proj=e.target.value;save();};
 $('client').oninput=e=>{S.client=e.target.value;save();};
+$('chooser').addEventListener('click',chooserPick);
+addEventListener('keydown',e=>{if(e.key==='Escape')closeChooser();});
+addEventListener('pointerdown',e=>{const c=$('chooser');if(!c.hidden&&!c.contains(e.target)&&!e.target.closest('[data-tadd],[data-open],.lbl.plus,#add-line'))closeChooser();},true);
 function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200);}
 async function copyText(t,msg){try{await navigator.clipboard.writeText(t);toast(msg);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();try{document.execCommand('copy');toast(msg);}catch(_){toast('Select and copy the text manually');}ta.remove();}}
 $('copy').onclick=()=>copyText(Object.entries(R.groups).map(([c,g])=>`${g.q}\t${c}`).concat(INT?R.acc.map(a=>`${a.q}\t${a.code}\t${a.name}`):[]).join('\n'),'Order list copied');
@@ -733,7 +812,7 @@ function carpetTex(){return canvasTex(512,(x,N)=>{const r=rng(21);x.fillStyle='#
 const carpet=carpetTex();let winMat=null;
 function buildOffice(){
   disposeGroup(site);site.clear();labels.forEach(l=>l.removeFromParent());labels=[];groundMats=[];
-  const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000));
+  const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)).concat(R.opens.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000)).concat(R.opens.map(p=>p.z/1000));if(!xs.length){xs.push(0);zs.push(0);}
   const m=2.6,ox=R.origin.x/1000,oz=R.origin.z/1000;
   const fit={x0:Math.floor(Math.min(...xs)+ox-m),x1:Math.ceil(Math.max(...xs)+ox+m),z0:Math.floor(Math.min(...zs)+oz-m),z1:Math.ceil(Math.max(...zs)+oz+m)};
   siteFrame=keepSite&&siteFrame?{x0:Math.min(siteFrame.x0,fit.x0),x1:Math.max(siteFrame.x1,fit.x1),z0:Math.min(siteFrame.z0,fit.z0),z1:Math.max(siteFrame.z1,fit.z1)}:fit;keepSite=false;
@@ -763,6 +842,10 @@ function buildOffice(){
   const ly=yLine()-0.09;
   R.pieces.forEach(q=>{const el=document.createElement('div');el.className='lbl';el.textContent=q.label;const o=new CSS2DObject(el);o.position.set(q.mid.x/1000,ly,q.mid.z/1000);o.visible=numbersOn;scene.add(o);labels.push(o);
     if(q.seg==='S'||q.seg==='I'){const f=document.createElement('div');f.className='lbl feed';f.textContent=LET(q.line)+' · Circuit '+(q.run+1);const p0=q.pts[0];const fo=new CSS2DObject(f);fo.position.set(p0.x/1000,ly-0.12,p0.z/1000);fo.visible=true;scene.add(fo);labels.push(fo);}});
+  // open ends: + asks what joins there
+  R.opens.forEach(p=>{const el=document.createElement('div');el.className='lbl feed plus';el.textContent='+';el.title=p.kind==='end'?'Add after this piece':p.kind==='start'?'Choose the first piece':'Add a piece on this arm';
+    el.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();openChooser(p.li,p.path,p.kind,e.clientX+12,e.clientY+12);});
+    const d=(p.kind==='start'?0:p.kind==='arm'?PRODUCT.junction/2+180:180)/1000,o=new CSS2DObject(el);o.position.set(p.x/1000+Math.cos(p.h)*d,yLine()+0.03,p.z/1000+Math.sin(p.h)*d);o.visible=true;scene.add(o);labels.push(o);});
   setMode(mode);}
 
 /* ---------- trees ---------- */
@@ -1006,6 +1089,7 @@ let current='aerial',anim=0,activeScene=scene;
 function viewFor(name){
   const ps=R.pieces,sz=Math.max(R.ext.w,R.ext.d,2000)/1000;
   if(INT&&(name==='walk'||name==='aerial'||name==='detail')){const y0=yLine(),H=S.ceil/1000;
+    if(!ps.length&&name!=='aerial'){const p=R.opens[0]||{x:0,z:0};return {s:scene,pos:[p.x/1000-2.2,1.6,p.z/1000+2.6],tgt:[p.x/1000,y0*0.8,p.z/1000]};}
     if(name==='walk'){const p=ps[0].pts[0],q=ps[Math.min(ps.length-1,Math.floor(ps.length/2))].mid,hx=Math.cos(p.h),hz=Math.sin(p.h);return {s:scene,pos:[p.x/1000-hx*2.4+hz*1.6,1.6,p.z/1000-hz*2.4-hx*1.6],tgt:[q.x/1000,y0*0.82,q.z/1000]};}
     if(name==='detail'){const c=R.nodes.find(c=>c.jn)||{x:ps[0].pts[0].x,z:ps[0].pts[0].z};return {s:scene,pos:[c.x/1000+0.85,y0-0.6,c.z/1000+0.95],tgt:[c.x/1000,y0,c.z/1000]};}
     const ss=B?Math.max(B.x1-B.x0,B.z1-B.z0)+3:8,cx=B?(B.x0+B.x1)/2:0,cz=B?(B.z0+B.z1)/2:0;return {s:scene,pos:[cx-ss*0.42,ss*0.72+H,cz+ss*0.68],tgt:[cx,H*0.3,cz]};}
@@ -1041,7 +1125,7 @@ const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=$('tip');let hover
 function highlight(q){document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
   run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):lightCol());});}
 canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run||drag3){tip.hidden=true;return;}
-  if(!e.buttons){let near=false;if(INT){const g=groundAt(e);if(g){const tol=Math.max(110,camera.position.distanceTo(g)*28);near=S.lines.some(ln=>ln.steps.some(st=>st.t!=='S'&&st._c&&st._c.jn&&Math.hypot(st._c.x-g.x*1000,st._c.z-g.z*1000)<tol));}}
+  if(!e.buttons){let near=false;if(INT){const g=groundAt(e);if(g){const tol=Math.max(110,camera.position.distanceTo(g)*28);near=R.turns.some(t=>Math.hypot(t.c.x-g.x*1000,t.c.z-g.z*1000)<tol);}}
     canvas.style.cursor=near?'alias':pickAt(e)?'grab':'';}
   const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
   const q=ray.intersectObjects(run.picks,false)[0]?.object.userData.piece||null;if(q!==hovered){hovered=q;highlight(q);}
@@ -1085,18 +1169,20 @@ const planEl=$('plan');let planFrame=null,planRaf=0;
 function svgPt(e){const svg=planEl.querySelector('svg'),m=svg.getScreenCTM().inverse();const p=new DOMPoint(e.clientX,e.clientY).matrixTransform(m);return p;}
 /* ---------- interior: drag a junction to set its angle (5° steps, arms at least 30° apart, no overlaps) ---------- */
 let angDrag=null,angRaf=0;
-function angBegin(li,si,frame){const st=S.lines[li].steps[si],c=st._c;if(!c)return false;
-  angDrag={li,si,st,c0:{x:c.x,z:c.z},hin:st._hin,O0:{...R.origin},frame,valid:{t:st.t,a:st.a==null?90:+st.a},base:new Set(clashFind(R).map(p=>p.join('-')))};return true;}
-function angTo(dx,dz){const A=angDrag;if(Math.hypot(dx,dz)<20)return false;let d=Math.atan2(dz,dx)-A.hin;d=Math.atan2(Math.sin(d),Math.cos(d))*180/Math.PI;d=Math.max(-150,Math.min(150,Math.round(d/5)*5));
-  const nt=d<0?'L':'R',na=Math.abs(d);if(nt===A.st.t&&na===(A.st.a==null?90:+A.st.a))return false;A.st.t=nt;A.st.a=na;R=resolve();
-  const bad=(A.st._c&&A.st._c.type==='bad')||clashFind(R).some(p=>p.includes(A.li)&&!A.base.has(p.join('-')));
-  if(bad){A.st.t=A.valid.t;A.st.a=A.valid.a;R=resolve();return false;}A.valid={t:nt,a:na};return true;}
+function angBegin(ti,frame){const T=R.turns[ti];if(!T)return false;const cn=T.conn;
+  angDrag={li:T.li,cn,c0:{x:T.c.x,z:T.c.z},hin:T.hin,O0:{...R.origin},frame,valid:{side:cn.side,a:cn.a==null?90:+cn.a},base:new Set(clashFind(R).map(p=>p.join('-')))};return true;}
+function angTo(dx,dz){const A=angDrag,cn=A.cn;if(Math.hypot(dx,dz)<20)return false;let d=Math.atan2(dz,dx)-A.hin;d=Math.atan2(Math.sin(d),Math.cos(d))*180/Math.PI;d=Math.max(-150,Math.min(150,Math.round(d/5)*5));
+  const nt=d<0?'L':'R',na=Math.abs(d);if(nt===cn.side&&na===(cn.a==null?90:+cn.a))return false;cn.side=nt;cn.a=na;R=resolve();
+  const bad=(cn._c&&cn._c.bad)||clashFind(R).some(p=>p.includes(A.li)&&!A.base.has(p.join('-')));
+  if(bad){cn.side=A.valid.side;cn.a=A.valid.a;R=resolve();return false;}A.valid={side:nt,a:na};return true;}
 function angEnd(){const A=angDrag;angDrag=null;R=resolve();const T={x:R.origin.x-A.O0.x,z:R.origin.z-A.O0.z};camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);
-  toast(`Junction ${LET(A.li)} set to ${A.st.a}° ${A.st.t==='L'?'left':'right'}`);}
+  toast(`Corner set to ${A.cn.a}° ${A.cn.side==='L'?'left':'right'}`);}
 let lastDown={t:0,li:-1};
-planEl.addEventListener('pointerdown',e=>{const tj=INT&&!e.button&&e.target.closest('[data-turn]');
-  if(tj){e.preventDefault();const [li,si]=tj.dataset.turn.split(',').map(Number),v=planEl.querySelector('svg').viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];
-    if(angBegin(li,si,planFrame)){planEl.setPointerCapture(e.pointerId);planEl.style.cursor='alias';}return;}const t=e.target.closest('[data-line]');if(!t||e.button)return;e.preventDefault();
+planEl.addEventListener('pointerdown',e=>{const op=INT&&!e.button&&e.target.closest('[data-open]');
+  if(op){e.preventDefault();e.stopPropagation();const o=R.opens[+op.dataset.open];if(o)openChooser(o.li,o.path,o.kind,e.clientX+12,e.clientY+12);return;}
+  const tj=INT&&!e.button&&e.target.closest('[data-turn]');
+  if(tj){e.preventDefault();const ti=+tj.dataset.turn,v=planEl.querySelector('svg').viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];
+    if(angBegin(ti,planFrame)){planEl.setPointerCapture(e.pointerId);planEl.style.cursor='alias';}return;}const t=e.target.closest('[data-line]');if(!t||e.button)return;e.preventDefault();
   const li=+t.dataset.line,now=performance.now();if(lastDown.li===li&&now-lastDown.t<400){lastDown={t:0,li:-1};turnLine(li);return;}lastDown={t:now,li};
   const svg=planEl.querySelector('svg'),v=svg.viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];const p=svgPt(e);dragBegin(+t.dataset.line,p.x,p.y,e.altKey);planEl.setPointerCapture(e.pointerId);planEl.style.cursor='grabbing';});
 planEl.addEventListener('pointermove',e=>{if(angDrag&&planFrame){const p=svgPt(e);if(angTo(p.x-angDrag.c0.x,p.y-angDrag.c0.z)){cancelAnimationFrame(angRaf);angRaf=requestAnimationFrame(()=>{if(!angDrag)return;
@@ -1115,8 +1201,8 @@ function pickAt(e){const g=groundAt(e);if(!g)return null;const tol=Math.min(0.6,
     const d=Math.hypot(a.x+dx*t-g.x*1000,a.z+dz*t-g.z*1000);if(d<bd){bd=d;best=q;}}});return best;}
 let ang3=null;
 stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||e.button||current==='plan')return;
-  if(INT){const g=groundAt(e);if(g){const tol=Math.max(110,camera.position.distanceTo(g)*28);let hit=null;S.lines.forEach((ln,li)=>ln.steps.forEach((st,si)=>{if(st.t!=='S'&&st._c&&st._c.jn&&Math.hypot(st._c.x-g.x*1000,st._c.z-g.z*1000)<tol)hit=[li,si];}));
-    if(hit&&angBegin(hit[0],hit[1],null)){e.stopPropagation();e.preventDefault();ang3=e.pointerId;canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='alias';tip.hidden=true;labels.forEach(l=>l.element.style.visibility='hidden');return;}}}
+  if(INT){const g=groundAt(e);if(g){const tol=Math.max(110,camera.position.distanceTo(g)*28);let hit=-1;R.turns.forEach((t,ti)=>{if(Math.hypot(t.c.x-g.x*1000,t.c.z-g.z*1000)<tol)hit=ti;});
+    if(hit>=0&&angBegin(hit,null)){e.stopPropagation();e.preventDefault();ang3=e.pointerId;canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='alias';tip.hidden=true;labels.forEach(l=>l.element.style.visibility='hidden');return;}}}
   const q=pickAt(e);if(!q)return;const g=groundAt(e);if(!g)return;e.stopPropagation();e.preventDefault();
   dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
   labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
@@ -1136,7 +1222,7 @@ canvas.addEventListener('pointerup',up3);canvas.addEventListener('pointercancel'
 // o.only = one line drawn on its own (its own extents, no datum); o.key = layout plan (lines, types, start points; no piece labels);
 // o.paper = [w,h] mm of the paper box, so text and line weights come out the same size on every PDF page
 function planSVG(o={}){
-  const solo=o.only!=null,ps=solo?R.pieces.filter(q=>q.line===o.only):R.pieces,all=ps.flatMap(q=>q.pts);
+  const solo=o.only!=null,ps=solo?R.pieces.filter(q=>q.line===o.only):R.pieces,all=ps.flatMap(q=>q.pts);if(!all.length)all.push(...(R.opens||[]).map(p=>({x:p.x,z:p.z})),{x:-R.origin.x,z:-R.origin.z});
   const x0=Math.min(...all.map(p=>p.x)),x1=Math.max(...all.map(p=>p.x)),z0=Math.min(...all.map(p=>p.z)),z1=Math.max(...all.map(p=>p.z));
   const dX=-R.origin.x,dZ=-R.origin.z,X0=solo?x0:Math.min(x0,dX),X1=solo?x1:Math.max(x1,dX),Z0=solo?z0:Math.min(z0,dZ),Z1=solo?z1:Math.max(z1,dZ); // datum in view
   const pad=Math.max(900,Math.max(X1-X0,Z1-Z0)*0.12);let vb=o.frame?o.frame.vb:[X0-pad,Z0-pad,X1-X0+2*pad,Z1-Z0+2*pad];
@@ -1157,8 +1243,8 @@ function planSVG(o={}){
   ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${red.has(q.line)?(i%2?'#f07a6e':'#d93a2b'):(i%2?grey:ink)}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
   // joints and end caps
   ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
-    const capped=i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
-  R.runs.filter(r=>!solo||r[0].line===o.only).forEach(r=>{const q=r.at(-1),p=q.pts.at(-1),nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="#ff5000" stroke-width="${k*2.4}"/>`;});
+    const capped=INT?R.nodes.some(c=>c.type==='end'&&Math.hypot(c.x-p.x,c.z-p.z)<5):i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
+  (INT?ps.filter(q=>R.nodes.some(c=>c.type==='end'&&Math.hypot(c.x-q.pts.at(-1).x,c.z-q.pts.at(-1).z)<5)):R.runs.filter(r=>!solo||r[0].line===o.only).map(r=>r.at(-1))).forEach(q=>{const p=q.pts.at(-1),nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="#ff5000" stroke-width="${k*2.4}"/>`;});
   // piece numbers on the left-hand side of travel
   if(!o.key)ps.forEach(q=>{const m=q.mid,off=sw*0.5+fs*1.15,cx=m.x+Math.sin(m.h)*off,cz=m.z-Math.cos(m.h)*off;
     s+=`<rect x="${cx-fs*1.15}" y="${cz-fs*0.75}" width="${fs*2.3}" height="${fs*1.5}" rx="${fs*0.75}" fill="#fff" stroke="${ink}" stroke-width="${k*0.9}"/><text x="${cx}" y="${cz}" font-size="${fs*0.8}" text-anchor="middle" dominant-baseline="central" fill="${ink}" font-weight="700">${q.label}</text>`;});
@@ -1167,13 +1253,19 @@ function planSVG(o={}){
     s+=`<line x1="${bx}" y1="${bz}" x2="${p.x-Math.cos(p.h)*sw}" y2="${p.z-Math.sin(p.h)*sw}" stroke="#ff5000" stroke-width="${k*1.6}" stroke-dasharray="${k*5} ${k*3}"/><circle cx="${bx}" cy="${bz}" r="${fs*0.45}" fill="#ff5000"/>`;
     s+=`<text x="${bx}" y="${bz-fs*1.0}" font-size="${fs}" text-anchor="middle" fill="#ff5000" font-weight="700">${LET(q.line)} · ${INT?'CIRCUIT':'FEED'} ${q.run+1}</text>`;});
   // interior: junction blocks to scale, with their type
-  if(INT&&R.nodes){const turns={};S.lines.forEach((ln,li)=>ln.steps.forEach((st,si)=>{if(st.t!=='S'&&st._c)turns[R.nodes.indexOf(st._c)]=[li,si,st];}));
+  if(INT&&R.nodes){const turns={};R.turns.forEach((t,ti)=>{turns[R.nodes.indexOf(t.c)]=[ti,t.conn];});
     R.nodes.forEach((c,ci)=>{if(!c.jn||(solo&&!ps.some(q=>q.pts.some(p=>Math.hypot(p.x-c.x,p.z-c.z)<PRODUCT.junction))))return;const J=PRODUCT.junction,tr=turns[ci],hr=Math.max(J*0.42,fs*0.9);
       c.arms.forEach(a=>{s+=`<line x1="${c.x}" y1="${c.z}" x2="${c.x+Math.cos(a)*J/2}" y2="${c.z+Math.sin(a)*J/2}" stroke="#ff5000" stroke-width="${sw*0.9}"/>`;});
-      s+=`<circle${tr&&o.screen?` data-turn="${tr[0]},${tr[1]}" style="cursor:alias"`:''} cx="${c.x}" cy="${c.z}" r="${hr}" fill="#fff" stroke="#ff5000" stroke-width="${k*1.6}"/>`;
-      s+=`<text x="${c.x+hr*1.3}" y="${c.z-hr*1.3}" font-size="${fs*0.8}" fill="#ff5000" font-weight="700">${c.type[1]}-WAY${tr?' · '+(tr[2].a==null?90:+tr[2].a)+'°':''}</text>`;});}
+      s+=`<circle${tr&&o.screen?` data-turn="${tr[0]}" style="cursor:alias"`:''} cx="${c.x}" cy="${c.z}" r="${hr}" fill="#fff" stroke="#ff5000" stroke-width="${k*1.6}"/>`;
+      s+=`<text x="${c.x+hr*1.3}" y="${c.z-hr*1.3}" font-size="${fs*0.8}" fill="#ff5000" font-weight="700">${c.type[1]}-WAY${tr?' · '+(tr[1].a==null?90:+tr[1].a)+'° '+(tr[1].side==='L'?'L':'R'):''}</text>`;});}
   // step callouts: radius + angle for turns, length for straights (right-hand side)
-  if(!o.key)S.lines.forEach((ln,li)=>(solo&&li!==o.only)?0:ln.steps.forEach((st,si)=>{const mine=ps.filter(q=>q.line===li&&q.step===si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
+  if(!o.key&&INT)R.segs.forEach(g=>{if(solo&&g.li!==o.only)return;const mine=ps.filter(q=>q.line===g.li&&q.step===g.si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
+    const off=sw*0.5+fs*1.6,cx=m.x-Math.sin(m.h)*off,cz=m.z+Math.cos(m.h)*off;
+    s+=`<text x="${cx}" y="${cz}" font-size="${fs*0.95}" text-anchor="middle" dominant-baseline="central" fill="${grey}" paint-order="stroke" stroke="#fff" stroke-width="${k*3}">${g.s._actual} mm</text>`;});
+  // open ends: + asks what joins there (screen only)
+  if(INT&&o.screen&&!o.key&&!solo)(R.opens||[]).forEach((p,i)=>{const J=PRODUCT.junction,d=p.kind==='start'?0:p.kind==='arm'?J/2+fs*1.8:fs*1.8,x=p.x+Math.cos(p.h)*d,z=p.z+Math.sin(p.h)*d,r=fs*1.05;
+    s+=`<g data-open="${i}" style="cursor:pointer"><title>${p.kind==='end'?'Add after this piece':p.kind==='start'?'Choose the first piece':'Add a piece on this arm'}</title><circle cx="${x}" cy="${z}" r="${r}" fill="#ff5000" stroke="#fff" stroke-width="${k*1.6}"/><path d="M${x-r*0.5} ${z}H${x+r*0.5}M${x} ${z-r*0.5}V${z+r*0.5}" stroke="#fff" stroke-width="${k*2.2}" stroke-linecap="round"/></g>`;});
+  if(!o.key&&!INT)S.lines.forEach((ln,li)=>(solo&&li!==o.only)?0:ln.steps.forEach((st,si)=>{const mine=ps.filter(q=>q.line===li&&q.step===si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
     const off=sw*0.5+fs*1.6,cx=m.x-Math.sin(m.h)*off,cz=m.z+Math.cos(m.h)*off;
     const t=st.t==='S'?`${st._actual} mm`:INT?`${st.a==null?90:+st.a}° ${st.t==='L'?'left':'right'}`:`R${PIECE[st.r].r} · ${+st._actual.toFixed(2)}° ${st.t==='L'?'left':'right'}`;
     s+=`<text x="${cx}" y="${cz}" font-size="${fs*0.95}" text-anchor="middle" dominant-baseline="central" fill="${grey}" paint-order="stroke" stroke="#fff" stroke-width="${k*3}">${t}</text>`;}));
@@ -1239,7 +1331,7 @@ async function snapshot(o){
   return url;}
 function logoPNG(white){const svg=logoSVG().replace(/#10181f/g,white?'#ffffff':'#10181f').replace(/#777779/g,white?'#b9bcbf':'#777779');return svgToPng(svg,1000,216,true);}
 $('pdf').onclick=async()=>{
-  const btn=$('pdf');{const c=clashFind(R);if(c.length){toast(`Lines overlap (${clashTxt(c)}): move them apart before making the PDF`);return;}}
+  const btn=$('pdf');if(R.empty){toast('Add a piece first');return;}{const c=clashFind(R);if(c.length){toast(`Lines overlap (${clashTxt(c)}): move them apart before making the PDF`);return;}}
   btn.textContent='Preparing PDF…';btn.disabled=true;
   try{
     const {jsPDF}=window.jspdf;
@@ -1291,7 +1383,7 @@ $('pdf').onclick=async()=>{
     const KEY=INT?keyInt({...P0,male:P0.male||P1.male}):[[P0.prof,'Stainless profile, EOP H100 (in the ground)'],[P0.ins,'LED insert with opal face'],[P0.cap,'End cap, screwed to the profile'],
       [P0.male,'T1X lead, male'],[P1.female,'T1X lead, female'],[P0.feed,'Feed lead out through the end cap, T1X female'],[P0.drv,`${st.v}V DC driver${RGB?' + '+CTRL:''}, lead with T1X male`]];
     // shape types: lines with the same steps are the same shape (heading and position don't matter)
-    const sig=ln=>JSON.stringify(ln.steps.map(s=>s.t==='S'?['S',+s.len]:[s.t,s.r,+s.a]));const TYPES=[];
+    const sig=ln=>INT?JSON.stringify(ln.tree,(k,v)=>k.startsWith('_')||k==='rel'?undefined:v):JSON.stringify(ln.steps.map(s=>s.t==='S'?['S',+s.len]:[s.t,s.r,+s.a]));const TYPES=[];
     R.lines.forEach(ln=>{const k=sig(S.lines[ln.li]);let t=TYPES.find(t=>t.k===k);if(!t)TYPES.push(t={k,lines:[]});t.lines.push(ln.li);});
     TYPES.forEach((t,i)=>{t.n=i+1;t.name=`Type ${i+1}`;});const typeOf=li=>TYPES.find(t=>t.lines.includes(li));
     const keyFor=li=>{const i0=R.pieces.findIndex(q=>q.line===li),a=studioRun.pgs[i0].userData.anch,nx=R.pieces[i0+1],b=(nx&&nx.run===R.pieces[i0].run)?studioRun.pgs[i0+1].userData.anch:{};
