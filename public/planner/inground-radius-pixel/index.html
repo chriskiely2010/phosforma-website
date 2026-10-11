@@ -343,22 +343,25 @@ function resolveInt(){
     const x0=+ln.x||0,z0=-(+ln.y||0),h0=-(+ln.dir||0)*Math.PI/180;let si=0;ln._hc=false;
     if(!ln.tree){opens.push({li,path:[],kind:'start',x:x0,z:z0,h:h0});return;}
     const n0={x:x0,z:z0,arms:[h0],type:'end',jn:false,li};cl.push(n0);opens.push({li,path:[],kind:'head',x:x0,z:z0,h:h0+Math.PI,node:n0});
-    const walk=(pc,path,x,z,h,fromJ)=>{pc._cl=false;if(pc.next)pc.next._tk=[];if(pc.link){links.push({li,pc,path,x,z,h,o0:fromJ?JH:0});return;}const cn=pc.next,t=cn?CONN[cn.k].t:'end',toJ=/^J/.test(t),o0=fromJ?JH:0,o1=toJ?JH:0;
+    const walk=(pc,path,x,z,h,fromJ,from)=>{pc._cl=false;pc._a=from;pc._h=h;pc._b=null;if(pc.next)pc.next._tk=[];if(pc.link){links.push({li,pc,path,x,z,h,o0:fromJ?JH:0,from});return;}const cn=pc.next,t=cn?CONN[cn.k].t:'end',toJ=/^J/.test(t),o0=fromJ?JH:0,o1=toJ?JH:0;
       const bl=fillRun(Math.max(0,+pc.len||0),list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
       const g={li,si:si++,s:pc,path,h,len:o0+act+o1,bodies:bl.length};segs.push(g);emit(g,x,z,h,o0,bl);
-      const ex=x+Math.cos(h)*g.len,ez=z+Math.sin(h)*g.len,node={x:ex,z:ez,arms:[h+Math.PI],type:t,jn:toJ,li};cl.push(node);
+      const ex=x+Math.cos(h)*g.len,ez=z+Math.sin(h)*g.len,node={x:ex,z:ez,arms:[h+Math.PI],type:t,jn:toJ,li};cl.push(node);pc._b=node;
       if(!cn){opens.push({li,path,kind:'end',x:ex,z:ez,h,pc,node});return;}
       if(cn.k==='corner')cn.outs[0].rel=(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a);
       cn._c=node;cn._hin=h;if(cn.k==='corner')turns.push({conn:cn,c:node,li,hin:h});
-      cn.outs.forEach((o,i)=>{const h2=h+o.rel*Math.PI/180;node.arms.push(h2);if(o.p)walk(o.p,path.concat(i),ex,ez,h2,toJ);else opens.push({li,path:path.concat(i),kind:'arm',x:ex,z:ez,h:h2,conn:cn,node});});};
-    walk(ln.tree,[],x0,z0,h0,false);});
+      cn.outs.forEach((o,i)=>{const h2=h+o.rel*Math.PI/180;node.arms.push(h2);if(o.p)walk(o.p,path.concat(i),ex,ez,h2,toJ,node);else opens.push({li,path:path.concat(i),kind:'arm',x:ex,z:ez,h:h2,conn:cn,node});});};
+    walk(ln.tree,[],x0,z0,h0,false,n0);});
   // closing pieces: run straight ahead into the next open junction arm, or onto an open end (straight on = linear joint, square on = corner junction)
-  const lost=[];links.forEach((L,k)=>{const t=linkFind(L,opens,JH),pc=L.pc;let o1=0;
-    if(t){o1=t.mode==='inline'?0:JH;pc.len=Math.max(0,Math.round(t.along-L.o0-o1));pc._to=t.mode;opens.splice(opens.indexOf(t.o),1);const T=t.o;if(T.kind==='arm')T.conn._tk.push(T.path.at(-1));else if(T.kind==='end')T.pc._cl=true;else S.lines[T.li]._hc=true;}else pc._to=null;
+  // a closing run keeps the target it was made for (pc.to); it never jumps to something else that happens to line up later
+  const lost=[];links.forEach((L,k)=>{const pc=L.pc;let t=null,o1=0;
+    if(pc.to){const T=opens.find(o=>o.li===L.li&&o.kind===pc.to.k&&o.path.join('.')===pc.to.p);if(T)t=linkFind(L,[T],JH);}
+    else{t=linkFind(L,opens,JH);if(t)pc.to={k:t.o.kind,p:t.o.path.join('.')};}
+    if(t){o1=t.mode==='inline'?0:t.mode==='arm'?(t.o.node.jn?JH:0):JH;pc.len=Math.max(0,Math.round(t.along-L.o0-o1));pc._to=t.mode;opens.splice(opens.indexOf(t.o),1);const T=t.o;if(T.kind==='arm')T.conn._tk.push(T.path.at(-1));else if(T.kind==='end')T.pc._cl=true;else S.lines[T.li]._hc=true;}else pc._to=null;
     const bl=fillRun(Math.max(0,+pc.len||0),list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
     const g={li:L.li,si:1000+k,s:pc,path:L.path,h:L.h,len:L.o0+act+o1,bodies:bl.length,link:true};segs.push(g);emit(g,L.x,L.z,L.h,L.o0,bl);
-    if(!t){lost.push(L.li);cl.push({x:L.x+Math.cos(L.h)*g.len,z:L.z+Math.sin(L.h)*g.len,arms:[L.h+Math.PI],type:'end',jn:false,li:L.li});return;}
-    const n=t.o.node;if(t.mode==='inline'){n.type='inline';n.arms.push(L.h+Math.PI);}
+    if(!t){lost.push(L.li);const ln_={x:L.x+Math.cos(L.h)*g.len,z:L.z+Math.sin(L.h)*g.len,arms:[L.h+Math.PI],type:'end',jn:false,li:L.li};cl.push(ln_);pc._b=ln_;return;}
+    const n=t.o.node;pc._b=n;if(t.mode==='inline'){n.type='inline';n.arms.push(L.h+Math.PI);}
     else if(t.mode==='corner'){n.x=t.C.x;n.z=t.C.z;n.type='J2';n.jn=true;n.arms=[t.o.h+Math.PI,L.h+Math.PI];}});
   cl.forEach(c=>{if(!c.jn)return;let mn=7;const k=c.arms.length;for(let i=0;i<k;i++)for(let j=i+1;j<k;j++)mn=Math.min(mn,Math.abs(Math.atan2(Math.sin(c.arms[i]-c.arms[j]),Math.cos(c.arms[i]-c.arms[j]))));if(mn<Math.PI/6-0.01)c.bad=true;});
   const lines=[],runs=[];
@@ -395,7 +398,7 @@ function openChooser(li,path,kind,px,py){const el=$('chooser'),ln=S.lines[li];if
   let h=`<div class="ch-h">${kind==='end'||kind==='head'?'What joins here?':kind==='start'?'Choose the first piece':kind==='headpiece'?'Choose the piece before it':'Choose the next piece'}<button class="ib" data-chx aria-label="Close">✕</button></div>`;
   const me=R.opens.find(o=>o.li===li&&o.kind===kind&&o.path.join()===path.join()),
     tg=me&&(kind==='end'||kind==='arm')?linkFind({li,x:me.x,z:me.z,h:me.h,o0:kind==='arm'?PRODUCT.junction/2:0,path,kind},R.opens,PRODUCT.junction/2):null;
-  if(tg){const gap=Math.round(tg.along-(kind==='arm'?PRODUCT.junction/2:0)-(tg.mode==='inline'?0:PRODUCT.junction/2));
+  el._tg=tg;if(tg){const gap=Math.round(tg.along-(kind==='arm'?PRODUCT.junction/2:0)-(tg.mode==='inline'?0:PRODUCT.junction/2));
     h+=`<button class="btn solid" data-chl style="text-align:center">Close the gap · run ${(gap/1000).toFixed(2)} m to the ${tg.mode==='arm'?'junction':tg.mode==='inline'?'open end':'open end (corner junction)'} ahead</button>`;}
   if(kind==='end'||kind==='head'){const opts=rec?['joint']:['joint','corner','tee','teeL','teeR','cross'];
     h+=`<div class="ch-g">${opts.map(k=>k==='corner'?`<button class="btn" data-chc="corner" data-side="L">Corner · left</button><button class="btn" data-chc="corner" data-side="R">Corner · right</button>`:`<button class="btn" data-chc="${k}">${CONN[k].short}</button>`).join('')}</div>`;
@@ -413,12 +416,43 @@ function headJoin(ln,k,side){const D=Math.PI/2,h0=-(+ln.dir||0)*Math.PI/180,ho=h
   const A={joint:[ho],corner:[side==='L'?ho-D:ho+D],tee:[ho-D,ho+D],teeL:[ho,ho-D],teeR:[ho,ho+D],cross:[ho,ho-D,ho+D]}[k];if(!A)return;
   const hin=A[0]+Math.PI,old=nm(h0-hin),rels=A.slice(1).map(a=>nm(a-hin)).concat(old).sort((a,b)=>a-b),key=rels.join(',');
   const kind={'0':'joint','90':'corner','-90':'corner','-90,90':'tee','-90,0':'teeL','0,90':'teeR','-90,0,90':'cross'}[key];if(!kind)return;
-  const cn=mkConn(kind,old<0?'L':'R');cn.outs.forEach(o=>{if(kind==='corner'||o.rel===old)o.p=ln.tree;});
+  const cn=mkConn(kind,old<0?'L':'R');let oi=0;cn.outs.forEach((o,i)=>{if(kind==='corner'||o.rel===old){o.p=ln.tree;oi=i;}});
+  const rp=pc=>{if(!pc)return;if(pc.link&&pc.to&&pc.to.k!=='head')pc.to.p=[oi].concat(pc.to.p===''?[]:pc.to.p.split('.')).join('.');if(pc.next)pc.next.outs.forEach(o=>rp(o.p));};rp(ln.tree);
   const len=intBodies().at(-1).len,root={len,next:cn},L=rootGeo(len,cn),J=/^J/.test(CONN[kind].t)?PRODUCT.junction/2:0; // a junction's centre sits half its size before the old start, so the bodies stay put
   const nx=(+ln.x||0)+Math.cos(ho)*J,ny=(+ln.y||0)-Math.sin(ho)*J;ln.x=Math.round(nx-Math.cos(hin)*L);ln.y=Math.round(ny+Math.sin(hin)*L);ln.dir=((Math.round(-hin*180/Math.PI)%360)+360)%360;ln.tree=root;}
+/* ---------- remove ONE piece; everything else stays exactly where it is ----------
+   The structure is read as a graph (junctions and free ends joined by pieces), the piece is taken out, and each part that is left
+   is rebuilt as a structure from one of its free ends. Junctions left with a single piece become plain ends; a part cut off on its
+   own becomes a separate line. Closing runs that are no longer needed to close a loop become ordinary pieces. */
+function removePiece(li,del){const JH=PRODUCT.junction/2,O=R.origin,ln=S.lines[li],head=ln.tree&&ln.tree._a;
+  const nm=a=>{let d=Math.round(Math.atan2(Math.sin(a),Math.cos(a))*180/Math.PI);return d===-180?180:d;};
+  const E=R.segs.filter(g=>g.li===li&&g.s!==del&&g.s._a&&g.s._b).map(g=>({pc:g.s,a:g.s._a,b:g.s._b,h:g.s._h}));
+  const deg=new Map();E.forEach(e=>{deg.set(e.a,(deg.get(e.a)||0)+1);deg.set(e.b,(deg.get(e.b)||0)+1);});
+  const free=new Map();deg.forEach((d,n)=>{if(n.type==='end')free.set(n,{x:n.x,z:n.z});else if(d===1){const e=E.find(e=>e.a===n||e.b===n),hh=e.a===n?e.h:e.h+Math.PI,off=n.jn?JH:0;free.set(n,{x:n.x+Math.cos(hh)*off,z:n.z+Math.sin(hh)*off});}});
+  const comps=[],seen=new Set();deg.forEach((d,n)=>{if(seen.has(n))return;const c=[],st=[n];seen.add(n);while(st.length){const x=st.pop();c.push(x);E.forEach(e=>{const y=e.a===x?e.b:e.b===x?e.a:null;if(y&&!seen.has(y)){seen.add(y);st.push(y);}});}comps.push(c);});
+  const built=[];
+  comps.forEach(comp=>{let s=comp.includes(head)&&free.has(head)?head:comp.find(n=>free.has(n)),split=null;
+    if(!s){s=comp.find(n=>deg.get(n)===2&&(n.type==='J2'||n.type==='inline'));if(!s)return;split=s;}
+    const used=new Set(),vis=new Map(),e0=E.find(e=>e.a===s||e.b===s),hd=e0.a===s?e0.h:e0.h+Math.PI,off=split&&split.jn?JH:0,sp=split?{x:s.x+Math.cos(hd)*off,z:s.z+Math.sin(hd)*off}:free.get(s);
+    vis.set(s,null);
+    const piece=(e,from,path)=>{used.add(e);const to=e.a===from?e.b:e.a,hh=e.a===from?e.h:e.h+Math.PI,pc={len:+e.pc.len||0,next:null};if(!free.has(to))node(to,hh,pc,path);return pc;};
+    const node=(n,hin,pc,path)=>{const arms=n.arms.filter(a=>Math.abs(nm(a-(hin+Math.PI)))>2),rels=arms.map(a=>nm(a-hin)).sort((a,b)=>a-b);
+      let kind;if(rels.length===1)kind=rels[0]===0?'joint':'corner';else kind={'-90,90':'tee','-90,0':'teeL','0,90':'teeR','-90,0,90':'cross'}[rels.join(',')];if(!kind)return;
+      const cn=mkConn(kind,rels[0]<0?'L':'R');if(kind==='corner')cn.a=Math.abs(rels[0]);pc.next=cn;vis.set(n,{path,cn,hin});
+      const outs=kind==='corner'?[rels[0]]:CONN[kind].outs;
+      outs.forEach((r,i)=>{const ah=hin+r*Math.PI/180,e=E.find(e=>!used.has(e)&&((e.a===n&&Math.abs(nm(e.h-ah))<=2)||(e.b===n&&Math.abs(nm(e.h+Math.PI-ah))<=2)));if(!e)return;
+        const other=e.a===n?e.b:e.a;
+        if(other===split){used.add(e);cn.outs[i].p={link:true,len:+e.pc.len||0,next:null,to:{k:'head',p:''}};return;}
+        if(vis.has(other)&&vis.get(other)){used.add(e);const V=vis.get(other),oh=e.a===other?e.h:e.h+Math.PI,rr=nm(oh-V.hin),os=V.cn.k==='corner'?[(V.cn.side==='L'?-1:1)*V.cn.a]:CONN[V.cn.k].outs,j=os.findIndex(x=>Math.abs(x-rr)<=2);
+          cn.outs[i].p={link:true,len:+e.pc.len||0,next:null,to:{k:'arm',p:V.path.concat(j).join('.')}};return;}
+        cn.outs[i].p=piece(e,n,path.concat(i));});};
+    const root=piece(e0,s,[]);
+    const r1=v=>Math.round(v*10)/10;built.push({x:r1(sp.x+O.x),y:r1(-(sp.z+O.z)),dir:((Math.round(-hd*180/Math.PI)%360)+360)%360,tree:root});});
+  if(!built.length){ln.tree=null;}else{Object.assign(ln,built[0]);built.slice(1).forEach(b=>{if(S.lines.length<26)S.lines.push(G(b.tree,b.x,b.y,b.dir));});}
+  update(true);toast(built.length>1?`Piece removed · the part cut off is now line ${LET(S.lines.length-1)}`:'Piece removed · the rest stays where it is');}
 function chooserPick(e){const el=$('chooser'),li=+el.dataset.li,path=el.dataset.path?el.dataset.path.split('.').map(Number):[],kind=el.dataset.kind,ln=S.lines[li];if(!ln)return;
   if(e.target.closest('[data-chx]')){closeChooser();return;}
-  if(e.target.closest('[data-chl]')){const lk={link:true,len:0,next:null};if(kind==='end'){const pc=tGet(ln,path);if(!pc)return;pc.next=mkConn('joint');pc.next.outs[0].p=lk;}
+  if(e.target.closest('[data-chl]')){const tg=el._tg,lk={link:true,len:0,next:null,...(tg?{to:{k:tg.o.kind,p:tg.o.path.join('.')}}:{})};if(kind==='end'){const pc=tGet(ln,path);if(!pc)return;pc.next=mkConn('joint');pc.next.outs[0].p=lk;}
     else{const sl=tSlot(ln,path);if(!sl)return;sl.o[sl.k]=lk;}closeChooser();update(true);toast('Closed · the run is filled with bodies');return;}
   const c=e.target.closest('[data-chc]');if(c&&kind==='head'){const r=el.getBoundingClientRect();headJoin(ln,c.dataset.chc,c.dataset.side);update(true);openChooser(li,[],'headpiece',r.left,r.top);return;}
   if(c){const pc=tGet(ln,path);if(!pc)return;pc.next=mkConn(c.dataset.chc,c.dataset.side);const r=el.getBoundingClientRect();update(true);
@@ -523,7 +557,7 @@ function stepHTML(s,l,i){
 const PP=t=>t?t.split('.').map(Number):[];
 function treeHTML(l,pc,path){const list=intBodies(),pd=`data-l="${l}" data-p="${path.join('.')}"`,id=`${l}-${path.join('_')}`;
   if(pc.link)return `<li class="step"><span class="n" title="Closing piece">⇥</span><div class="body"><b style="font-size:12.5px">Closing run ${pc._to==='arm'?'into the junction ahead':pc._to==='inline'?'onto the open end ahead (linear joint)':pc._to==='corner'?'onto the open end ahead (corner junction)':'· nothing ahead to join'}</b><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove closing run" title="Remove this closing run">✕</button></div></li>`;
-  let h=`<li class="step"><span class="n" title="Piece">▬</span><div class="body"><div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Piece · body length (mm)<input type="number" min="300" step="50" ${pd} data-tk="len" value="${pc.len}"></label><label class="f">Or one body<select ${pd} data-tk="body"><option value="">Pick a length…</option>${list.map(b=>`<option value="${b.len}"${b.len===+pc.len?' selected':''}>${b.len} mm · ${b.wl} W</option>`).join('')}</select></label></div><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove piece" title="Remove this piece and everything after it">✕</button></div></li>`;
+  let h=`<li class="step"><span class="n" title="Piece">▬</span><div class="body"><div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Piece · body length (mm)<input type="number" min="300" step="50" ${pd} data-tk="len" value="${pc.len}"></label><label class="f">Or one body<select ${pd} data-tk="body"><option value="">Pick a length…</option>${list.map(b=>`<option value="${b.len}"${b.len===+pc.len?' selected':''}>${b.len} mm · ${b.wl} W</option>`).join('')}</select></label></div><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove piece" title="Remove this piece (everything else stays where it is)">✕</button></div></li>`;
   const cn=pc.next;if(!cn&&pc._cl)return h+`<li class="tadd note">Joined here by a closing run</li>`;if(!cn)return h+`<li class="tadd"><button class="btn dash" data-tadd="end" ${pd}>+ Add after this piece</button></li>`;
   h+=`<li class="step"><span class="n j" title="Junction">◆</span><div class="body"><b style="font-size:12.5px">${CONN[cn.k].name}</b>${cn.k==='corner'?`<div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Turn<select ${pd} data-tk="side"><option value="L"${cn.side==='L'?' selected':''}>Left</option><option value="R"${cn.side!=='L'?' selected':''}>Right</option></select></label><label class="f">Angle (°)<input type="number" min="0" max="150" step="5" ${pd} data-tk="a" value="${cn.a==null?90:cn.a}"></label></div>`:''}<div class="res" id="cres-${id}"></div></div><div class="ctl"><button class="ib" data-cdel ${pd} aria-label="Remove junction" title="Remove this junction and everything after it">✕</button></div></li>`;
   cn.outs.forEach((o,i)=>{const p2=path.concat(i),inner=o.p?treeHTML(l,o.p,p2):(cn._tk||[]).includes(i)?`<li class="tadd note">Joined here by a closing run</li>`:`<li class="tadd"><button class="btn dash" data-tadd="arm" data-l="${l}" data-p="${p2.join('.')}">+ Add a piece</button></li>`;
@@ -608,17 +642,19 @@ function renderSummaryInt(){const {st,pieces,runs,ext}=R,O=optOf(S.opt);
 $('lines').addEventListener('input',e=>{const t=e.target,l=+t.dataset.l;if(Number.isNaN(l))return;const ln=S.lines[l];
   if(t.dataset.lk){const v=t.dataset.lk==='dir'?+t.value:parseFloat(t.value);if(Number.isNaN(v))return;ln[t.dataset.lk]=v;update(false);return;}
   if(INT){const k=t.dataset.tk;if(!k)return;const pc=tGet(ln,PP(t.dataset.p));if(!pc)return;
-    if(k==='len'){const v=parseFloat(t.value);if(!(v>=300&&v<=60000))return;pc.len=v;update(false);return;}
+    if(k==='len'||k==='a')return; // applied when the typing is finished (change), so half-typed numbers never reshape the design
     if(k==='body'){if(!t.value)return;pc.len=+t.value;update(true);return;}
     if(!pc.next)return;if(k==='side'){pc.next.side=t.value;update(true);return;}
     if(k==='a'){const v=parseFloat(t.value);if(!(v>=0&&v<=150))return;pc.next.a=v;update(false);return;}return;}
   if(!t.dataset.k)return;const s=ln.steps[+t.dataset.i];
   const v=t.dataset.k==='len'||t.dataset.k==='a'?parseFloat(t.value):t.value; if(t.type==='number'&&!(v>0||(INT&&t.dataset.k==='a'&&v===0)))return; if(INT&&t.dataset.k==='a'&&v>150)return; s[t.dataset.k]=v; update(false);});
+$('lines').addEventListener('change',e=>{if(!INT)return;const t=e.target,k=t.dataset.tk;if(k!=='len'&&k!=='a')return;const ln=S.lines[+t.dataset.l],pc=ln&&tGet(ln,PP(t.dataset.p));if(!pc)return;const v=parseFloat(t.value);
+  if(k==='len'){if(!(v>=300&&v<=60000)){t.value=pc.len;toast('Length between 300 and 60,000 mm');return;}pc.len=v;}else{if(!pc.next||!(v>=0&&v<=150)){t.value=pc.next?pc.next.a:90;return;}pc.next.a=v;}update(true);});
 $('lines').addEventListener('click',e=>{
   const du=e.target.closest('[data-dupline]');if(du){dupLine(+du.dataset.dupline);return;}
   const rm=e.target.closest('[data-rmline]');if(rm){S.lines.splice(+rm.dataset.rmline,1);update(true,true);return;}
   if(INT){const ta=e.target.closest('[data-tadd]');if(ta){const r=ta.getBoundingClientRect();openChooser(+ta.dataset.l,PP(ta.dataset.p),ta.dataset.tadd,r.left,r.bottom+4);e.stopPropagation();return;}
-    const td=e.target.closest('[data-tdel]');if(td){const ln=S.lines[+td.dataset.l],sl=tSlot(ln,PP(td.dataset.p));if(sl){sl.o[sl.k]=null;closeChooser();update(true);}return;}
+    const td=e.target.closest('[data-tdel]');if(td){const l=+td.dataset.l,pc=tGet(S.lines[l],PP(td.dataset.p));if(pc){closeChooser();removePiece(l,pc);}return;}
     const cd=e.target.closest('[data-cdel]');if(cd){const pc=tGet(S.lines[+cd.dataset.l],PP(cd.dataset.p));if(pc){pc.next=null;closeChooser();update(true);}return;}return;}
   const ad=e.target.closest('[data-add]');if(ad){const ln=S.lines[+ad.dataset.l],t=ad.dataset.add;ln.steps.push(t==='S'?{t:'S',len:INT?3000:1000}:INT?{t,a:90}:{t,r:'R1000',a:90});update(true);return;}
   const b=e.target.closest('.ib');if(!b)return;const st=S.lines[+b.dataset.l].steps,i=+b.dataset.i,a=b.dataset.a;
