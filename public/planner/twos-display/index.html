@@ -285,7 +285,7 @@ if(INT){for(const k of Object.keys(PRESETS))delete PRESETS[k];Object.assign(PRES
 });}
 const copyLines=l=>JSON.parse(JSON.stringify(l));
 let S={proj:'',client:'',strip:(STRIPS[0]||{}).id,cct:PRODUCT.cct0,rgb:'#ff2fb4',scene:'plaza',lines:INT?[G(null)]:copyLines(PRESETS['S-bend walkway (10 m)'])};
-if(INT)Object.assign(S,{opt:PRODUCT.optics[0].id,emis:'D',pw:'LP',dali:false,fin:'B',ceil:3000,drop:600});
+if(INT)Object.assign(S,{desks:false,opt:PRODUCT.optics[0].id,emis:'D',pw:'LP',dali:false,fin:'B',ceil:3000,drop:600});
 // share links carry the plan in the address (#p=…); otherwise the last plan in this browser
 const clean=()=>JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);
 function enc(){return 'p='+encodeURIComponent(clean());}
@@ -809,7 +809,7 @@ function buildLightsInt(target){rects=[];const y0=yLine(),col=lightCol(),hM=PROD
 function carpetTex(){return canvasTex(512,(x,N)=>{const r=rng(21);x.fillStyle='#7d8186';x.fillRect(0,0,N,N);
   for(let i=0;i<60000;i++){const v=110+r()*40|0;x.fillStyle=`rgba(${v},${v+2},${v+5},0.18)`;x.fillRect(r()*N,r()*N,1.4,1.4);}
   x.strokeStyle='rgba(60,62,66,0.35)';x.lineWidth=2;for(let k=0;k<=4;k++){x.beginPath();x.moveTo(k*N/4,0);x.lineTo(k*N/4,N);x.stroke();x.beginPath();x.moveTo(0,k*N/4);x.lineTo(N,k*N/4);x.stroke();}});}
-const carpet=carpetTex();let winMat=null;
+let winMat=null;
 function buildOffice(){
   disposeGroup(site);site.clear();labels.forEach(l=>l.removeFromParent());labels=[];groundMats=[];
   const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)).concat(R.opens.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000)).concat(R.opens.map(p=>p.z/1000));if(!xs.length){xs.push(0);zs.push(0);}
@@ -818,20 +818,17 @@ function buildOffice(){
   siteFrame=keepSite&&siteFrame?{x0:Math.min(siteFrame.x0,fit.x0),x1:Math.max(siteFrame.x1,fit.x1),z0:Math.min(siteFrame.z0,fit.z0),z1:Math.max(siteFrame.z1,fit.z1)}:fit;keepSite=false;
   B={x0:siteFrame.x0-ox,x1:siteFrame.x1-ox,z0:siteFrame.z0-oz,z1:siteFrame.z1-oz};
   const W=B.x1-B.x0,D=B.z1-B.z0,cx=(B.x0+B.x1)/2,cz=(B.z0+B.z1)/2,H=S.ceil/1000;
-  // floor, walls (single-sided, so the room opens like a dollhouse from outside), glazed facade, ceiling
-  carpet.repeat.set(W/2,D/2);const fm=new THREE.MeshStandardMaterial({map:carpet,roughness:0.95});groundMats.push(fm);
+  // a plain grey room: satin floor, matt walls (single-sided, so the room opens like a dollhouse from outside), ceiling
+  const fm=new THREE.MeshStandardMaterial({color:0x76787b,roughness:0.42,metalness:0});groundMats.push(fm);
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(W,D).rotateX(-Math.PI/2),fm);fl.position.set(cx,0,cz);fl.receiveShadow=true;site.add(fl);
-  const wm=new THREE.MeshStandardMaterial({color:0xeceae6,roughness:0.92});groundMats.push(wm);
+  const wm=new THREE.MeshStandardMaterial({color:0xc4c5c6,roughness:0.9});groundMats.push(wm);
   const wall=(w,rot,x,z)=>{const g=new THREE.Mesh(new THREE.PlaneGeometry(w,H),wm);g.rotation.y=rot;g.position.set(x,H/2,z);g.receiveShadow=true;site.add(g);};
   wall(W,0,cx,B.z0);wall(W,Math.PI,cx,B.z1);wall(D,Math.PI/2,B.x0,cz);wall(D,-Math.PI/2,B.x1,cz);
-  winMat=new THREE.MeshBasicMaterial({color:0xe4eef7});const wh=Math.min(H-1.1,2.2),gl=new THREE.Mesh(new THREE.PlaneGeometry(W-0.6,wh),winMat);gl.position.set(cx,0.85+wh/2,B.z0+0.01);site.add(gl);
-  const mul=new THREE.MeshStandardMaterial({color:0x3a3d41,roughness:0.5,metalness:0.4});groundMats.push(mul);
-  for(let x=B.x0+0.3;x<=B.x1-0.29;x+=1.5){const b=new THREE.Mesh(new THREE.BoxGeometry(0.05,wh,0.06),mul);b.position.set(x,0.85+wh/2,B.z0+0.03);site.add(b);}
-  for(const y of [0.85,0.85+wh]){const b=new THREE.Mesh(new THREE.BoxGeometry(W-0.6,0.06,0.07),mul);b.position.set(cx,y,B.z0+0.035);site.add(b);}
-  const cm=new THREE.MeshStandardMaterial({color:0xf3f2ef,roughness:0.95});groundMats.push(cm);
+  winMat=null; // plain room for now: no glazed facade
+  const cm=new THREE.MeshStandardMaterial({color:0xd0d1d2,roughness:0.95});groundMats.push(cm);
   const ce=new THREE.Mesh(new THREE.PlaneGeometry(W,D).rotateX(Math.PI/2),cm);ce.position.set(cx,H,cz);site.add(ce);
   // workstations: benches of desks facing each other, chairs and screens
-  if(S.scene!=='open'){const dk=[];for(let z=B.z0+1.9;z<=B.z1-1.7;z+=3.1)for(let x=B.x0+1.4;x+1.6<=B.x1-1.2;x+=1.7)dk.push([x+0.8,z]);
+  if(S.desks){const dk=[];for(let z=B.z0+1.9;z<=B.z1-1.7;z+=3.1)for(let x=B.x0+1.4;x+1.6<=B.x1-1.2;x+=1.7)dk.push([x+0.8,z]);
     const n=dk.length*2;if(n){const mT=new THREE.MeshStandardMaterial({color:0xd9c6a5,roughness:0.6}),mL=new THREE.MeshStandardMaterial({color:0xe9e9e7,roughness:0.5}),mC=new THREE.MeshStandardMaterial({color:0x2c2f34,roughness:0.8}),mS=new THREE.MeshStandardMaterial({color:0x121315,roughness:0.4});
       groundMats.push(mT,mL,mC,mS);const I=(g,mat,k)=>{const im=new THREE.InstancedMesh(g,mat,n*k);im.receiveShadow=true;site.add(im);return im;};
       const top=I(new THREE.BoxGeometry(1.6,0.025,0.8),mT,1),leg=I(new THREE.BoxGeometry(0.03,0.7,0.7),mL,2),seat=I(new THREE.BoxGeometry(0.5,0.07,0.48),mC,1),back=I(new THREE.BoxGeometry(0.48,0.5,0.06),mC,1),scr=I(new THREE.BoxGeometry(0.6,0.36,0.025),mS,1),stand=I(new THREE.BoxGeometry(0.06,0.18,0.04),mS,1);
@@ -1080,8 +1077,8 @@ if(RGB)$('mixf').addEventListener('input',e=>{const ch=+e.target.dataset.ch;if(N
 if(RGB)$('fxsel').onchange=e=>{S.fx=e.target.value;if(!night)setMode('twilight');update(false);};
 document.querySelectorAll('[data-rgb]').forEach(b=>b.onclick=()=>setRGB(b.dataset.rgb));
 if(RGB){$('rgbsel').onchange=e=>{if(e.target.value==='custom')$('rgbpick').click();else setRGB(e.target.value);};$('rgbpick').oninput=e=>setRGB(e.target.value);}
-$('t-scene').onclick=()=>{S.scene=S.scene==='open'?'plaza':'open';$('t-scene').setAttribute('aria-pressed',S.scene!=='open');keepSite=true;save();buildSite();};
-$('t-scene').setAttribute('aria-pressed',S.scene!=='open');
+$('t-scene').onclick=INT?()=>{S.desks=!S.desks;$('t-scene').setAttribute('aria-pressed',!!S.desks);keepSite=true;save();buildSite();}:()=>{S.scene=S.scene==='open'?'plaza':'open';$('t-scene').setAttribute('aria-pressed',S.scene!=='open');keepSite=true;save();buildSite();};
+$('t-scene').setAttribute('aria-pressed',INT?!!S.desks:S.scene!=='open');
 $('t-num').onclick=()=>{numbersOn=!numbersOn;applyExplode();$('t-num').setAttribute('aria-pressed',numbersOn);labels.forEach(l=>{if(!l.element.classList.contains('feed'))l.visible=numbersOn;});};
 
 /* ---------- views ---------- */
