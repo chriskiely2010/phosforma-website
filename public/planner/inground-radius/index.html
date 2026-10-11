@@ -281,6 +281,8 @@ if(INT){for(const k of Object.keys(PRESETS))delete PRESETS[k];Object.assign(PRES
   'U-shape (3 × 4 × 3 m)':[G(TP(3000,TC('corner',[TP(4000,TC('corner',[TP(3000)],'R'))],'R')))],
   'T junction':[G(TP(3000,TC('teeR',[TP(3000),TP(3000)])))],
   'Cross (4-way)':[G(TP(3000,TC('cross',[TP(3000),TP(3000),TP(3000)])))],
+  'Square (2.8 m, closed)':[G(TP(2801,TC('corner',[TP(2801,TC('corner',[TP(2801,TC('corner',[{link:true,len:0,next:null}],'R'))],'R'))],'R')))],
+  'Grid, two cells (5.8 × 2.9 m)':[G(TP(2801,TC('teeR',[TP(2801,TC('corner',[TP(2801,TC('corner',[TP(2801,TC('teeR',[TP(2801,TC('corner',[{link:true,len:0,next:null}],'R')),{link:true,len:0,next:null}]))],'R'))],'R')),null])))],
   'Spine with three branches':[G(TP(1500,TC('teeR',[TP(2400,TC('teeR',[TP(2400,TC('corner',[TP(3000)],'R')),TP(3000)])),TP(3000)])))],
 });}
 const copyLines=l=>JSON.parse(JSON.stringify(l));
@@ -334,22 +336,30 @@ function stepsToTree(steps){let root=null,last=null;(steps||[]).forEach(s=>{if(s
 function resolveInt(){
   const JH=PRODUCT.junction/2,list=intBodies(),K4=S.cct==='K4',O=optOf(S.opt);
   const st={label:`${O.name}${S.emis==='DI'?' · direct/indirect':''} · ${S.pw==='HP'?'40':'20'} W/m`,v:230,max:PRODUCT.perCircuit};
-  const cl=[],segs=[],turns=[],opens=[],all=[];
+  const cl=[],segs=[],turns=[],opens=[],all=[],links=[];
+  const emit=(g,x,z,h,d,bl)=>bl.forEach(b=>{const p0={x:x+Math.cos(h)*d,z:z+Math.sin(h)*d,h};d+=b.len;const p1={x:x+Math.cos(h)*d,z:z+Math.sin(h)*d,h};
+    all.push({b,line:g.li,step:g.si,pts:[p0,p1],mid:{x:(p0.x+p1.x)/2,z:(p0.z+p1.z)/2,h},d:{len:b.len,ang:0,name:bodyName(b)},w:b.w,lm:b.lm[K4?1:0],code:bodyCode(b)});});
   S.lines.forEach((ln,li)=>{if(ln.steps&&ln.tree===undefined){ln.tree=stepsToTree(ln.steps);delete ln.steps;}
-    const x0=+ln.x||0,z0=-(+ln.y||0),h0=-(+ln.dir||0)*Math.PI/180;let si=0;
+    const x0=+ln.x||0,z0=-(+ln.y||0),h0=-(+ln.dir||0)*Math.PI/180;let si=0;ln._hc=false;
     if(!ln.tree){opens.push({li,path:[],kind:'start',x:x0,z:z0,h:h0});return;}
-    cl.push({x:x0,z:z0,arms:[h0],type:'end',jn:false,li});opens.push({li,path:[],kind:'head',x:x0,z:z0,h:h0+Math.PI});
-    const walk=(pc,path,x,z,h,fromJ)=>{const cn=pc.next,t=cn?CONN[cn.k].t:'end',toJ=/^J/.test(t),o0=fromJ?JH:0,o1=toJ?JH:0;
+    const n0={x:x0,z:z0,arms:[h0],type:'end',jn:false,li};cl.push(n0);opens.push({li,path:[],kind:'head',x:x0,z:z0,h:h0+Math.PI,node:n0});
+    const walk=(pc,path,x,z,h,fromJ)=>{pc._cl=false;if(pc.next)pc.next._tk=[];if(pc.link){links.push({li,pc,path,x,z,h,o0:fromJ?JH:0});return;}const cn=pc.next,t=cn?CONN[cn.k].t:'end',toJ=/^J/.test(t),o0=fromJ?JH:0,o1=toJ?JH:0;
       const bl=fillRun(Math.max(0,+pc.len||0),list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
-      const g={li,si:si++,s:pc,path,h,len:o0+act+o1,bodies:bl.length};segs.push(g);let d=o0;
-      bl.forEach(b=>{const p0={x:x+Math.cos(h)*d,z:z+Math.sin(h)*d,h};d+=b.len;const p1={x:x+Math.cos(h)*d,z:z+Math.sin(h)*d,h};
-        all.push({b,line:li,step:g.si,pts:[p0,p1],mid:{x:(p0.x+p1.x)/2,z:(p0.z+p1.z)/2,h},d:{len:b.len,ang:0,name:bodyName(b)},w:b.w,lm:b.lm[K4?1:0],code:bodyCode(b)});});
+      const g={li,si:si++,s:pc,path,h,len:o0+act+o1,bodies:bl.length};segs.push(g);emit(g,x,z,h,o0,bl);
       const ex=x+Math.cos(h)*g.len,ez=z+Math.sin(h)*g.len,node={x:ex,z:ez,arms:[h+Math.PI],type:t,jn:toJ,li};cl.push(node);
-      if(!cn){opens.push({li,path,kind:'end',x:ex,z:ez,h,pc});return;}
+      if(!cn){opens.push({li,path,kind:'end',x:ex,z:ez,h,pc,node});return;}
       if(cn.k==='corner')cn.outs[0].rel=(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a);
       cn._c=node;cn._hin=h;if(cn.k==='corner')turns.push({conn:cn,c:node,li,hin:h});
-      cn.outs.forEach((o,i)=>{const h2=h+o.rel*Math.PI/180;node.arms.push(h2);if(o.p)walk(o.p,path.concat(i),ex,ez,h2,toJ);else opens.push({li,path:path.concat(i),kind:'arm',x:ex,z:ez,h:h2,conn:cn});});};
+      cn.outs.forEach((o,i)=>{const h2=h+o.rel*Math.PI/180;node.arms.push(h2);if(o.p)walk(o.p,path.concat(i),ex,ez,h2,toJ);else opens.push({li,path:path.concat(i),kind:'arm',x:ex,z:ez,h:h2,conn:cn,node});});};
     walk(ln.tree,[],x0,z0,h0,false);});
+  // closing pieces: run straight ahead into the next open junction arm, or onto an open end (straight on = linear joint, square on = corner junction)
+  const lost=[];links.forEach((L,k)=>{const t=linkFind(L,opens,JH),pc=L.pc;let o1=0;
+    if(t){o1=t.mode==='inline'?0:JH;pc.len=Math.max(0,Math.round(t.along-L.o0-o1));pc._to=t.mode;opens.splice(opens.indexOf(t.o),1);const T=t.o;if(T.kind==='arm')T.conn._tk.push(T.path.at(-1));else if(T.kind==='end')T.pc._cl=true;else S.lines[T.li]._hc=true;}else pc._to=null;
+    const bl=fillRun(Math.max(0,+pc.len||0),list),act=bl.reduce((a,b)=>a+b.len,0);pc._list=bl;pc._actual=act;
+    const g={li:L.li,si:1000+k,s:pc,path:L.path,h:L.h,len:L.o0+act+o1,bodies:bl.length,link:true};segs.push(g);emit(g,L.x,L.z,L.h,L.o0,bl);
+    if(!t){lost.push(L.li);cl.push({x:L.x+Math.cos(L.h)*g.len,z:L.z+Math.sin(L.h)*g.len,arms:[L.h+Math.PI],type:'end',jn:false,li:L.li});return;}
+    const n=t.o.node;if(t.mode==='inline'){n.type='inline';n.arms.push(L.h+Math.PI);}
+    else if(t.mode==='corner'){n.x=t.C.x;n.z=t.C.z;n.type='J2';n.jn=true;n.arms=[t.o.h+Math.PI,L.h+Math.PI];}});
   cl.forEach(c=>{if(!c.jn)return;let mn=7;const k=c.arms.length;for(let i=0;i<k;i++)for(let j=i+1;j<k;j++)mn=Math.min(mn,Math.abs(Math.atan2(Math.sin(c.arms[i]-c.arms[j]),Math.cos(c.arms[i]-c.arms[j]))));if(mn<Math.PI/6-0.01)c.bad=true;});
   const lines=[],runs=[];
   [...new Set(all.map(q=>q.line))].forEach(li=>{const out=all.filter(q=>q.line===li),lr=[];for(let i=0;i<out.length;i+=PRODUCT.perCircuit)lr.push(out.slice(i,i+PRODUCT.perCircuit));
@@ -369,11 +379,24 @@ function resolveInt(){
   if(!xs.length){xs.push(0);zs.push(0);}
   const b={x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)},ox=(b.x0+b.x1)/2,oz=(b.z0+b.z1)/2;
   all.forEach(q=>{q.pts.forEach(p=>{p.x-=ox;p.z-=oz;});q.mid.x-=ox;q.mid.z-=oz;});cl.forEach(c=>{c.x-=ox;c.z-=oz;});susp.forEach(p=>{p.x-=ox;p.z-=oz;});opens.forEach(p=>{p.x-=ox;p.z-=oz;});
-  return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0},nodes:cl,acc,segs,susp,turns,opens,empty:!all.length};}
+  return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0},nodes:cl,acc,segs,susp,turns,opens,lost,empty:!all.length};}
+// what a piece starting at L (x, z, heading h, o0 = half a junction behind it or 0) would run into straight ahead, if anything
+function linkFind(L,opens,JH){const dx=Math.cos(L.h),dz=Math.sin(L.h),nr=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<0.035;let best=null;
+  opens.forEach(o=>{if(o.li!==L.li||o.kind==='start'||(o.path&&L.path&&o.kind!=='head'&&o.kind===L.kind&&o.path.join()===L.path.join()))return;let C={x:o.x,z:o.z},mode;
+    if(o.kind==='arm'){if(!nr(o.h,L.h+Math.PI))return;mode='arm';}
+    else if(nr(o.h,L.h+Math.PI))mode='inline';
+    else if(PRODUCT.mount!=='recessed'&&(nr(o.h,L.h+Math.PI/2)||nr(o.h,L.h-Math.PI/2))){mode='corner';C={x:o.x+Math.cos(o.h)*JH,z:o.z+Math.sin(o.h)*JH};}
+    else return;
+    const ax=C.x-L.x,az=C.z-L.z,along=ax*dx+az*dz,lat=Math.abs(-ax*dz+az*dx);if(along<300||lat>40)return;if(!best||along<best.along)best={o,C,mode,along};});
+  return best;}
 /* ---------- the chooser: what joins at an open end, or which piece goes on an open arm ---------- */
 function closeChooser(){const c=$('chooser');if(c)c.hidden=true;}
 function openChooser(li,path,kind,px,py){const el=$('chooser'),ln=S.lines[li];if(!ln)return;const list=intBodies(),rec=PRODUCT.mount==='recessed';
   let h=`<div class="ch-h">${kind==='end'||kind==='head'?'What joins here?':kind==='start'?'Choose the first piece':kind==='headpiece'?'Choose the piece before it':'Choose the next piece'}<button class="ib" data-chx aria-label="Close">✕</button></div>`;
+  const me=R.opens.find(o=>o.li===li&&o.kind===kind&&o.path.join()===path.join()),
+    tg=me&&(kind==='end'||kind==='arm')?linkFind({li,x:me.x,z:me.z,h:me.h,o0:kind==='arm'?PRODUCT.junction/2:0,path,kind},R.opens,PRODUCT.junction/2):null;
+  if(tg){const gap=Math.round(tg.along-(kind==='arm'?PRODUCT.junction/2:0)-(tg.mode==='inline'?0:PRODUCT.junction/2));
+    h+=`<button class="btn solid" data-chl style="text-align:center">Close the gap · run ${(gap/1000).toFixed(2)} m to the ${tg.mode==='arm'?'junction':tg.mode==='inline'?'open end':'open end (corner junction)'} ahead</button>`;}
   if(kind==='end'||kind==='head'){const opts=rec?['joint']:['joint','corner','tee','teeL','teeR','cross'];
     h+=`<div class="ch-g">${opts.map(k=>k==='corner'?`<button class="btn" data-chc="corner" data-side="L">Corner · left</button><button class="btn" data-chc="corner" data-side="R">Corner · right</button>`:`<button class="btn" data-chc="${k}">${CONN[k].short}</button>`).join('')}</div>`;
     if(rec)h+=`<p class="note">${PRODUCT.name} joins in straight rows only (no corner or T junctions listed by ${BRAND}).</p>`;
@@ -395,6 +418,8 @@ function headJoin(ln,k,side){const D=Math.PI/2,h0=-(+ln.dir||0)*Math.PI/180,ho=h
   const nx=(+ln.x||0)+Math.cos(ho)*J,ny=(+ln.y||0)-Math.sin(ho)*J;ln.x=Math.round(nx-Math.cos(hin)*L);ln.y=Math.round(ny+Math.sin(hin)*L);ln.dir=((Math.round(-hin*180/Math.PI)%360)+360)%360;ln.tree=root;}
 function chooserPick(e){const el=$('chooser'),li=+el.dataset.li,path=el.dataset.path?el.dataset.path.split('.').map(Number):[],kind=el.dataset.kind,ln=S.lines[li];if(!ln)return;
   if(e.target.closest('[data-chx]')){closeChooser();return;}
+  if(e.target.closest('[data-chl]')){const lk={link:true,len:0,next:null};if(kind==='end'){const pc=tGet(ln,path);if(!pc)return;pc.next=mkConn('joint');pc.next.outs[0].p=lk;}
+    else{const sl=tSlot(ln,path);if(!sl)return;sl.o[sl.k]=lk;}closeChooser();update(true);toast('Closed · the run is filled with bodies');return;}
   const c=e.target.closest('[data-chc]');if(c&&kind==='head'){const r=el.getBoundingClientRect();headJoin(ln,c.dataset.chc,c.dataset.side);update(true);openChooser(li,[],'headpiece',r.left,r.top);return;}
   if(c){const pc=tGet(ln,path);if(!pc)return;pc.next=mkConn(c.dataset.chc,c.dataset.side);const r=el.getBoundingClientRect();update(true);
     if(pc.next.outs.length===1)openChooser(li,path.concat(0),'arm',r.left,r.top);else{closeChooser();toast(`${CONN[pc.next.k].name} added · use + on each arm to add pieces`);}return;}
@@ -497,10 +522,11 @@ function stepHTML(s,l,i){
 }
 const PP=t=>t?t.split('.').map(Number):[];
 function treeHTML(l,pc,path){const list=intBodies(),pd=`data-l="${l}" data-p="${path.join('.')}"`,id=`${l}-${path.join('_')}`;
+  if(pc.link)return `<li class="step"><span class="n" title="Closing piece">⇥</span><div class="body"><b style="font-size:12.5px">Closing run ${pc._to==='arm'?'into the junction ahead':pc._to==='inline'?'onto the open end ahead (linear joint)':pc._to==='corner'?'onto the open end ahead (corner junction)':'· nothing ahead to join'}</b><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove closing run" title="Remove this closing run">✕</button></div></li>`;
   let h=`<li class="step"><span class="n" title="Piece">▬</span><div class="body"><div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Piece · body length (mm)<input type="number" min="300" step="50" ${pd} data-tk="len" value="${pc.len}"></label><label class="f">Or one body<select ${pd} data-tk="body"><option value="">Pick a length…</option>${list.map(b=>`<option value="${b.len}"${b.len===+pc.len?' selected':''}>${b.len} mm · ${b.wl} W</option>`).join('')}</select></label></div><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove piece" title="Remove this piece and everything after it">✕</button></div></li>`;
-  const cn=pc.next;if(!cn)return h+`<li class="tadd"><button class="btn dash" data-tadd="end" ${pd}>+ Add after this piece</button></li>`;
+  const cn=pc.next;if(!cn&&pc._cl)return h+`<li class="tadd note">Joined here by a closing run</li>`;if(!cn)return h+`<li class="tadd"><button class="btn dash" data-tadd="end" ${pd}>+ Add after this piece</button></li>`;
   h+=`<li class="step"><span class="n j" title="Junction">◆</span><div class="body"><b style="font-size:12.5px">${CONN[cn.k].name}</b>${cn.k==='corner'?`<div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Turn<select ${pd} data-tk="side"><option value="L"${cn.side==='L'?' selected':''}>Left</option><option value="R"${cn.side!=='L'?' selected':''}>Right</option></select></label><label class="f">Angle (°)<input type="number" min="0" max="150" step="5" ${pd} data-tk="a" value="${cn.a==null?90:cn.a}"></label></div>`:''}<div class="res" id="cres-${id}"></div></div><div class="ctl"><button class="ib" data-cdel ${pd} aria-label="Remove junction" title="Remove this junction and everything after it">✕</button></div></li>`;
-  cn.outs.forEach((o,i)=>{const p2=path.concat(i),inner=o.p?treeHTML(l,o.p,p2):`<li class="tadd"><button class="btn dash" data-tadd="arm" data-l="${l}" data-p="${p2.join('.')}">+ Add a piece</button></li>`;
+  cn.outs.forEach((o,i)=>{const p2=path.concat(i),inner=o.p?treeHTML(l,o.p,p2):(cn._tk||[]).includes(i)?`<li class="tadd note">Joined here by a closing run</li>`:`<li class="tadd"><button class="btn dash" data-tadd="arm" data-l="${l}" data-p="${p2.join('.')}">+ Add a piece</button></li>`;
     h+=cn.outs.length===1?inner:`<li class="tarm"><div class="tarm-h">Arm · ${armName(o.rel)}</div><ol class="steps">${inner}</ol></li>`;});
   return h;}
 function renderTree(){$('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
@@ -510,7 +536,7 @@ function renderTree(){$('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line
       <label class="f">Start Y (mm)<input type="number" step="10" data-l="${l}" data-lk="y" value="${ln.y}"></label>
       <label class="f">Heading<select data-l="${l}" data-lk="dir">${DIRS.map(([v,t])=>`<option value="${v}"${+ln.dir===v?' selected':''}>${t}</option>`).join('')}</select></label>
     </div>
-    <ol class="steps">${ln.tree?`<li class="tadd"><button class="btn dash" data-tadd="head" data-l="${l}" data-p="">+ Add before the first piece</button></li>`+treeHTML(l,ln.tree,[]):`<li class="tadd"><button class="btn dash" data-tadd="start" data-l="${l}" data-p="">+ Choose the first piece</button></li>`}</ol>
+    <ol class="steps">${ln.tree?(ln._hc?`<li class="tadd note">Start joined by a closing run</li>`:`<li class="tadd"><button class="btn dash" data-tadd="head" data-l="${l}" data-p="">+ Add before the first piece</button></li>`)+treeHTML(l,ln.tree,[]):`<li class="tadd"><button class="btn dash" data-tadd="start" data-l="${l}" data-p="">+ Choose the first piece</button></li>`}</ol>
   </div>`).join('');}
 function renderSteps(){if(INT){renderTree();return;}
   $('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
@@ -528,7 +554,7 @@ function renderResults(){
   if(INT){R.segs.forEach(g=>{const pc=g.s,id=`${g.li}-${g.path.join('_')}`,el=$('tres-'+id);
       if(el){const L=pc._list||[];if(!L.length){el.className='res off';el.textContent=`Too short for a ${PRODUCT.name} body (shortest ${intBodies()[0].len} mm)`;}
         else{const c={};L.forEach(b=>c[b.len]=(c[b.len]||0)+1);const off=Math.abs(pc._actual-pc.len)>40;el.className='res'+(off?' off':'');
-          el.innerHTML=`<b>${Object.entries(c).sort((a,b)=>b[0]-a[0]).map(([n,k])=>`${k} × ${n}`).join(' + ')}</b> = ${pc._actual} mm${off?` (asked for ${pc.len} mm; bodies come in fixed lengths)`:''}`;}}
+          el.innerHTML=`<b>${Object.entries(c).sort((a,b)=>b[0]-a[0]).map(([n,k])=>`${k} × ${n}`).join(' + ')}</b> = ${pc._actual} mm${off?(pc.link?` (gap ${pc.len} mm; bodies come in fixed lengths, so change a piece length to close it exactly)`:` (asked for ${pc.len} mm; bodies come in fixed lengths)`):''}`;}}
       const cn=pc.next,ce=$('cres-'+id);if(ce&&cn&&cn._c){const c=cn._c;ce.className='res'+(c.bad?' off':'');
         ce.innerHTML=(c.jn?`<b>${c.type[1]}-way junction</b> · ${c.type==='J2'?'adjustable':'arms at 90°'}`:'<b>Linear joint</b> · straight on')+(c.bad?' · arms closer than 30°':'')+(cn.k==='corner'?' · drag it in the plan or 3D to set the angle':'');}});
     S.lines.forEach((ln,l)=>{const LL=R.lines.find(x=>x.li===l),el=$('lsum-'+l);if(el)el.textContent=LL?`${(LL.pieces.reduce((a,q)=>a+q.d.len,0)/1000).toFixed(2)} m · ${LL.pieces.length} bod${LL.pieces.length===1?'y':'ies'} · ${LL.runs.length} circuit${LL.runs.length>1?'s':''}`:'empty';});return;}
@@ -570,6 +596,7 @@ function renderSummaryInt(){const {st,pieces,runs,ext}=R,O=optOf(S.opt);
     ['Circuits',runs.length+` (through-wired, max ${PRODUCT.perCircuit} bodies each, to be confirmed)`],['Driver',`Built in · 220–240V${S.dali?' · DALI':''}`],
     ['Mounting',PRODUCT.mount==='suspended'?`Suspended ${S.drop} mm below a ${S.ceil} mm ceiling`:`Recessed, ${S.ceil} mm ceiling`]].map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
   const w=[];if(R.empty)w.push('<b>Start here:</b> choose the first piece (the <b>+</b> in the panel, the plan or the 3D view). At each open end, <b>+</b> asks what joins there: straight on, a corner, a T or a 4-way junction.');
+  if(R.lost&&R.lost.length)w.push(`<b>A closing piece has nothing to join:</b> line ${[...new Set(R.lost)].map(LET).join(', ')}. Nothing open lies straight ahead of it any more; remove it or line the shapes up again.`);
   if(R.nodes.some(c=>c.bad))w.push('<b>Junction not possible:</b> two arms are closer than 30°. Open the corner angle out.');
   if(PRODUCT.mount==='recessed'&&J.length)w.push(`<b>${PRODUCT.name} runs in straight rows.</b> ${BRAND} lists no corner or T junctions for the recessed version, so each corner here is shown for planning only: confirm the detail with Phosforma, or use separate rows.`);
   R.lines.forEach(LL=>{if(LL.runs.length>1)w.push(`Line ${LET(LL.li)} has more than ${PRODUCT.perCircuit} bodies, so it is split into ${LL.runs.length} circuits.`);});
