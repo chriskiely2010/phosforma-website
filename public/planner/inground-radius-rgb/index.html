@@ -980,7 +980,9 @@ function furnBox(k){if(FBOX[k])return FBOX[k];const m=glbGet(FURN[k].f);if(!m)re
 function buildFurniture(){furnG=new THREE.Group();furnG.visible=S.showFurn!==false;site.add(furnG);
   (S.furn||[]).forEach((it,i)=>{const F=FURN[it.k];if(!F)return;const m=glbGet(F.f);if(!m)return;const o=m.clone(true);
     o.position.set((it.x-R.origin.x)/1000,(F.up||0)/1000,(it.z-R.origin.z)/1000);o.rotation.y=(it.r||0)*Math.PI/180;o.userData.fi=i;
-    o.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;c.userData.fi=i;}});furnG.add(o);});}
+    o.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;c.userData.fi=i;c.material=Array.isArray(c.material)?c.material.map(furnMat):furnMat(c.material);}});furnG.add(o);});}
+// furniture takes the room's lighting: the same reflection level as walls and floor (no full-strength reflections that bloom at night)
+const FMAT=new Map();function furnMat(m){let c=FMAT.get(m);if(!c){c=m.clone();if((m.name||'').startsWith('White_Lacquer'))c.color.setHex(0xe9e8e5);c.emissiveIntensity=0;FMAT.set(m,c);}if(!groundMats.includes(c))groundMats.push(c);return c;}
 function buildOffice(){
   disposeGroup(site);site.clear();labels.forEach(l=>l.removeFromParent());labels=[];groundMats=[];
   const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)).concat(R.opens.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000)).concat(R.opens.map(p=>p.z/1000));(S.furn||[]).forEach(it=>{const x=(it.x-R.origin.x)/1000,z=(it.z-R.origin.z)/1000;xs.push(x-1.2,x+1.2);zs.push(z-1.2,z+1.2);});if(!xs.length){xs.push(0);zs.push(0);}
