@@ -46,6 +46,16 @@ TWOS=(rows('DK','D','LP',L6,LPW,[2654,3316,3978,4641,5304,6628],[2790,3486,4182,
  +rows('PG','DI','LP',L6,DILP,[4225,5398,6527,7745,8919,11266],[4398,5619,6840,8062,9284,11727],'54DI{w}PG{c}',DILPL)
  +rows('PG','DI','HP',L6,DIHP,[6538,8281,10024,11767,13511,16997],[6786,8595,10405,12214,14024,17643],'54DI{w}PG{c}HP',DIHPL)
  +rows('PC60','D','HP',L4,PCW,PC3,PC4,'54PC{w}{c}60')+rows('PC110','D','HP',L4,PCW,PC3,PC4,'54PC{w}{c}110')+rows('AS','D','HP',L4,PCW,PC3,PC4,'54AS{w}{c}'))
+# Twos special versions (all double emission). Codes, lengths and watts from Esse-Ci (as noted with the Phosforma 3-D models);
+# lumens marked est. are Phosforma estimates from the DK/PG/DI tables (spots ~85 lm/W, downlights ~90 lm/W) until Esse-Ci's figures are entered.
+def V(o,lens,ws,wls,lm3,lm4,codes):
+  return [dict(o=o,e='DI',p='LP',len=l,w=w,wl=wl,lm=[a,b],t=c,est=(o!='LV')) for l,w,wl,a,b,c in zip(lens,ws,wls,lm3,lm4,codes)]
+TWOS+=(V('C2DK',[1121,1401],[57,84],['12+45','24+60'],[6592,9674],[7245,10590],['54DI57DK{c}MC','54DI84DK{c}MC'])
+ +V('CDKS',[1241,1521],[42,52],['24+12+2×3','30+16+2×3'],[4568,5698],[4880,6096],['54DI36DKS2X3{c}','54DI46DKS2X3{c}'])
+ +V('CPGS',[1241,1521],[42,52],['24+12+2×3','30+16+2×3'],[4738,5912],[5002,6250],['54DI36PGS2X3{c}','54DI46PGS2X3{c}'])
+ +V('PGDL',[1241,1521],[48,58],['24+12+2×6','30+16+2×6'],[5308,6482],[5592,6840],['54DI36PGF2X6{c}','54DI46PGF2X6{c}'])
+ +V('DL',[1121,1401],[42,58],['30+12','42+16'],[2754,3762],[2960,4040],['54DI5X6I12{c}','54DI7X6I16{c}'])
+ +V('LV',[1001,2001],[12,24],['0+12','0+24'],[704,1408],[720,1440],['54DI1I12LV{c}','54DI2I24LV{c}']))
 DISPLAY=(rows('DK','D','LP',L6,LPW,[2654,3316,3978,4641,5304,6628],[2790,3486,4182,4878,5573,6965],'54DK{w}{c}R')
  +rows('CLD','D','LP',L6,LPW,[2877,3595,4314,5032,5749,7182],[2966,3707,4448,5188,5928,7405],'54CLD{w}{c}R')
  +rows('CLD','D','HP',L3,[48,60,72],[5255,6520,7883],[5418,6722,8127],'54CLD{w}{c}HPR')
@@ -53,7 +63,10 @@ DISPLAY=(rows('DK','D','LP',L6,LPW,[2654,3316,3978,4641,5304,6628],[2790,3486,41
  +rows('PG','D','HP',L3,[48,60,72],[5217,6521,7824],[5379,6723,8068],'54PG{w}{c}HPR')
  +rows('AS','D','HP',L4,PCW,PC3,PC4,'54AS{w}{c}R'))
 OPTICS=[dict(id='DK',name='DK microcell, 60°',ugr='UGR<16'),dict(id='CLD',name='CLD collimated diffuser',ugr='UGR<19'),dict(id='PG',name='PG satin diffuser',ugr='UGR<22'),
-        dict(id='PC60',name='PC lens 60° (low glare)',ugr='UGR<19'),dict(id='PC110',name='PC lens 110° (extra wide)',ugr='UGR<22'),dict(id='AS',name='Asymmetric wall-washer lens',ugr='')]
+        dict(id='PC60',name='PC lens 60° (low glare)',ugr='UGR<19'),dict(id='PC110',name='PC lens 110° (extra wide)',ugr='UGR<22'),dict(id='AS',name='Asymmetric wall-washer lens',ugr=''),
+        dict(id='C2DK',name='Combo 2×DK · micro-cell ends + uplight',ugr='UGR<16'),dict(id='CDKS',name='Combo DK + 2 zoom spots + uplight',ugr='UGR<16'),
+        dict(id='CPGS',name='Combo PG + 2 zoom spots + uplight',ugr='UGR<22'),dict(id='PGDL',name='PG + 2 downlights + uplight',ugr='UGR<22'),
+        dict(id='DL',name='Downlights (5 or 7 × 6 W) + uplight',ugr=''),dict(id='LV',name='48 V track (for spots) + uplight',ugr='')]
 PRODUCTS+=[
  dict(kind='interior',path='twos',name='Twos',brand='Esse-Ci',store='twosplan',mount='suspended',cct0='K3',ccts=[['K3','3000K'],['K4','4000K']],
       optics=OPTICS,bodies=TWOS,sec=dict(w=43,h=63),junction=81,perCircuit=25,

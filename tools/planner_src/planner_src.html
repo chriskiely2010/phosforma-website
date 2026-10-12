@@ -332,7 +332,8 @@ function intChoices(){const B=PRODUCT.bodies,o=B.filter(b=>b.o===S.opt);if(!o.le
 function intBodies(){intChoices();return PRODUCT.bodies.filter(b=>b.o===S.opt&&b.e===S.emis&&b.p===S.pw).sort((a,b)=>a.len-b.len);}
 const BLIND=[1000,2000].map(len=>({o:'MC',e:'',p:'',len,w:0,wl:'0',lm:[0,0],t:'54MC'+len,blind:true}));
 const bodyCode=b=>b.blind?b.t:b.t.replace('{w}',b.w).replace('{c}',S.cct)+(S.dali?'D':'')+(S.fin||'B');
-const bodyName=b=>b.blind?`Blind module ${b.len}`:`${b.o==='PC60'?'PC 60°':b.o==='PC110'?'PC 110°':b.o}${b.e==='DI'?' direct/indirect':''} ${b.len}`;
+const ONAME={C2DK:'Combo 2×DK',CDKS:'Combo DK + spots',CPGS:'Combo PG + spots',PGDL:'PG + downlights',DL:'Downlight',LV:'LV track'};
+const bodyName=b=>b.blind?`Blind module ${b.len}`:ONAME[b.o]?`${ONAME[b.o]} ${b.len}`:`${b.o==='PC60'?'PC 60°':b.o==='PC110'?'PC 110°':b.o}${b.e==='DI'?' direct/indirect':''} ${b.len}`;
 // fewest bodies whose total is closest to the length available (running long counts 1.6×: rows often stop at a wall) (catalogue lengths only; a longer row is a run of bodies with linear joints)
 function fillRun(U,list){if(!list.length||U<list[0].len*0.6)return [];let lv=new Map([[0,[]]]),best=null;const mx=list.at(-1).len;
   for(let n=1;n<=80;n++){const nx=new Map();for(const [s0,c] of lv)for(const b of list){const t=s0+b.len;if(t>U+mx)continue;if(!nx.has(t))nx.set(t,c.concat(b));}
@@ -666,7 +667,7 @@ function renderSummaryInt(){const {st,pieces,runs,ext}=R,O=optOf(S.opt);
   R.clash=clashFind(R);if(R.clash.length)w.unshift(`<b>Lines overlap:</b> ${clashTxt(R.clash)}. Keep at least ${CLEAR} mm between rows, except where they meet at a junction.`);
   $('warn').innerHTML=w.join('<br><br>');$('warn').hidden=!w.length;
   const groups={};pieces.forEach(q=>{(groups[q.code]=groups[q.code]||{q:0,list:[],p:q}).q++;groups[q.code].list.push(q);});R.groups=groups;
-  $('bom').innerHTML=Object.entries(groups).map(([code,g])=>`<tr data-code="${code}"><td class="q">${g.q}×</td><td><code>${code}</code><small>${g.p.d.name} · ${g.p.b.wl} W · ${g.p.lm} lm · ${labelsTxt(g.list)}</small></td></tr>`).join('')+
+  $('bom').innerHTML=Object.entries(groups).map(([code,g])=>`<tr data-code="${code}"><td class="q">${g.q}×</td><td><code>${code}</code><small>${g.p.d.name} · ${g.p.b.wl} W · ${g.p.lm} lm${g.p.b.est?' (est.)':''} · ${labelsTxt(g.list)}</small></td></tr>`).join('')+
     R.acc.map(a=>`<tr><td class="q">${a.q}×</td><td><code>${a.code}</code><small>${a.name}${a.note?' · '+a.note:''}</small></td></tr>`).join('');}
 $('lines').addEventListener('input',e=>{const t=e.target,l=+t.dataset.l;if(Number.isNaN(l))return;const ln=S.lines[l];
   if(t.dataset.lk){const v=t.dataset.lk==='dir'?+t.value:parseFloat(t.value);if(Number.isNaN(v))return;ln[t.dataset.lk]=v;update(false);return;}
@@ -893,8 +894,8 @@ function junctionModel(c,hM,mat){const g=new THREE.Group(),JH=PRODUCT.junction/1
    One model serves several optics that look the same: PG and CLD share the profile (CLD shows its own screen), PC 60°, PC 110° and
    the asymmetric lens share the PC model. The procedural model is shown until a file has loaded (and if it can't load). */
 const GLB={},gltf=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder),GLBDIR='/planner/models/';
-const GLBLEN={DK:[1128,1401,1681,1961,2241,2801],PG:[1121,1401,1681,1961,2241,2801],PC:[1128,1688,2248,2808]};
-const glbFam=o=>o==='DK'?'DK':(o==='PG'||o==='CLD')?'PG':'PC';let glbT=0;
+const GLBLEN={DK:[1128,1401,1681,1961,2241,2801],PG:[1121,1401,1681,1961,2241,2801],PC:[1128,1688,2248,2808],C2DK:[1121,1401],CDKS:[1241,1521],CPGS:[1241,1521],PGDL:[1241,1521],DL:[1121,1401],LV:[1001,2001]};
+const glbFam=o=>GLBLEN[o]&&o!=='PG'&&o!=='DK'?o:o==='DK'?'DK':(o==='PG'||o==='CLD')?'PG':'PC';let glbT=0;
 function glbGet(key){const g=GLB[key];if(g&&g!=='loading'&&g!=='fail')return g;
   if(!g){GLB[key]='loading';gltf.load(GLBDIR+key+'.glb',r=>{GLB[key]=r.scene;clearTimeout(glbT);glbT=setTimeout(()=>{if(drag||angDrag)return;keepSite=true;buildSite();},80);},undefined,()=>{GLB[key]='fail';});}return null;}
 // suspension from the model: ceiling gripper (as photographed) at the ceiling, wire insert on the profile, 1.5 mm steel wire between
@@ -939,8 +940,10 @@ function buildTwos(target,list,studioMode){const group=new THREE.Group(),picks=[
       proc.forEach(c=>c.visible=BM.f==='MC'&&!!c.userData.isCap);if(face.userData.top)face.userData.top.position.y+=0.0012;
       const mid={x:(f[0].x+f[1].x)/2000,z:(f[0].z+f[1].z)/2000},mk=()=>{const g=new THREE.Group();g.position.set(mid.x,hM,mid.z);g.rotation.y=-f[0].h;g.scale.set(q.d.len/BM.L,1,1);return g;};
       const gb=mk(),go=mk(),src=BM.f==='MC'?(BM.m.children[0]||BM.m):(BM.m.getObjectByName('Luminaire')||BM.m),glow=[];
+      const spots=BM.m.getObjectByName('Spots');if(spots)spots.children.forEach(ch=>{const c=ch.clone(true);c.applyMatrix4(spots.matrix);go.add(c);});
+      if(src.getObjectByName('TopDiffuser')&&face.userData.top)face.userData.top.visible=false;
       src.children.forEach(ch=>{const c=ch.clone(true),n=ch.name;if(n==='EndCap_A'&&!capA)return;if(n==='EndCap_B'&&!capB)return;if(n==='Diffuser'&&S.opt==='CLD')return;
-        (BM.f==='MC'||/^(Body|EndCap_A|EndCap_B|GearTray)$/.test(n)?gb:go).add(c);});
+        (BM.f==='MC'||/^(Body|EndCap_A|EndCap_B|GearTray|BottomCover|TopEndBlanks)$/.test(n)?gb:go).add(c);});
       glbMats(gb,null,0);glbMats(go,glow,studioMode?1.3:0);prof.add(gb);ins.add(go);face.userData.glow=glow;
       if(S.opt!=='CLD'){face.material.colorWrite=false;face.material.depthWrite=false;}}
     pg.userData.prof=prof;pg.userData.ins=ins;pg.userData.extras=extras;pg.userData.anch=anch;});
