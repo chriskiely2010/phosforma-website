@@ -156,7 +156,10 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
     </section>
 
     <section id="roomsec" hidden>
-      <h2><span>Room</span><span>furniture</span></h2>
+      <h2><span>Room</span><span>size · artwork · furniture</span></h2>
+      <div class="row2" style="margin-bottom:8px"><label class="f">Room size<select id="room-mode"><option value="auto">Fits the design</option><option value="fixed">Fixed size</option></select></label>
+        <label class="f">Artwork<select id="art-wall"><option value="back">Back wall</option><option value="left">Left wall</option><option value="right">Right wall</option><option value="front">Front wall</option><option value="none">None</option></select></label></div>
+      <div class="row2" id="room-dims" hidden style="margin-bottom:8px"><label class="f">Width (mm)<input type="number" id="room-w" min="2000" max="60000" step="100"></label><label class="f">Depth (mm)<input type="number" id="room-d" min="2000" max="60000" step="100"></label></div>
       <div class="adds" style="margin-top:0"><select id="furn-add" aria-label="Add furniture" style="flex:1"><option value="">+ Add furniture…</option></select></div>
       <div id="furn-list" class="lines" style="gap:4px;margin-top:8px"></div>
       <p class="note" style="margin-top:6px">Drag furniture in the 3D view to place it · click it (or its row here) to turn it to any angle · the Furniture button shows or hides it all.</p>
@@ -305,7 +308,7 @@ const FURNSETS={'Executive office (desk, meeting table, bookcases, chairs)':[['d
   'Private office (desk and bookcase)':[['desk',0,0,0],['acc',0,0,0],['chair',-50,-920,0],['book',0,-1900,0]]};
 const copyLines=l=>JSON.parse(JSON.stringify(l));
 let S={proj:'',client:'',strip:(STRIPS[0]||{}).id,cct:PRODUCT.cct0,rgb:'#ff2fb4',scene:'plaza',lines:INT?[G(null)]:copyLines(PRESETS['S-bend walkway (10 m)'])};
-if(INT)Object.assign(S,{furn:[],showFurn:true,opt:PRODUCT.optics[0].id,emis:'D',pw:'LP',dali:false,fin:'B',ceil:3000,drop:600});
+if(INT)Object.assign(S,{room:{on:false,w:8000,d:6000,x:0,z:0},art:'back',furn:[],showFurn:true,opt:PRODUCT.optics[0].id,emis:'D',pw:'LP',dali:false,fin:'B',ceil:3000,drop:600});
 // share links carry the plan in the address (#p=…); otherwise the last plan in this browser
 const clean=()=>JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);
 function enc(){return 'p='+encodeURIComponent(clean());}
@@ -724,7 +727,13 @@ if(INT){$('furn-add').onchange=e=>{const v=e.target.value;e.target.value='';if(!
     else S.furn.push({k:v,x:Math.round(O.x+(n%4)*600),z:Math.round(O.z+Math.floor(n/4)*600),r:0});
     S.showFurn=true;$('t-scene').setAttribute('aria-pressed',true);save();renderFurn();buildSite();toast(v==='clear'?'Furniture removed':'Added · drag it in the 3D view to place it');};
   $('furn-list').onclick=e=>{const d=e.target.closest('[data-fdel]'),r=e.target.closest('[data-frot]');if(!d&&!r){const row=e.target.closest('[data-fi]');if(row){selectFurn(+row.dataset.fi);const b=row.getBoundingClientRect();openFurnRot(+row.dataset.fi,b.right+8,b.top);}return;}if(d){S.furn.splice(+d.dataset.fdel,1);selF=null;}else if(r){const it=S.furn[+r.dataset.frot];it.r=((it.r||0)+90)%360;}else return;save();renderFurn();keepSite=true;buildSite();};
-  renderFurn();}
+  renderFurn();
+  const syncRoom=()=>{const rm=S.room||(S.room={on:false,w:8000,d:6000,x:0,z:0});$('room-mode').value=rm.on?'fixed':'auto';$('room-dims').hidden=!rm.on;$('room-w').value=rm.w;$('room-d').value=rm.d;$('art-wall').value=S.art||'back';};
+  $('room-mode').onchange=e=>{const rm=S.room||(S.room={});if(e.target.value==='fixed'){const b=siteFrame||{x0:-4,x1:4,z0:-3,z1:3};rm.on=true;rm.w=Math.round((b.x1-b.x0)*10)*100;rm.d=Math.round((b.z1-b.z0)*10)*100;rm.x=Math.round((b.x0+b.x1)*500);rm.z=Math.round((b.z0+b.z1)*500);toast('Room size fixed · set the width and depth');}else rm.on=false;
+    syncRoom();save();buildSite();if(current==='plan')$('plan').innerHTML=planSVG({screen:true});};
+  const dim=k=>e=>{const v=+e.target.value;if(!(v>=2000&&v<=60000))return;S.room[k]=v;save();buildSite();if(current==='plan')$('plan').innerHTML=planSVG({screen:true});};
+  $('room-w').onchange=dim('w');$('room-d').onchange=dim('d');
+  $('art-wall').onchange=e=>{S.art=e.target.value;save();keepSite=true;buildSite();};syncRoom();}
 function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200);}
 async function copyText(t,msg){try{await navigator.clipboard.writeText(t);toast(msg);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();try{document.execCommand('copy');toast(msg);}catch(_){toast('Select and copy the text manually');}ta.remove();}}
 $('copy').onclick=()=>copyText(Object.entries(R.groups).map(([c,g])=>`${g.q}\t${c}`).concat(INT?R.acc.map(a=>`${a.q}\t${a.code}\t${a.name}`):[]).join('\n'),'Order list copied');
@@ -974,6 +983,9 @@ function carpetTex(){return canvasTex(512,(x,N)=>{const r=rng(21);x.fillStyle='#
 let winMat=null;
 /* ---------- office furniture (Phosforma 3-D models): add pieces from the list, drag them in 3D, double-click to turn ---------- */
 let furnG=null;const FBOX={};
+function roomFit(it){const rm=S.room;if(!INT||!rm||!rm.on)return;const P=furnPoly(it);if(!P)return;const xs=P.map(p=>p[0]+R.origin.x),zs=P.map(p=>p[1]+R.origin.z),SN=150;
+  const x0=rm.x-rm.w/2,x1=rm.x+rm.w/2,z0=rm.z-rm.d/2,z1=rm.z+rm.d/2,lo=Math.min(...xs),hi=Math.max(...xs),lz=Math.min(...zs),hz=Math.max(...zs);
+  if(lo-x0<SN)it.x+=x0-lo;else if(x1-hi<SN)it.x+=x1-hi;if(lz-z0<SN)it.z+=z0-lz;else if(z1-hz<SN)it.z+=z1-hz;it.x=Math.round(it.x);it.z=Math.round(it.z);}
 function furnPoly(it){const b=furnBox(it.k);if(!b)return null;const a=(it.r||0)*Math.PI/180,c=Math.cos(a),sn=Math.sin(a),cx=it.x-R.origin.x,cz=it.z-R.origin.z;
   return [[b.min.x,b.min.z],[b.max.x,b.min.z],[b.max.x,b.max.z],[b.min.x,b.max.z]].map(([x,z])=>[cx+(x*c+z*sn)*1000,cz+(-x*sn+z*c)*1000]);}
 function furnBox(k){if(FBOX[k])return FBOX[k];const m=glbGet(FURN[k].f);if(!m)return null;m.updateMatrixWorld(true);return FBOX[k]=new THREE.Box3().setFromObject(m);}
@@ -983,12 +995,23 @@ function buildFurniture(){furnG=new THREE.Group();furnG.visible=S.showFurn!==fal
     o.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;c.userData.fi=i;c.material=Array.isArray(c.material)?c.material.map(furnMat):furnMat(c.material);}});furnG.add(o);});}
 // furniture takes the room's lighting: the same reflection level as walls and floor (no full-strength reflections that bloom at night)
 const FMAT=new Map();function furnMat(m){let c=FMAT.get(m);if(!c){c=m.clone();if((m.name||'').startsWith('White_Lacquer'))c.color.setHex(0xe9e8e5);c.emissiveIntensity=0;FMAT.set(m,c);}if(!groundMats.includes(c))groundMats.push(c);return c;}
+// wall artwork: the Line to Light line, set in the site's type, with the Phosforma logo
+let ART=null;function artTex(){if(ART)return ART;const c=document.createElement('canvas');c.width=2048;c.height=410;const x=c.getContext('2d'),F=getComputedStyle(document.body).fontFamily;
+  const draw=img=>{x.clearRect(0,0,2048,410);x.textBaseline='alphabetic';x.font=`700 132px ${F}`;const a='Draw the line.',b=' We\u2019ll give it form.',wa=x.measureText(a).width,wb=x.measureText(b).width,x0=(2048-wa-wb)/2;
+    x.fillStyle='#1d2329';x.fillText(a,x0,210);x.fillStyle='#ff5000';x.fillText(b,x0+wa,210);
+    x.fillStyle='#ff5000';x.fillRect(x0,250,wa+wb,6);if(img){const h=60,w=img.width/img.height*h||290;x.drawImage(img,(2048-w)/2,300,w,h);}ART.needsUpdate=true;};
+  ART=new THREE.CanvasTexture(c);ART.colorSpace=THREE.SRGBColorSpace;ART.anisotropy=8;draw(null);
+  try{const svg=$('logo').cloneNode(true);svg.setAttribute('xmlns','http://www.w3.org/2000/svg');svg.setAttribute('width','500');svg.setAttribute('height','108');svg.querySelectorAll('*').forEach(n=>{if(!n.getAttribute('fill'))n.setAttribute('fill','#1d2329');});
+    const im=new Image();im.onload=()=>draw(im);im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg.outerHTML);}catch(e){}
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>draw(null));return ART;}
 function buildOffice(){
   disposeGroup(site);site.clear();labels.forEach(l=>l.removeFromParent());labels=[];groundMats=[];
   const xs=R.pieces.flatMap(q=>q.pts.map(p=>p.x/1000)).concat(R.opens.map(p=>p.x/1000)),zs=R.pieces.flatMap(q=>q.pts.map(p=>p.z/1000)).concat(R.opens.map(p=>p.z/1000));(S.furn||[]).forEach(it=>{const x=(it.x-R.origin.x)/1000,z=(it.z-R.origin.z)/1000;xs.push(x-1.2,x+1.2);zs.push(z-1.2,z+1.2);});if(!xs.length){xs.push(0);zs.push(0);}
   const m=2.6,ox=R.origin.x/1000,oz=R.origin.z/1000;
   const fit={x0:Math.floor(Math.min(...xs)+ox-m),x1:Math.ceil(Math.max(...xs)+ox+m),z0:Math.floor(Math.min(...zs)+oz-m),z1:Math.ceil(Math.max(...zs)+oz+m)};
   siteFrame=keepSite&&siteFrame?{x0:Math.min(siteFrame.x0,fit.x0),x1:Math.max(siteFrame.x1,fit.x1),z0:Math.min(siteFrame.z0,fit.z0),z1:Math.max(siteFrame.z1,fit.z1)}:fit;keepSite=false;
+  const RM=S.room&&S.room.on?S.room:null; // fixed room: its own size and place, so pieces can go against a wall
+  if(RM)siteFrame={x0:(RM.x-RM.w/2)/1000,x1:(RM.x+RM.w/2)/1000,z0:(RM.z-RM.d/2)/1000,z1:(RM.z+RM.d/2)/1000};
   B={x0:siteFrame.x0-ox,x1:siteFrame.x1-ox,z0:siteFrame.z0-oz,z1:siteFrame.z1-oz};
   const W=B.x1-B.x0,D=B.z1-B.z0,cx=(B.x0+B.x1)/2,cz=(B.z0+B.z1)/2,H=S.ceil/1000;
   // a plain grey room: satin floor, matt walls (single-sided, so the room opens like a dollhouse from outside), ceiling
@@ -997,6 +1020,9 @@ function buildOffice(){
   const wm=new THREE.MeshStandardMaterial({color:0xdcd9d5,roughness:0.92});groundMats.push(wm);
   const wall=(w,rot,x,z)=>{const g=new THREE.Mesh(new THREE.PlaneGeometry(w,H),wm);g.rotation.y=rot;g.position.set(x,H/2,z);g.receiveShadow=true;site.add(g);};
   wall(W,0,cx,B.z0);wall(W,Math.PI,cx,B.z1);wall(D,Math.PI/2,B.x0,cz);wall(D,-Math.PI/2,B.x1,cz);
+  if(S.art&&S.art!=='none'){const A={back:[W,0,cx,B.z0+0.004],front:[W,Math.PI,cx,B.z1-0.004],left:[D,Math.PI/2,B.x0+0.004,cz],right:[D,-Math.PI/2,B.x1-0.004,cz]}[S.art];
+    if(A){const aw=Math.min(A[0]-0.8,3.6),ah=aw*0.2,am=new THREE.MeshStandardMaterial({map:artTex(),transparent:true,roughness:0.9,depthWrite:false});groundMats.push(am);
+      const g=new THREE.Mesh(new THREE.PlaneGeometry(aw,ah),am);g.rotation.y=A[1];if(A[1]===0||A[1]===Math.PI)g.position.set(A[2],Math.min(H-0.45,1.75),A[3]);else g.position.set(A[2],Math.min(H-0.45,1.75),A[3]);site.add(g);}}
   winMat=null; // plain room for now: no glazed facade
   const cm=new THREE.MeshStandardMaterial({color:0xe7e5e2,roughness:0.95});groundMats.push(cm);
   const ce=new THREE.Mesh(new THREE.PlaneGeometry(W,D).rotateX(Math.PI/2),cm);ce.position.set(cx,H,cz);site.add(ce);
@@ -1421,7 +1447,7 @@ let fdrag=null,lastF={t:0,fi:-1};const floorP=new THREE.Plane(new THREE.Vector3(
 function floorAt(e){const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);return ray.ray.intersectPlane(floorP,fp)?fp.clone():null;}
 function furnAt(e){if(!INT||!furnG||!furnG.visible||!furnG.children.length)return null;const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
   const h=ray.intersectObject(furnG,true).find(x=>x.object.userData.fi!=null);return h?h.object.userData.fi:null;}
-canvas.addEventListener('pointermove',e=>{if(!fdrag)return;const p=floorAt(e);if(!p)return;const it=S.furn[fdrag.fi];it.x=Math.round((fdrag.s0.x+(p.x-fdrag.p0.x)*1000)/25)*25;it.z=Math.round((fdrag.s0.z+(p.z-fdrag.p0.z)*1000)/25)*25;
+canvas.addEventListener('pointermove',e=>{if(!fdrag)return;const p=floorAt(e);if(!p)return;const it=S.furn[fdrag.fi];it.x=Math.round((fdrag.s0.x+(p.x-fdrag.p0.x)*1000)/25)*25;it.z=Math.round((fdrag.s0.z+(p.z-fdrag.p0.z)*1000)/25)*25;roomFit(it);
   if(fdrag.obj)fdrag.obj.position.set((it.x-R.origin.x)/1000,fdrag.obj.position.y,(it.z-R.origin.z)/1000);if(selBox)selBox.update();});
 const fUp=()=>{if(!fdrag)return;fdrag=null;controls.enabled=true;canvas.style.cursor='';save();keepSite=true;buildSite();};canvas.addEventListener('pointerup',fUp);canvas.addEventListener('pointercancel',fUp);
 stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||e.button||current==='plan')return;
@@ -1453,6 +1479,7 @@ canvas.addEventListener('pointerup',up3);canvas.addEventListener('pointercancel'
 function planSVG(o={}){
   const solo=o.only!=null,ps=solo?R.pieces.filter(q=>q.line===o.only):R.pieces,all=ps.flatMap(q=>q.pts);if(!all.length)all.push(...(R.opens||[]).map(p=>({x:p.x,z:p.z})),{x:-R.origin.x,z:-R.origin.z});
   if(INT&&!solo&&!o.key)(S.furn||[]).forEach(it=>{const P=furnPoly(it);if(P)P.forEach(([x,z])=>all.push({x,z}));});
+  if(INT&&!solo&&!o.key&&S.room&&S.room.on){const rm=S.room;all.push({x:rm.x-rm.w/2-R.origin.x,z:rm.z-rm.d/2-R.origin.z},{x:rm.x+rm.w/2-R.origin.x,z:rm.z+rm.d/2-R.origin.z});}
   const x0=Math.min(...all.map(p=>p.x)),x1=Math.max(...all.map(p=>p.x)),z0=Math.min(...all.map(p=>p.z)),z1=Math.max(...all.map(p=>p.z));
   const dX=-R.origin.x,dZ=-R.origin.z,X0=solo?x0:Math.min(x0,dX),X1=solo?x1:Math.max(x1,dX),Z0=solo?z0:Math.min(z0,dZ),Z1=solo?z1:Math.max(z1,dZ); // datum in view
   const pad=Math.max(900,Math.max(X1-X0,Z1-Z0)*0.12);let vb=o.frame?o.frame.vb:[X0-pad,Z0-pad,X1-X0+2*pad,Z1-Z0+2*pad];
@@ -1467,6 +1494,7 @@ function planSVG(o={}){
   s+=o.frame?`<g transform="translate(${o.frame.tx} ${o.frame.tz})">`:'<g>';
   // datum: Line A start = (0, 0); start points of other lines are measured from here
   if(!solo){const dx=-R.origin.x,dz=-R.origin.z,c=fs*0.9;s+=`<g stroke="${grey}" stroke-width="${k*0.9}"><line x1="${dx-c}" y1="${dz}" x2="${dx+c}" y2="${dz}"/><line x1="${dx}" y1="${dz-c}" x2="${dx}" y2="${dz+c}"/></g><text x="${dx+c*0.4}" y="${dz+c*1.6}" font-size="${fs*0.75}" fill="${grey}">0,0</text>`;}
+  if(INT&&!solo&&!o.key&&S.room&&S.room.on){const rm=S.room,x=rm.x-rm.w/2-R.origin.x,z=rm.z-rm.d/2-R.origin.z;s+=`<rect x="${x}" y="${z}" width="${rm.w}" height="${rm.d}" fill="none" stroke="#9a9894" stroke-width="${k*4}"/>`;}
   if(INT&&!solo&&!o.key)(S.furn||[]).forEach(it=>{const P=furnPoly(it);if(!P)return;
     s+=`<polygon points="${P.map(p=>p.join(',')).join(' ')}" fill="#f2f1ef" stroke="#c9c7c3" stroke-width="${k*0.8}"/>`;});
   // pieces, alternating tone so every joint reads
