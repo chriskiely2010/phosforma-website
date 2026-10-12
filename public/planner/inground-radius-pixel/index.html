@@ -159,7 +159,7 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
       <h2><span>Room</span><span>furniture</span></h2>
       <div class="adds" style="margin-top:0"><select id="furn-add" aria-label="Add furniture" style="flex:1"><option value="">+ Add furniture…</option></select></div>
       <div id="furn-list" class="lines" style="gap:4px;margin-top:8px"></div>
-      <p class="note" style="margin-top:6px">Drag furniture in the 3D view to place it · double-click to turn it 90° · the Furniture button shows or hides it all.</p>
+      <p class="note" style="margin-top:6px">Drag furniture in the 3D view to place it · click it (or its row here) to turn it to any angle · the Furniture button shows or hides it all.</p>
     </section>
 
     <section>
@@ -355,7 +355,7 @@ function stepsToTree(steps){let root=null,last=null;(steps||[]).forEach(s=>{if(s
 function resolveInt(){
   const JH=PRODUCT.junction/2,list=intBodies(),K4=S.cct==='K4',O=optOf(S.opt);
   const st={label:`${O.name}${S.emis==='DI'?' · direct/indirect':''} · ${S.pw==='HP'?'40':'20'} W/m`,v:230,max:PRODUCT.perCircuit};
-  const cl=[],segs=[],turns=[],opens=[],all=[],links=[];
+  const cl=[],segs=[],turns=[],opens=[],all=[],links=[],conns=[];
   const emit=(g,x,z,h,d,bl)=>bl.forEach(b=>{const p0={x:x+Math.cos(h)*d,z:z+Math.sin(h)*d,h};d+=b.len;const p1={x:x+Math.cos(h)*d,z:z+Math.sin(h)*d,h};
     all.push({b,line:g.li,step:g.si,pts:[p0,p1],mid:{x:(p0.x+p1.x)/2,z:(p0.z+p1.z)/2,h},d:{len:b.len,ang:0,name:bodyName(b)},w:b.w,lm:b.lm[K4?1:0],code:bodyCode(b)});});
   S.lines.forEach((ln,li)=>{if(ln.steps&&ln.tree===undefined){ln.tree=stepsToTree(ln.steps);delete ln.steps;}
@@ -368,7 +368,7 @@ function resolveInt(){
       const ex=x+Math.cos(h)*g.len,ez=z+Math.sin(h)*g.len,node={x:ex,z:ez,arms:[h+Math.PI],type:t,jn:toJ,li};cl.push(node);pc._b=node;
       if(!cn){opens.push({li,path,kind:'end',x:ex,z:ez,h,pc,node});return;}
       if(cn.k==='corner')cn.outs[0].rel=(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a);
-      cn._c=node;cn._hin=h;if(cn.k==='corner')turns.push({conn:cn,c:node,li,hin:h});
+      cn._c=node;cn._hin=h;conns.push({conn:cn,c:node,li,path,hin:h});if(cn.k==='corner')turns.push({conn:cn,c:node,li,hin:h});
       cn.outs.forEach((o,i)=>{const h2=h+o.rel*Math.PI/180;node.arms.push(h2);if(o.p)walk(o.p,path.concat(i),ex,ez,h2,toJ,node);else opens.push({li,path:path.concat(i),kind:'arm',x:ex,z:ez,h:h2,conn:cn,node});});};
     walk(ln.tree,[],x0,z0,h0,false,n0);});
   // closing pieces: run straight ahead into the next open junction arm, or onto an open end (straight on = linear joint, square on = corner junction)
@@ -402,7 +402,7 @@ function resolveInt(){
   if(!xs.length){xs.push(0);zs.push(0);}
   const b={x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)},ox=(b.x0+b.x1)/2,oz=(b.z0+b.z1)/2;
   all.forEach(q=>{q.pts.forEach(p=>{p.x-=ox;p.z-=oz;});q.mid.x-=ox;q.mid.z-=oz;});cl.forEach(c=>{c.x-=ox;c.z-=oz;});susp.forEach(p=>{p.x-=ox;p.z-=oz;});opens.forEach(p=>{p.x-=ox;p.z-=oz;});
-  return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0},nodes:cl,acc,segs,susp,turns,opens,lost,empty:!all.length};}
+  return {st,pieces:all,runs,lines,raw:b,origin:{x:ox,z:oz},ext:{w:b.x1-b.x0,d:b.z1-b.z0},nodes:cl,acc,segs,susp,turns,conns,opens,lost,empty:!all.length};}
 // what a piece starting at L (x, z, heading h, o0 = half a junction behind it or 0) would run into straight ahead, if anything
 function linkFind(L,opens,JH){const dx=Math.cos(L.h),dz=Math.sin(L.h),nr=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<0.035;let best=null;
   opens.forEach(o=>{if(o.li!==L.li||o.kind==='start'||(o.path&&L.path&&o.kind!=='head'&&o.kind===L.kind&&o.path.join()===L.path.join()))return;let C={x:o.x,z:o.z},mode;
@@ -473,6 +473,12 @@ function removePiece(li,del){const JH=PRODUCT.junction/2,O=R.origin,ln=S.lines[l
   update(true);toast(built.length>1?`Piece removed · the part cut off is now line ${LET(S.lines.length-1)}`:'Piece removed · the rest stays where it is');}
 function chooserPick(e){const el=$('chooser'),li=+el.dataset.li,path=el.dataset.path?el.dataset.path.split('.').map(Number):[],kind=el.dataset.kind,ln=S.lines[li];if(!ln)return;
   if(e.target.closest('[data-chx]')){closeChooser();return;}
+  if(kind==='junc'){const jt=e.target.closest('[data-jt]:not([disabled])'),ja=e.target.closest('[data-ja]'),r=el.getBoundingClientRect();
+    if(jt){setConnType(li,path,jt.dataset.jt,jt.dataset.side||'R');openJunc(li,path,r.left,r.top);return;}
+    if(ja){const pc=tGet(ln,path);if(pc&&pc.next){pc.next.a=+ja.dataset.ja;update(true);openJunc(li,path,r.left,r.top);}return;}
+    if(e.target.closest('[data-jdel]')){const pc=tGet(ln,path);if(pc){pc.next=null;selConn=null;closeChooser();update(true);toast('Junction removed, with everything after it');}return;}return;}
+  if(kind==='furn'){const fi=+el.dataset.fi,b=e.target.closest('[data-fr]');if(b){furnTurn(fi,(S.furn[fi].r||0)+ +b.dataset.fr);renderFurn();markSidebar(false);return;}
+    if(e.target.closest('[data-fremove]')){S.furn.splice(fi,1);selF=null;closeChooser();save();renderFurn();keepSite=true;buildSite();}return;}
   if(e.target.closest('[data-chl]')){const tg=el._tg,lk={link:true,len:0,next:null,...(tg?{to:{k:tg.o.kind,p:tg.o.path.join('.')}}:{})};if(kind==='end'){const pc=tGet(ln,path);if(!pc)return;pc.next=mkConn('joint');pc.next.outs[0].p=lk;}
     else{const sl=tSlot(ln,path);if(!sl)return;sl.o[sl.k]=lk;}closeChooser();update(true);toast('Closed · the run is filled with bodies');return;}
   const c=e.target.closest('[data-chc]');if(c&&kind==='head'){const r=el.getBoundingClientRect();headJoin(ln,c.dataset.chc,c.dataset.side);update(true);openChooser(li,[],'headpiece',r.left,r.top);return;}
@@ -705,13 +711,18 @@ $('cct').onchange=e=>{S.cct=e.target.value;update(false);};
 $('proj').oninput=e=>{S.proj=e.target.value;save();};
 $('client').oninput=e=>{S.client=e.target.value;save();};
 $('chooser').addEventListener('click',chooserPick);
+$('chooser').addEventListener('input',e=>{const el=$('chooser');
+  if(e.target.matches('[data-jang]')){const ln=S.lines[+el.dataset.li],pc=ln&&tGet(ln,PP(el.dataset.path));if(!pc||!pc.next)return;pc.next.a=+e.target.value;$('ja-v').textContent=e.target.value+'°';update(false);if(current==='plan')$('plan').innerHTML=planSVG({screen:true});}
+  if(e.target.matches('[data-frange]'))furnTurn(+el.dataset.fi,+e.target.value);});
+$('chooser').addEventListener('change',e=>{if(e.target.matches('[data-jang]')){keepSite=true;update(true);const r=$('chooser').getBoundingClientRect();openJunc(+$('chooser').dataset.li,PP($('chooser').dataset.path),r.left,r.top);}
+  if(e.target.matches('[data-frange]'))renderFurn();});
 addEventListener('keydown',e=>{if(e.key==='Escape')closeChooser();});
-addEventListener('pointerdown',e=>{const c=$('chooser');if(!c.hidden&&!c.contains(e.target)&&!e.target.closest('[data-tadd],[data-open],.lbl.plus,#add-line'))closeChooser();},true);
+addEventListener('pointerdown',e=>{const c=$('chooser');if(!c.hidden&&!c.contains(e.target)&&!e.target.closest('[data-tadd],[data-open],[data-conn],[data-turn],[data-fi],.lbl.plus,#add-line'))closeChooser();},true);
 if(INT){$('furn-add').onchange=e=>{const v=e.target.value;e.target.value='';if(!v)return;S.furn=S.furn||[];const O=R.origin,n=S.furn.length;
     if(v==='clear'){S.furn=[];}else if(v.startsWith('set:')){FURNSETS[v.slice(4)].forEach(([k,x,z,r])=>S.furn.push({k,x:Math.round(O.x+x),z:Math.round(O.z+z),r}));}
     else S.furn.push({k:v,x:Math.round(O.x+(n%4)*600),z:Math.round(O.z+Math.floor(n/4)*600),r:0});
     S.showFurn=true;$('t-scene').setAttribute('aria-pressed',true);save();renderFurn();buildSite();toast(v==='clear'?'Furniture removed':'Added · drag it in the 3D view to place it');};
-  $('furn-list').onclick=e=>{const d=e.target.closest('[data-fdel]'),r=e.target.closest('[data-frot]');if(!d&&!r){const row=e.target.closest('[data-fi]');if(row)selectFurn(+row.dataset.fi);return;}if(d){S.furn.splice(+d.dataset.fdel,1);selF=null;}else if(r){const it=S.furn[+r.dataset.frot];it.r=((it.r||0)+90)%360;}else return;save();renderFurn();keepSite=true;buildSite();};
+  $('furn-list').onclick=e=>{const d=e.target.closest('[data-fdel]'),r=e.target.closest('[data-frot]');if(!d&&!r){const row=e.target.closest('[data-fi]');if(row){selectFurn(+row.dataset.fi);const b=row.getBoundingClientRect();openFurnRot(+row.dataset.fi,b.right+8,b.top);}return;}if(d){S.furn.splice(+d.dataset.fdel,1);selF=null;}else if(r){const it=S.furn[+r.dataset.frot];it.r=((it.r||0)+90)%360;}else return;save();renderFurn();keepSite=true;buildSite();};
   renderFurn();}
 function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200);}
 async function copyText(t,msg){try{await navigator.clipboard.writeText(t);toast(msg);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();try{document.execCommand('copy');toast(msg);}catch(_){toast('Select and copy the text manually');}ta.remove();}}
@@ -1285,13 +1296,43 @@ function markSidebar(scroll){document.querySelectorAll('.step.sel,.lhead.sel').f
   if(q){let res=null;if(INT){const g=R.segs.find(g=>g.li===q.line&&g.si===q.step);if(g)res=$(`tres-${g.li}-${g.path.join('_')}`);}else res=$(`res-${q.line}-${q.step}`);
     el=res&&res.closest('.step');if(el){el.classList.add('sel');res.insertAdjacentHTML('afterbegin',`<span class="selmark">${q.label} selected</span> `);}
     const tr=document.querySelector(`#bom tr[data-code="${CSS.escape(q.code)}"]`);if(tr)tr.classList.add('sel');}
+  if(INT&&selConn){const res=$(`cres-${selConn.li}-${selConn.path.join('_')}`);el=res&&res.closest('.step');if(el){el.classList.add('sel');res.insertAdjacentHTML('afterbegin','<span class="selmark">junction selected</span> ');}}
   if(INT&&selF!=null){const rows=document.querySelectorAll('#furn-list .lhead');el=rows[selF]||null;if(el)el.classList.add('sel');}
   if(scroll&&el)el.scrollIntoView({block:'nearest',behavior:'smooth'});if(run&&!scroll)highlight(hovered);
   if(selBox){selBox.removeFromParent();selBox=null;}
   if(INT&&selF!=null&&furnG){const o=furnG.children.find(o=>o.userData.fi===selF);if(o){selBox=new THREE.BoxHelper(o,0xff5000);scene.add(selBox);}}
+  if(INT&&selConn&&R.conns){const C=R.conns.find(c=>c.li===selConn.li&&c.path.join()===selConn.path.join());if(C){const y=yLine(),hM=PRODUCT.sec.h/1000,b=new THREE.Box3(V3(C.c.x/1000-0.05,y-0.01,C.c.z/1000-0.05),V3(C.c.x/1000+0.05,y+hM+0.01,C.c.z/1000+0.05));selBox=new THREE.Box3Helper(b,0xff5000);scene.add(selBox);}}
   if(q&&run){const n=R.pieces.indexOf(q),pg=run.pgs[n];const f=run.picks[n];if(f){f.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(f);b.min.y-=0.008;b.max.y=b.min.y+(PRODUCT.sec?PRODUCT.sec.h:100)/1000+0.016;b.expandByVector(V3(0.012,0,0.012));selBox=new THREE.Box3Helper(b,0xff5000);scene.add(selBox);}}}
-function selectPiece(q){selLabel=q?q.label:null;selF=null;markSidebar(true);highlight(hovered);}
-function selectFurn(fi){selF=fi;selLabel=null;markSidebar(true);highlight(hovered);}
+/* ---------- junction editor: click any junction (plan or 3D) to change its type or angle; furniture: turn to any angle ---------- */
+let selConn=null;
+const JOPTS=[['joint','','Straight on'],['corner','L','Corner · left'],['corner','R','Corner · right'],['tee','','T · left + right'],['teeL','','T · straight + left'],['teeR','','T · straight + right'],['cross','','4-way']];
+const relOf=(cn,o)=>cn.k==='corner'?(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a):o.rel;
+function connAllowed(old,k,side){const occ=old.outs.map(o=>({rel:relOf(old,o),p:o.p})).filter(x=>x.p);if(old.outs.length===1&&CONN[k].outs.length===1)return true;
+  const nc=mkConn(k,side),rs=nc.outs.map(o=>k==='corner'?(side==='L'?-90:90):o.rel);return occ.every(x=>rs.includes(x.rel));}
+function setConnType(li,path,k,side){const ln=S.lines[li],pc=tGet(ln,path);if(!pc||!pc.next)return;const old=pc.next;if(!connAllowed(old,k,side))return;
+  const occ=old.outs.map(o=>({rel:relOf(old,o),p:o.p})).filter(x=>x.p),nc=mkConn(k,side);if(k==='corner'&&old.k==='corner')nc.a=old.a;
+  if(old.outs.length===1&&nc.outs.length===1)nc.outs[0].p=old.outs[0].p;else nc.outs.forEach(o=>{const r=k==='corner'?(side==='L'?-90:90):o.rel,m=occ.find(x=>x.rel===r);if(m)o.p=m.p;});
+  pc.next=nc;update(true);}
+function openJunc(li,path,px,py){const ln=S.lines[li],pc=tGet(ln,path);if(!pc||!pc.next)return;const cn=pc.next,el=$('chooser'),rec=PRODUCT.mount==='recessed';
+  selConn={li,path};selLabel=null;selF=null;markSidebar(true);highlight(hovered);
+  let h=`<div class="ch-h">${CONN[cn.k].name} · line ${LET(li)}<button class="ib" data-chx aria-label="Close">✕</button></div>`;
+  h+=`<div class="ch-g">${JOPTS.filter(([k])=>!rec||k==='joint').map(([k,sd,n])=>{const cur=cn.k===k&&(k!=='corner'||cn.side===sd),ok=connAllowed(cn,k,sd||cn.side);
+    return `<button class="btn${cur?' solid':''}" data-jt="${k}" data-side="${sd}"${ok?'':' disabled style="opacity:.4;cursor:not-allowed" title="This would cut off an arm that has pieces on it: remove them first"'}>${n}</button>`;}).join('')}</div>`;
+  if(cn.k==='corner'){const a=cn.a==null?90:+cn.a;h+=`<div class="ch-f"><label class="f">Angle · ${cn.side==='L'?'left':'right'} <b id="ja-v">${a}°</b><input type="range" min="0" max="150" step="5" value="${a}" data-jang style="accent-color:#ff5000;padding:0;border:0;background:none"></label>
+    <div style="display:flex;gap:6px;margin-top:6px">${[30,45,60,90,120,135].map(v=>`<button class="btn" data-ja="${v}" style="flex:1;padding:5px 0;text-align:center">${v}°</button>`).join('')}</div></div>`;}
+  h+=`<div style="display:flex;justify-content:space-between;gap:6px"><span class="note">Arms with pieces stay; the rest move with the junction.</span><button class="btn" data-jdel style="white-space:nowrap">Remove junction</button></div>`;
+  el.innerHTML=h;el.hidden=false;el.dataset.li=li;el.dataset.path=path.join('.');el.dataset.kind='junc';
+  const W=320;el.style.left=Math.max(8,Math.min(px,innerWidth-W-8))+'px';el.style.top=Math.max(8,Math.min(py,innerHeight-el.offsetHeight-8))+'px';}
+function openFurnRot(fi,px,py){const it=S.furn[fi];if(!it)return;const el=$('chooser'),r=it.r||0;
+  el.innerHTML=`<div class="ch-h">${FURN[it.k].n}<button class="ib" data-chx aria-label="Close">✕</button></div>
+    <div class="ch-f"><label class="f">Turn <b id="fr-v">${r}°</b><input type="range" min="0" max="355" step="5" value="${r}" data-frange style="accent-color:#ff5000;padding:0;border:0;background:none"></label>
+    <div style="display:flex;gap:6px;margin-top:6px">${[-90,-15,15,90].map(v=>`<button class="btn" data-fr="${v}" style="flex:1;padding:5px 0;text-align:center">${v>0?'+':''}${v}°</button>`).join('')}</div></div>
+    <div style="display:flex;justify-content:space-between;gap:6px"><span class="note">Drag it in 3D to move it.</span><button class="btn" data-fremove>Remove</button></div>`;
+  el.hidden=false;el.dataset.kind='furn';el.dataset.fi=fi;const W=320;el.style.left=Math.max(8,Math.min(px,innerWidth-W-8))+'px';el.style.top=Math.max(8,Math.min(py,innerHeight-el.offsetHeight-8))+'px';}
+function furnTurn(fi,r){const it=S.furn[fi];if(!it)return;it.r=((Math.round(r)%360)+360)%360;const o=furnG&&furnG.children.find(o=>o.userData.fi===fi);if(o)o.rotation.y=it.r*Math.PI/180;if(selBox&&selBox.update)selBox.update();
+  const v=$('fr-v');if(v)v.textContent=it.r+'°';const rg=document.querySelector('[data-frange]');if(rg&&+rg.value!==it.r)rg.value=it.r;save();if(current==='plan')$('plan').innerHTML=planSVG({screen:true});}
+function selectPiece(q){selConn=null;selLabel=q?q.label:null;selF=null;markSidebar(true);highlight(hovered);}
+function selectFurn(fi){selConn=null;selF=fi;selLabel=null;markSidebar(true);highlight(hovered);}
 function highlight(q){const sq=selected();document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
   run&&run.picks.forEach(o=>{const on=(q&&o.userData.piece===q)||(sq&&o.userData.piece.label===sq.label);o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):lightCol());});}
 canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run||drag3){tip.hidden=true;return;}
@@ -1340,19 +1381,20 @@ function svgPt(e){const svg=planEl.querySelector('svg'),m=svg.getScreenCTM().inv
 /* ---------- interior: drag a junction to set its angle (5° steps, arms at least 30° apart, no overlaps) ---------- */
 let angDrag=null,angRaf=0;
 function angBegin(ti,frame){const T=R.turns[ti];if(!T)return false;const cn=T.conn;
-  angDrag={li:T.li,cn,c0:{x:T.c.x,z:T.c.z},hin:T.hin,O0:{...R.origin},frame,valid:{side:cn.side,a:cn.a==null?90:+cn.a},base:new Set(clashFind(R).map(p=>p.join('-')))};return true;}
+  angDrag={li:T.li,cn,c0:{x:T.c.x,z:T.c.z},hin:T.hin,O0:{...R.origin},frame,valid:{side:cn.side,a:cn.a==null?90:+cn.a},s0:{side:cn.side,a:cn.a==null?90:+cn.a},base:new Set(clashFind(R).map(p=>p.join('-')))};return true;}
 function angTo(dx,dz){const A=angDrag,cn=A.cn;if(Math.hypot(dx,dz)<20)return false;let d=Math.atan2(dz,dx)-A.hin;d=Math.atan2(Math.sin(d),Math.cos(d))*180/Math.PI;d=Math.max(-150,Math.min(150,Math.round(d/5)*5));
   const nt=d<0?'L':'R',na=Math.abs(d);if(nt===cn.side&&na===(cn.a==null?90:+cn.a))return false;cn.side=nt;cn.a=na;R=resolve();
   const bad=(cn._c&&cn._c.bad)||clashFind(R).some(p=>p.includes(A.li)&&!A.base.has(p.join('-')));
   if(bad){cn.side=A.valid.side;cn.a=A.valid.a;R=resolve();return false;}A.valid={side:nt,a:na};return true;}
-function angEnd(){const A=angDrag;angDrag=null;R=resolve();const T={x:R.origin.x-A.O0.x,z:R.origin.z-A.O0.z};camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);
+function angEnd(){const A=angDrag;angDrag=null;if(A.valid.side===A.s0.side&&A.valid.a===A.s0.a){const C=R.conns.find(c=>c.conn===A.cn);if(C&&A.at)openJunc(C.li,C.path,A.at.x,A.at.y);return;}R=resolve();const T={x:R.origin.x-A.O0.x,z:R.origin.z-A.O0.z};camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);
   toast(`Corner set to ${A.cn.a}° ${A.cn.side==='L'?'left':'right'}`);}
 let lastDown={t:0,li:-1},planPick=null;
 planEl.addEventListener('pointerdown',e=>{const op=INT&&!e.button&&e.target.closest('[data-open]');
   if(op){e.preventDefault();e.stopPropagation();const o=R.opens[+op.dataset.open];if(o)openChooser(o.li,o.path,o.kind,e.clientX+12,e.clientY+12);return;}
+  const jc=INT&&!e.button&&e.target.closest('[data-conn]');if(jc){e.preventDefault();e.stopPropagation();const [l,p]=jc.dataset.conn.split('|');openJunc(+l,PP(p),e.clientX+12,e.clientY+12);return;}
   const tj=INT&&!e.button&&e.target.closest('[data-turn]');
   if(tj){e.preventDefault();const ti=+tj.dataset.turn,v=planEl.querySelector('svg').viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];
-    if(angBegin(ti,planFrame)){planEl.setPointerCapture(e.pointerId);planEl.style.cursor='alias';}return;}const t=e.target.closest('[data-line]');if(!t||e.button)return;e.preventDefault();
+    if(angBegin(ti,planFrame)&&(angDrag.at={x:e.clientX+12,y:e.clientY+12})){planEl.setPointerCapture(e.pointerId);planEl.style.cursor='alias';}return;}const t=e.target.closest('[data-line]');if(!t||e.button)return;e.preventDefault();
   const li=+t.dataset.line,now=performance.now();planPick=t.dataset.pi!=null?R.pieces[+t.dataset.pi]:null;if(lastDown.li===li&&now-lastDown.t<400){lastDown={t:0,li:-1};turnLine(li);return;}lastDown={t:now,li};
   const svg=planEl.querySelector('svg'),v=svg.viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];const p=svgPt(e);dragBegin(+t.dataset.line,p.x,p.y,e.altKey);planEl.setPointerCapture(e.pointerId);planEl.style.cursor='grabbing';});
 planEl.addEventListener('pointermove',e=>{if(angDrag&&planFrame){const p=svgPt(e);if(angTo(p.x-angDrag.c0.x,p.y-angDrag.c0.z)){cancelAnimationFrame(angRaf);angRaf=requestAnimationFrame(()=>{if(!angDrag)return;
@@ -1379,10 +1421,11 @@ canvas.addEventListener('pointermove',e=>{if(!fdrag)return;const p=floorAt(e);if
 const fUp=()=>{if(!fdrag)return;fdrag=null;controls.enabled=true;canvas.style.cursor='';save();keepSite=true;buildSite();};canvas.addEventListener('pointerup',fUp);canvas.addEventListener('pointercancel',fUp);
 stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||e.button||current==='plan')return;
   if(INT){const g=groundAt(e);if(g){const tol=Math.max(110,camera.position.distanceTo(g)*28);let hit=-1;R.turns.forEach((t,ti)=>{if(Math.hypot(t.c.x-g.x*1000,t.c.z-g.z*1000)<tol)hit=ti;});
-    if(hit>=0&&angBegin(hit,null)){e.stopPropagation();e.preventDefault();ang3=e.pointerId;canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='alias';tip.hidden=true;labels.forEach(l=>l.element.style.visibility='hidden');return;}}}
+    if(hit<0){const C=R.conns.find(c=>(c.c.jn||c.c.type==='inline')&&Math.hypot(c.c.x-g.x*1000,c.c.z-g.z*1000)<tol*0.8);if(C){e.stopPropagation();e.preventDefault();openJunc(C.li,C.path,e.clientX+12,e.clientY+12);return;}}
+    if(hit>=0&&angBegin(hit,null)&&(angDrag.at={x:e.clientX+12,y:e.clientY+12})){e.stopPropagation();e.preventDefault();ang3=e.pointerId;canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='alias';tip.hidden=true;labels.forEach(l=>l.element.style.visibility='hidden');return;}}}
   let q=pickAt(e);if(q&&INT&&pickAt.d>45&&furnAt(e)!=null)q=null; // a direct hit on furniture wins over a near-miss on a line
   if(!q){const fi=furnAt(e);if(fi!=null&&floorAt(e)){e.stopPropagation();e.preventDefault();const now=performance.now();
-      if(lastF.fi===fi&&now-lastF.t<400){lastF={t:0,fi:-1};const it=S.furn[fi];it.r=((it.r||0)+90)%360;save();renderFurn();keepSite=true;buildSite();return;}lastF={t:now,fi};selectFurn(fi);
+      if(lastF.fi===fi&&now-lastF.t<400){lastF={t:0,fi:-1};const it=S.furn[fi];it.r=((it.r||0)+90)%360;save();renderFurn();keepSite=true;buildSite();return;}lastF={t:now,fi};selectFurn(fi);openFurnRot(fi,e.clientX+12,e.clientY+12);
       const p=floorAt(e),it=S.furn[fi];fdrag={fi,id:e.pointerId,p0:{x:p.x,z:p.z},s0:{x:it.x,z:it.z},obj:furnG.children.find(o=>o.userData.fi===fi)};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;}return;}
   const g=groundAt(e);if(!g)return;e.stopPropagation();e.preventDefault();
   dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line,q};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
@@ -1440,7 +1483,7 @@ function planSVG(o={}){
   if(INT&&R.nodes){const turns={};R.turns.forEach((t,ti)=>{turns[R.nodes.indexOf(t.c)]=[ti,t.conn];});
     R.nodes.forEach((c,ci)=>{if(!c.jn||(solo&&!ps.some(q=>q.pts.some(p=>Math.hypot(p.x-c.x,p.z-c.z)<PRODUCT.junction))))return;const J=PRODUCT.junction,tr=turns[ci],hr=Math.max(J*0.42,fs*0.9);
       c.arms.forEach(a=>{s+=`<line x1="${c.x}" y1="${c.z}" x2="${c.x+Math.cos(a)*J/2}" y2="${c.z+Math.sin(a)*J/2}" stroke="#ff5000" stroke-width="${sw*0.9}"/>`;});
-      s+=`<circle${tr&&o.screen?` data-turn="${tr[0]}" style="cursor:alias"`:''} cx="${c.x}" cy="${c.z}" r="${hr}" fill="#fff" stroke="#ff5000" stroke-width="${k*1.6}"/>`;
+      const C=R.conns&&R.conns.find(x=>x.c===c);s+=`<circle${o.screen?(tr?` data-turn="${tr[0]}" style="cursor:alias"`:C?` data-conn="${C.li}|${C.path.join('.')}" style="cursor:pointer"`:''):''} cx="${c.x}" cy="${c.z}" r="${hr}" fill="#fff" stroke="#ff5000" stroke-width="${k*1.6}"/>`;
       s+=`<text x="${c.x+hr*1.3}" y="${c.z-hr*1.3}" font-size="${fs*0.8}" fill="#ff5000" font-weight="700">${c.type[1]}-WAY${tr?' · '+(tr[1].a==null?90:+tr[1].a)+'° '+(tr[1].side==='L'?'L':'R'):''}</text>`;});}
   // step callouts: radius + angle for turns, length for straights (right-hand side)
   if(!o.key&&INT)R.segs.forEach(g=>{if(solo&&g.li!==o.only)return;const mine=ps.filter(q=>q.line===g.li&&q.step===g.si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
@@ -1698,7 +1741,7 @@ function update(redrawSteps,reframe){
     document.querySelectorAll('[data-rgb]').forEach(b=>b.setAttribute('aria-pressed',isW?b.dataset.rgb==='W':!!sw&&b.dataset.rgb===sw[0]));$('rgbsel').value=sw?sw[0]:'custom';$('rgbpick').value=S.rgb;
     if(!SCENES.find(x=>x[0]===S.fx))S.fx='static';$('fxsel').value=S.fx;
     ['r','g','b','w'].slice(0,NCH).forEach((k,i)=>{$('mix-'+k).value=S.mix[i];if(document.activeElement!==$('mixn-'+k))$('mixn-'+k).value=S.mix[i];});}$('proj').value=S.proj;$('client').value=S.client;
-  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · drag a line to move it · Alt-drag to copy · double-click to turn it'+(INT?' · drag a junction to set its angle':'');
+  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · drag a line to move it · Alt-drag to copy · double-click to turn it'+(INT?' · click a junction to change it · drag a corner to set its angle':'');
   clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(camShift){anim=0;camera.position.add(camShift);controls.target.add(camShift);camShift=null;}if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
 }
 update(true);setTimeout(()=>go('aerial',true),0);
