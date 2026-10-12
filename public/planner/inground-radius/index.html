@@ -79,6 +79,9 @@ td{padding:6px 0;border-top:1px solid var(--line);vertical-align:top}
 td.q{width:30px;font-variant-numeric:tabular-nums;font-weight:600}
 td code{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.01em;line-height:1.45;display:block;word-break:break-word}
 td small{color:var(--muted);font-size:11px}
+tr.sel td{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.step.sel,.lhead.sel{border-color:var(--accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.selmark{font:600 10.5px var(--sans);color:#fff;background:var(--accent);border-radius:8px;padding:1px 7px;margin-left:6px}
 tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .actions{display:flex;flex-wrap:wrap;gap:8px}
 .note{font-size:11.5px;line-height:1.5;color:var(--muted);margin:0}
@@ -548,7 +551,7 @@ if(RGB){$('mixf').hidden=false;$('mixf').innerHTML=[['r','Red','#ff2318'],['g','
     `<div style="font-size:11px;color:var(--muted)">Mix for the ${CTRL}, 0–100% per channel. Shown in the drawings.</div>`;
   $('cctf').hidden=NCH!==4||PIX;$('cctf').firstChild.textContent='White channel';$('rgbf').hidden=false;$('rgbsel').innerHTML=RGBSW.map(([h,n])=>`<option value="${h}">${n}</option>`).join('')+'<option value="custom">Custom…</option>';}
 if(INT){$('roomsec').hidden=false;$('furn-add').innerHTML+=`<optgroup label="Pieces">${Object.entries(FURN).map(([k,f])=>`<option value="${k}">${f.n}</option>`).join('')}</optgroup><optgroup label="Layouts">${Object.keys(FURNSETS).map(k=>`<option value="set:${k}">${k}</option>`).join('')}</optgroup><option value="clear">Remove all furniture</option>`;}
-function renderFurn(){if(!INT)return;const L=S.furn||[];$('furn-list').innerHTML=L.length?L.map((it,i)=>`<div class="lhead" style="border:1px solid var(--line);border-radius:6px;padding:5px 8px"><span style="font-size:12.5px">${FURN[it.k]?FURN[it.k].n:it.k}</span><span style="display:flex;gap:2px"><button class="ib" data-frot="${i}" title="Turn 90°" aria-label="Turn">↻</button><button class="ib" data-fdel="${i}" title="Remove" aria-label="Remove">✕</button></span></div>`).join(''):'<p class="note">No furniture yet. Add pieces or a whole layout to see how the light sits over desks and tables.</p>';}
+function renderFurn(){if(!INT)return;const L=S.furn||[];$('furn-list').innerHTML=L.length?L.map((it,i)=>`<div class="lhead" data-fi="${i}" style="border:1px solid var(--line);border-radius:6px;padding:5px 8px;cursor:pointer"><span style="font-size:12.5px">${FURN[it.k]?FURN[it.k].n:it.k}</span><span style="display:flex;gap:2px"><button class="ib" data-frot="${i}" title="Turn 90°" aria-label="Turn">↻</button><button class="ib" data-fdel="${i}" title="Remove" aria-label="Remove">✕</button></span></div>`).join(''):'<p class="note">No furniture yet. Add pieces or a whole layout to see how the light sits over desks and tables.</p>';}
 $('preset').innerHTML+=Object.keys(PRESETS).map(k=>`<option>${k}</option>`).join('');
 if(INT){$('strip').closest('label').hidden=true;$('cctf').firstChild.textContent='Colour temperature';
   $('mixf').insertAdjacentHTML('beforebegin',`<label class="f">Optic<select id="i-opt">${PRODUCT.optics.map(o=>`<option value="${o.id}">${o.name}${o.ugr?' · '+o.ugr:''}</option>`).join('')}</select></label>
@@ -672,6 +675,8 @@ $('lines').addEventListener('input',e=>{const t=e.target,l=+t.dataset.l;if(Numbe
 $('lines').addEventListener('change',e=>{if(!INT)return;const t=e.target,k=t.dataset.tk;if(k!=='len'&&k!=='a')return;const ln=S.lines[+t.dataset.l],pc=ln&&tGet(ln,PP(t.dataset.p));if(!pc)return;const v=parseFloat(t.value);
   if(k==='len'){if(!(v>=300&&v<=60000)){t.value=pc.len;toast('Length between 300 and 60,000 mm');return;}pc.len=v;}else{if(!pc.next||!(v>=0&&v<=150)){t.value=pc.next?pc.next.a:90;return;}pc.next.a=v;}update(true);});
 $('lines').addEventListener('click',e=>{
+  if(!e.target.closest('input,select,button,label')){const st=e.target.closest('.step'),res=st&&st.querySelector('.res[id]');if(res){const id=res.id.replace(/^t?res-/,''),[l,p]=id.split('-');
+    const q=INT?(()=>{const g=R.segs.find(g=>g.li===+l&&g.path.join('_')===p);return g&&R.pieces.find(q=>q.line===g.li&&q.step===g.si);})():R.pieces.find(q=>q.line===+l&&q.step===+p);if(q){selectPiece(q);return;}}}
   const du=e.target.closest('[data-dupline]');if(du){dupLine(+du.dataset.dupline);return;}
   const rm=e.target.closest('[data-rmline]');if(rm){S.lines.splice(+rm.dataset.rmline,1);update(true,true);return;}
   if(INT){const ta=e.target.closest('[data-tadd]');if(ta){const r=ta.getBoundingClientRect();openChooser(+ta.dataset.l,PP(ta.dataset.p),ta.dataset.tadd,r.left,r.bottom+4);e.stopPropagation();return;}
@@ -706,7 +711,7 @@ if(INT){$('furn-add').onchange=e=>{const v=e.target.value;e.target.value='';if(!
     if(v==='clear'){S.furn=[];}else if(v.startsWith('set:')){FURNSETS[v.slice(4)].forEach(([k,x,z,r])=>S.furn.push({k,x:Math.round(O.x+x),z:Math.round(O.z+z),r}));}
     else S.furn.push({k:v,x:Math.round(O.x+(n%4)*600),z:Math.round(O.z+Math.floor(n/4)*600),r:0});
     S.showFurn=true;$('t-scene').setAttribute('aria-pressed',true);save();renderFurn();buildSite();toast(v==='clear'?'Furniture removed':'Added · drag it in the 3D view to place it');};
-  $('furn-list').onclick=e=>{const d=e.target.closest('[data-fdel]'),r=e.target.closest('[data-frot]');if(d){S.furn.splice(+d.dataset.fdel,1);}else if(r){const it=S.furn[+r.dataset.frot];it.r=((it.r||0)+90)%360;}else return;save();renderFurn();keepSite=true;buildSite();};
+  $('furn-list').onclick=e=>{const d=e.target.closest('[data-fdel]'),r=e.target.closest('[data-frot]');if(!d&&!r){const row=e.target.closest('[data-fi]');if(row)selectFurn(+row.dataset.fi);return;}if(d){S.furn.splice(+d.dataset.fdel,1);selF=null;}else if(r){const it=S.furn[+r.dataset.frot];it.r=((it.r||0)+90)%360;}else return;save();renderFurn();keepSite=true;buildSite();};
   renderFurn();}
 function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200);}
 async function copyText(t,msg){try{await navigator.clipboard.writeText(t);toast(msg);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();try{document.execCommand('copy');toast(msg);}catch(_){toast('Select and copy the text manually');}ta.remove();}}
@@ -917,6 +922,7 @@ function buildTwos(target,list,studioMode){const group=new THREE.Group(),picks=[
     anch.prof={obj:prof,p:V3((f[0].x*0.7+f[1].x*0.3)/1000-Math.sin(f[0].h)*PRODUCT.sec.w/2000,hM*0.6,(f[0].z*0.7+f[1].z*0.3)/1000+Math.cos(f[0].h)*PRODUCT.sec.w/2000)};
     anch.ins={obj:ins,p:V3((f[0].x*0.4+f[1].x*0.6)/1000,sec.face.y/1000,(f[0].z*0.4+f[1].z*0.6)/1000)};
     if(q.b.blind){face.material=finM().clone();face.material.emissiveIntensity=0;}
+    face.material.side=THREE.DoubleSide; // so it can be picked from above as well as below
     const BM=q.b.blind?blindModel(q.d.len):bodyModel(S.opt,q.d.len);
     if(BM){const capA=!sameA&&!atNode(f[0]),capB=!sameB&&!atNode(f[1]);
       proc.forEach(c=>c.visible=BM.f==='MC'&&!!c.userData.isCap);if(face.userData.top)face.userData.top.position.y+=0.0012;
@@ -995,7 +1001,7 @@ function buildOffice(){
   R.opens.forEach(p=>{const el=document.createElement('div');el.className='lbl feed plus';el.textContent='+';el.title=p.kind==='end'?'Add after this piece':p.kind==='head'?'Add before this piece':p.kind==='start'?'Choose the first piece':'Add a piece on this arm';
     el.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();openChooser(p.li,p.path,p.kind,e.clientX+12,e.clientY+12);});
     const d=(p.kind==='start'?0:p.kind==='arm'?PRODUCT.junction/2+180:p.kind==='head'?380:180)/1000,o=new CSS2DObject(el);o.position.set(p.x/1000+Math.cos(p.h)*d,yLine()+0.03,p.z/1000+Math.sin(p.h)*d);o.visible=true;scene.add(o);labels.push(o);});
-  setMode(mode);}
+  setMode(mode);markSidebar(false);}
 
 /* ---------- trees ---------- */
 const barkM=new THREE.MeshStandardMaterial({map:bark,color:0xb8a898,roughness:0.95});
@@ -1271,8 +1277,23 @@ for(const v of ['walk','aerial','detail','studio','plan'])$('v-'+v).onclick=()=>
 
 /* ---------- hover ---------- */
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=$('tip');let hovered=null;
-function highlight(q){document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
-  run&&run.picks.forEach(o=>{const on=q&&o.userData.piece===q;o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):lightCol());});}
+/* ---------- selection: click a piece (3D or plan) or a piece of furniture and the side panel shows which one ---------- */
+let selLabel=null,selF=null,selBox=null;
+function selected(){return selLabel?R.pieces.find(q=>q.label===selLabel)||null:null;}
+function markSidebar(scroll){document.querySelectorAll('.step.sel,.lhead.sel').forEach(x=>x.classList.remove('sel'));document.querySelectorAll('.selmark').forEach(x=>x.remove());
+  document.querySelectorAll('#bom tr').forEach(r=>r.classList.remove('sel'));let el=null;const q=selected();
+  if(q){let res=null;if(INT){const g=R.segs.find(g=>g.li===q.line&&g.si===q.step);if(g)res=$(`tres-${g.li}-${g.path.join('_')}`);}else res=$(`res-${q.line}-${q.step}`);
+    el=res&&res.closest('.step');if(el){el.classList.add('sel');res.insertAdjacentHTML('afterbegin',`<span class="selmark">${q.label} selected</span> `);}
+    const tr=document.querySelector(`#bom tr[data-code="${CSS.escape(q.code)}"]`);if(tr)tr.classList.add('sel');}
+  if(INT&&selF!=null){const rows=document.querySelectorAll('#furn-list .lhead');el=rows[selF]||null;if(el)el.classList.add('sel');}
+  if(scroll&&el)el.scrollIntoView({block:'nearest',behavior:'smooth'});if(run&&!scroll)highlight(hovered);
+  if(selBox){selBox.removeFromParent();selBox=null;}
+  if(INT&&selF!=null&&furnG){const o=furnG.children.find(o=>o.userData.fi===selF);if(o){selBox=new THREE.BoxHelper(o,0xff5000);scene.add(selBox);}}
+  if(q&&run){const n=R.pieces.indexOf(q),pg=run.pgs[n];const f=run.picks[n];if(f){f.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(f);b.min.y-=0.008;b.max.y=b.min.y+(PRODUCT.sec?PRODUCT.sec.h:100)/1000+0.016;b.expandByVector(V3(0.012,0,0.012));selBox=new THREE.Box3Helper(b,0xff5000);scene.add(selBox);}}}
+function selectPiece(q){selLabel=q?q.label:null;selF=null;markSidebar(true);highlight(hovered);}
+function selectFurn(fi){selF=fi;selLabel=null;markSidebar(true);highlight(hovered);}
+function highlight(q){const sq=selected();document.querySelectorAll('#bom tr').forEach(r=>r.classList.toggle('hl',!!q&&r.dataset.code===q.code));
+  run&&run.picks.forEach(o=>{const on=(q&&o.userData.piece===q)||(sq&&o.userData.piece.label===sq.label);o.material.color.set(on?0xffb38a:MODE[mode].opal);o.material.emissive.copy(on?new THREE.Color(1,0.55,0.25):lightCol());});}
 canvas.addEventListener('pointermove',e=>{if(activeScene!==scene||!run||drag3){tip.hidden=true;return;}
   if(!e.buttons){let near=false;if(INT){const g=groundAt(e);if(g){const tol=Math.max(110,camera.position.distanceTo(g)*28);near=R.turns.some(t=>Math.hypot(t.c.x-g.x*1000,t.c.z-g.z*1000)<tol);}}
     canvas.style.cursor=near?'alias':pickAt(e)?'grab':'';}
@@ -1326,20 +1347,20 @@ function angTo(dx,dz){const A=angDrag,cn=A.cn;if(Math.hypot(dx,dz)<20)return fal
   if(bad){cn.side=A.valid.side;cn.a=A.valid.a;R=resolve();return false;}A.valid={side:nt,a:na};return true;}
 function angEnd(){const A=angDrag;angDrag=null;R=resolve();const T={x:R.origin.x-A.O0.x,z:R.origin.z-A.O0.z};camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);
   toast(`Corner set to ${A.cn.a}° ${A.cn.side==='L'?'left':'right'}`);}
-let lastDown={t:0,li:-1};
+let lastDown={t:0,li:-1},planPick=null;
 planEl.addEventListener('pointerdown',e=>{const op=INT&&!e.button&&e.target.closest('[data-open]');
   if(op){e.preventDefault();e.stopPropagation();const o=R.opens[+op.dataset.open];if(o)openChooser(o.li,o.path,o.kind,e.clientX+12,e.clientY+12);return;}
   const tj=INT&&!e.button&&e.target.closest('[data-turn]');
   if(tj){e.preventDefault();const ti=+tj.dataset.turn,v=planEl.querySelector('svg').viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];
     if(angBegin(ti,planFrame)){planEl.setPointerCapture(e.pointerId);planEl.style.cursor='alias';}return;}const t=e.target.closest('[data-line]');if(!t||e.button)return;e.preventDefault();
-  const li=+t.dataset.line,now=performance.now();if(lastDown.li===li&&now-lastDown.t<400){lastDown={t:0,li:-1};turnLine(li);return;}lastDown={t:now,li};
+  const li=+t.dataset.line,now=performance.now();planPick=t.dataset.pi!=null?R.pieces[+t.dataset.pi]:null;if(lastDown.li===li&&now-lastDown.t<400){lastDown={t:0,li:-1};turnLine(li);return;}lastDown={t:now,li};
   const svg=planEl.querySelector('svg'),v=svg.viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];const p=svgPt(e);dragBegin(+t.dataset.line,p.x,p.y,e.altKey);planEl.setPointerCapture(e.pointerId);planEl.style.cursor='grabbing';});
 planEl.addEventListener('pointermove',e=>{if(angDrag&&planFrame){const p=svgPt(e);if(angTo(p.x-angDrag.c0.x,p.y-angDrag.c0.z)){cancelAnimationFrame(angRaf);angRaf=requestAnimationFrame(()=>{if(!angDrag)return;
     planEl.innerHTML=planSVG({screen:true,frame:{vb:planFrame,tx:R.origin.x-angDrag.O0.x,tz:R.origin.z-angDrag.O0.z}});});}return;}
   if(!drag||!planFrame)return;const p=svgPt(e);
   dragTo(p.x,p.y);cancelAnimationFrame(planRaf);planRaf=requestAnimationFrame(()=>{if(!drag)return;R=resolve();const T=holdShift({x:0,z:0});
     planEl.innerHTML=planSVG({screen:true,frame:{vb:planFrame,tx:T.x,tz:T.z}});});});
-const planUp=e=>{if(angDrag){cancelAnimationFrame(angRaf);planFrame=null;planEl.style.cursor='';angEnd();return;}if(!drag||!planFrame)return;cancelAnimationFrame(planRaf);planFrame=null;planEl.style.cursor='';dragEnd()||(planEl.innerHTML=planSVG({screen:true}));};
+const planUp=e=>{if(angDrag){cancelAnimationFrame(angRaf);planFrame=null;planEl.style.cursor='';angEnd();return;}if(!drag||!planFrame)return;cancelAnimationFrame(planRaf);planFrame=null;planEl.style.cursor='';if(!dragEnd()){planEl.innerHTML=planSVG({screen:true});if(planPick)selectPiece(planPick);}};
 planEl.addEventListener('pointerup',planUp);planEl.addEventListener('pointercancel',planUp);
 // 3D: grab a piece on the paving and slide its line along the ground
 const ground=new THREE.Plane(new THREE.Vector3(0,1,0),0),gp=new THREE.Vector3();let drag3=null;
@@ -1347,23 +1368,24 @@ function groundAt(e){const r=canvas.getBoundingClientRect();mouse.set((e.clientX
 // the profile is only 30 mm wide, so a line can be grabbed anywhere within a few centimetres to ~0.5 m of it (scales with the view distance)
 function pickAt(e){const g=groundAt(e);if(!g)return null;const tol=Math.min(0.6,Math.max(0.12,camera.position.distanceTo(g)*0.025))*1000;let best=null,bd=tol;
   R.pieces.forEach(q=>{for(let k=1;k<q.pts.length;k++){const a=q.pts[k-1],b=q.pts[k],dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((g.x*1000-a.x)*dx+(g.z*1000-a.z)*dz)/L2));
-    const d=Math.hypot(a.x+dx*t-g.x*1000,a.z+dz*t-g.z*1000);if(d<bd){bd=d;best=q;}}});return best;}
+    const d=Math.hypot(a.x+dx*t-g.x*1000,a.z+dz*t-g.z*1000);if(d<bd){bd=d;best=q;}}});pickAt.d=bd;return best;}
 let ang3=null;
 let fdrag=null,lastF={t:0,fi:-1};const floorP=new THREE.Plane(new THREE.Vector3(0,1,0),0),fp=new THREE.Vector3();
 function floorAt(e){const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);return ray.ray.intersectPlane(floorP,fp)?fp.clone():null;}
 function furnAt(e){if(!INT||!furnG||!furnG.visible||!furnG.children.length)return null;const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
   const h=ray.intersectObject(furnG,true).find(x=>x.object.userData.fi!=null);return h?h.object.userData.fi:null;}
 canvas.addEventListener('pointermove',e=>{if(!fdrag)return;const p=floorAt(e);if(!p)return;const it=S.furn[fdrag.fi];it.x=Math.round((fdrag.s0.x+(p.x-fdrag.p0.x)*1000)/25)*25;it.z=Math.round((fdrag.s0.z+(p.z-fdrag.p0.z)*1000)/25)*25;
-  if(fdrag.obj)fdrag.obj.position.set((it.x-R.origin.x)/1000,fdrag.obj.position.y,(it.z-R.origin.z)/1000);});
+  if(fdrag.obj)fdrag.obj.position.set((it.x-R.origin.x)/1000,fdrag.obj.position.y,(it.z-R.origin.z)/1000);if(selBox)selBox.update();});
 const fUp=()=>{if(!fdrag)return;fdrag=null;controls.enabled=true;canvas.style.cursor='';save();keepSite=true;buildSite();};canvas.addEventListener('pointerup',fUp);canvas.addEventListener('pointercancel',fUp);
 stage.addEventListener('pointerdown',e=>{if(e.target!==canvas||activeScene!==scene||!run||e.button||current==='plan')return;
   if(INT){const g=groundAt(e);if(g){const tol=Math.max(110,camera.position.distanceTo(g)*28);let hit=-1;R.turns.forEach((t,ti)=>{if(Math.hypot(t.c.x-g.x*1000,t.c.z-g.z*1000)<tol)hit=ti;});
     if(hit>=0&&angBegin(hit,null)){e.stopPropagation();e.preventDefault();ang3=e.pointerId;canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='alias';tip.hidden=true;labels.forEach(l=>l.element.style.visibility='hidden');return;}}}
-  const q=pickAt(e);if(!q){const fi=furnAt(e);if(fi!=null&&floorAt(e)){e.stopPropagation();e.preventDefault();const now=performance.now();
-      if(lastF.fi===fi&&now-lastF.t<400){lastF={t:0,fi:-1};const it=S.furn[fi];it.r=((it.r||0)+90)%360;save();renderFurn();keepSite=true;buildSite();return;}lastF={t:now,fi};
+  let q=pickAt(e);if(q&&INT&&pickAt.d>45&&furnAt(e)!=null)q=null; // a direct hit on furniture wins over a near-miss on a line
+  if(!q){const fi=furnAt(e);if(fi!=null&&floorAt(e)){e.stopPropagation();e.preventDefault();const now=performance.now();
+      if(lastF.fi===fi&&now-lastF.t<400){lastF={t:0,fi:-1};const it=S.furn[fi];it.r=((it.r||0)+90)%360;save();renderFurn();keepSite=true;buildSite();return;}lastF={t:now,fi};selectFurn(fi);
       const p=floorAt(e),it=S.furn[fi];fdrag={fi,id:e.pointerId,p0:{x:p.x,z:p.z},s0:{x:it.x,z:it.z},obj:furnG.children.find(o=>o.userData.fi===fi)};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;}return;}
   const g=groundAt(e);if(!g)return;e.stopPropagation();e.preventDefault();
-  dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
+  dragBegin(q.line,g.x*1000,g.z*1000,e.altKey);drag3={id:e.pointerId,li:q.line,q};canvas.setPointerCapture(e.pointerId);controls.enabled=false;canvas.style.cursor='grabbing';tip.hidden=true;
   labels.forEach(l=>l.element.style.visibility='hidden');if(plazaMat)plazaMat.lightMapIntensity=0;},true);
 canvas.addEventListener('pointermove',e=>{if(ang3!==null&&angDrag){const g=groundAt(e);if(!g)return;
     if(angTo(g.x*1000+(R.origin.x-angDrag.O0.x)*0-angDrag.c0.x,g.z*1000-angDrag.c0.z)){cancelAnimationFrame(angRaf);angRaf=requestAnimationFrame(()=>{if(!angDrag)return;disposeGroup(run.group);run.group.removeFromParent();run=buildRunInt(site,R.pieces);
@@ -1372,7 +1394,7 @@ canvas.addEventListener('pointermove',e=>{if(ang3!==null&&angDrag){const g=groun
   run.picks.forEach((o,n)=>{if(o.userData.piece.line===drag3.li){run.pgs[n].position.set(drag.d.x/1000,0,drag.d.z/1000);o.material.color.set(drag.bad?0xff6a5a:MODE[mode].opal);o.material.emissive.set(drag.bad?0xff2a10:lightCol());}});
   canvas.style.cursor=drag.bad?'not-allowed':'grabbing';});
 let last3={t:0,li:-1};
-const up3=()=>{if(ang3!==null){ang3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');if(angDrag){cancelAnimationFrame(angRaf);angEnd();}return;}if(!drag3)return;const li=drag3.li;drag3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');
+const up3=()=>{if(drag3&&drag&&!(drag.d.x||drag.d.z)&&!drag.dup)selectPiece(drag3.q);if(ang3!==null){ang3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');if(angDrag){cancelAnimationFrame(angRaf);angEnd();}return;}if(!drag3)return;const li=drag3.li;drag3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');
   const moved=drag&&(drag.d.x||drag.d.z);if(drag)dragEnd();
   if(!moved){const now=performance.now();if(last3.li===li&&now-last3.t<400){last3={t:0,li:-1};turnLine(li);}else last3={t:now,li};}else last3={t:0,li:-1};};
 canvas.addEventListener('pointerup',up3);canvas.addEventListener('pointercancel',up3);
@@ -1402,7 +1424,7 @@ function planSVG(o={}){
   // pieces, alternating tone so every joint reads
   const mv=o.screen?' style="cursor:grab"':'';
   const red=new Set((o.clash||(o.screen?clashFind(R):[])).flat());
-  ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}"${mv} fill="none" stroke="${red.has(q.line)?(i%2?'#f07a6e':'#d93a2b'):(i%2?grey:ink)}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
+  ps.forEach((q,i)=>{s+=`<polyline data-line="${q.line}" data-pi="${q.i}"${mv} fill="none" stroke="${red.has(q.line)?(i%2?'#f07a6e':'#d93a2b'):(i%2?grey:ink)}" stroke-width="${sw}" stroke-linecap="butt" points="${q.pts.map(p=>`${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(' ')}"/>`;});
   // joints and end caps
   ps.forEach((q,i)=>{const p=q.pts[0],nx=-Math.sin(p.h),nz=Math.cos(p.h),L=sw*1.6;
     const capped=INT?R.nodes.some(c=>c.type==='end'&&Math.hypot(c.x-p.x,c.z-p.z)<5):i===0||ps[i-1].run!==q.run;s+=`<line x1="${p.x-nx*L}" y1="${p.z-nz*L}" x2="${p.x+nx*L}" y2="${p.z+nz*L}" stroke="${capped?'#ff5000':'#fff'}" stroke-width="${k*(capped?2.4:1.4)}"/>`;});
@@ -1670,7 +1692,7 @@ renderer.setAnimationLoop(t=>{glowSync();
 /* ======================= update ======================= */
 let rebuildT=0;
 function update(redrawSteps,reframe){
-  R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();
+  R=resolve();if(redrawSteps)renderSteps();renderResults();renderSummary();save();if(typeof markSidebar==='function')markSidebar(false);
   syncInt();if(!INT)$('strip').value=S.strip;$('cct').value=S.cct;document.querySelectorAll('[data-cct]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cct===S.cct));
   if(RGB){S.mix=fixMix(S.mix||hexToMix(S.rgb));S.rgb=mixToHex(S.mix);const sw=RGBSW.find(x=>hexToMix(x[0]).join()===S.mix.join());const isW=NCH===4&&S.mix.join()==='0,0,0,100';
     document.querySelectorAll('[data-rgb]').forEach(b=>b.setAttribute('aria-pressed',isW?b.dataset.rgb==='W':!!sw&&b.dataset.rgb===sw[0]));$('rgbsel').value=sw?sw[0]:'custom';$('rgbpick').value=S.rgb;
