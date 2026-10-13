@@ -920,10 +920,18 @@ function suspGLB(len){if(!INT||PRODUCT.mount==='recessed')return null;const m=gl
   const ga=new THREE.Group(),gb=new THREE.Group();ga.add(a);gb.add(b);ga.position.set(-ox,len-1,-oz);gb.position.set(-ox,hM,-oz);
   const top=len-1+bg.min.y,bot=hM+bi.max.y,w=new THREE.Mesh(new THREE.CylinderGeometry(0.00075,0.00075,Math.max(0.001,top-bot),8),wireM);w.position.y=(top+bot)/2;
   g.add(ga,gb,w);g.userData.grip=a;return g;}
-// 54AA11 linear joint: in the room the plate sits in the top of the profile across the seam; in the parts view the whole kit, lifted
-function linJoint(full){if(!INT||PRODUCT.mount==='recessed')return null;const m=glbGet('twos-joint');if(!m)return null;m.updateMatrixWorld(true);
-  const src=full?m:m.getObjectByName('JointPlate');if(!src)return null;const b=new THREE.Box3().setFromObject(src),c=b.getCenter(V3()),o=src.clone(true);if(src!==m)o.applyMatrix4(src.parent.matrixWorld);glbMats(o,null,0);
-  const g=new THREE.Group(),w=new THREE.Group();w.add(o);w.position.set(-c.x,-b.max.y,-c.z);g.add(w);return g;}
+// 54AA11 linear joint, as Esse-Ci's installation sheet (ISTW): a U-shaped steel bracket with a wire notch at each end, slid into the top
+// chamber of both profiles across the seam and fixed with two screws, one into each profile. Hidden inside in the room; lifted out in the parts view.
+const zincM=new THREE.MeshStandardMaterial({color:0xbfc2c6,metalness:0.9,roughness:0.35}),screwM=new THREE.MeshStandardMaterial({color:0x8d9095,metalness:1,roughness:0.3});
+let JGEO=null;
+function linJoint(full){if(!INT||PRODUCT.mount==='recessed')return null;
+  if(!JGEO){const L=0.035,W=0.017,r=0.007,t=0.0015,sh=new THREE.Shape();sh.moveTo(-L,-W);sh.lineTo(L,-W);sh.lineTo(L,-r);sh.absarc(L,0,r,-Math.PI/2,Math.PI/2,true);sh.lineTo(L,W);sh.lineTo(-L,W);sh.lineTo(-L,r);sh.absarc(-L,0,r,Math.PI/2,-Math.PI/2,true);sh.lineTo(-L,-W);
+    const base=new THREE.ExtrudeGeometry(sh,{depth:t,bevelEnabled:false});base.rotateX(Math.PI/2);base.translate(0,t,0);JGEO={base,side:new THREE.BoxGeometry(2*L,0.012,t),head:new THREE.CylinderGeometry(0.0035,0.0035,0.0018,20),shaft:new THREE.CylinderGeometry(0.0019,0.0019,0.011,12)};}
+  const g=new THREE.Group(),b=new THREE.Mesh(JGEO.base,zincM);g.add(b);
+  for(const sz of [-1,1]){const w=new THREE.Mesh(JGEO.side,zincM);w.position.set(0,0.006,sz*(0.017-0.00075));g.add(w);}
+  for(const sx of [-1,1]){const hd=new THREE.Mesh(JGEO.head,screwM),st=new THREE.Mesh(JGEO.shaft,screwM);const off=full?-0.012:0;hd.position.set(sx*0.012,off-0.0009,0);st.position.set(sx*0.012,off+0.0045,0);g.add(hd,st);}
+  if(!full)g.position.y=-0.016; // seated in the top chamber, under the top face
+  const o=new THREE.Group();o.add(g);return o;}
 // feed: Esse-Ci's ceiling supply box (canopy) with the cable down to the gland on the profile, 60 mm in from the end
 const cableM=new THREE.MeshStandardMaterial({color:0x151515,roughness:0.6});
 function feedGLB(len){if(!INT||PRODUCT.mount==='recessed')return null;const m=glbGet('twos-power');if(!m)return null;const gl=m.getObjectByName('CableGland'),bx=m.getObjectByName('CeilingPowerBox');if(!gl||!bx)return null;
@@ -954,7 +962,7 @@ function buildTwos(target,list,studioMode){const spotsL=[],group=new THREE.Group
       const cap=new THREE.Mesh(new THREE.BoxGeometry(0.003,rec?0.0018:hM+0.0006,(rec?(PRODUCT.sec.flange||58):PRODUCT.sec.w)/1000+0.0006),finM());
       cap.position.copy(V3(pt.x/1000,rec?-0.0011:hM/2,pt.z/1000).addScaledVector(T,sg*0.0015));cap.rotation.y=-pt.h;prof.add(cap);proc.push(cap);cap.userData.isCap=true;
       if(studioMode){cap.userData.dir=T.clone().multiplyScalar(sg*0.14);extras.push(cap);}anch.cap=anch.cap||cap;}
-    if(sameB){const j=linJoint(studioMode)||(studioMode?new THREE.Mesh(new THREE.BoxGeometry(0.07,0.022,0.032),MAT.ijoint):null);if(j){j.position.set(f[1].x/1000,studioMode?hM*0.55:hM-0.0002,f[1].z/1000);j.rotation.y=-f[1].h;prof.add(j);
+    if(sameB){const j=linJoint(studioMode)||(studioMode?new THREE.Mesh(new THREE.BoxGeometry(0.07,0.022,0.032),MAT.ijoint):null);if(j){j.position.set(f[1].x/1000,studioMode?hM*0.55:hM,f[1].z/1000);j.rotation.y=-f[1].h;prof.add(j);
       if(studioMode){j.userData.dir=V3(0,0.16,0);extras.push(j);anch.male=j;}}}
     if(!studioMode&&!rec&&(q.seg==='S'||q.seg==='I')){const fd=feedGLB(S.ceil/1000-yLine());if(fd){const T_=V3(Math.cos(f[0].h),0,Math.sin(f[0].h));fd.position.set(f[0].x/1000+T_.x*0.06,0,f[0].z/1000+T_.z*0.06);fd.rotation.y=-(f[0].h+Math.PI);prof.add(fd);}}
     if(studioMode&&(q.seg==='S'||q.seg==='I')){const P=(t)=>V3((f[0].x+(f[1].x-f[0].x)*t)/1000,hM,(f[0].z+(f[1].z-f[0].z)*t)/1000),a=P(0.06);
@@ -983,7 +991,7 @@ function buildTwos(target,list,studioMode){const spotsL=[],group=new THREE.Group
   if(!rec)(R.susp||[]).forEach(sp=>{let k=-1,bd=1e9;list.forEach((q,i)=>{const a=q.pts[0],b=q.pts[1],dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((sp.x-a.x)*dx+(sp.z-a.z)*dz)/L2)),d=Math.hypot(a.x+dx*t-sp.x,a.z+dz*t-sp.z);if(d<bd){bd=d;k=i;}});
     const len=studioMode?0.36:S.ceil/1000-y0,s=suspGLB(len)||suspension(len);s.position.set(sp.x/1000,0,sp.z/1000);
     if(k>=0&&pgs[k]){const pr=pgs[k].userData.prof;pr.add(s);if(studioMode){s.userData.dir=V3(0,0.22,0);pgs[k].userData.extras.push(s);}if(!pgs[k].userData.anch.drv)pgs[k].userData.anch.drv=s.userData.grip;}else group.add(s);});
-  if(!rec)R.nodes.forEach(c=>{if(c.type!=='inline')return;const j=linJoint(studioMode);if(!j)return;j.position.set(c.x/1000,studioMode?hM*0.55:hM-0.0002,c.z/1000);j.rotation.y=-c.arms[0];group.add(j);});
+  if(!rec)R.nodes.forEach(c=>{if(c.type!=='inline')return;const j=linJoint(studioMode);if(!j)return;j.position.set(c.x/1000,studioMode?hM*0.55:hM,c.z/1000);j.rotation.y=-c.arms[0];group.add(j);});
   R.nodes.forEach(c=>{if(!c.jn)return;let m;const JG=!rec&&c.arms.length>=2&&c.arms.length<=4?glbGet(`twos-J${c.arms.length}`):null;
     if(JG){m=JG.clone(true);glbMats(m,null,0);const arms=[1,2,3,4].map(i=>m.getObjectByName('Arm_'+i)).filter(Boolean);
       arms.forEach((a,i)=>{if(c.arms[i]==null)return;const b=new THREE.Box3().setFromObject(a),ctr=b.getCenter(V3()),a0=Math.atan2(ctr.z,ctr.x),pv=new THREE.Group();a.parent.add(pv);pv.attach(a);pv.rotation.y=a0-c.arms[i];});
@@ -1674,7 +1682,7 @@ $('pdf').onclick=async()=>{
     const P0=studioRun.pgs[0].userData.anch,P1=(studioRun.pgs[1]&&R.pieces[1].run===R.pieces[0].run)?studioRun.pgs[1].userData.anch:{};
     const O=INT?optOf(S.opt):null,JNC=INT?(studioRun.pgs.map(p=>p.userData.anch.junc).find(Boolean)||null):null;
     const keyInt=a=>[[a.prof,`${PRODUCT.name} body, extruded aluminium, ${S.fin==='C8'?'black':'white'}`],[a.ins,`Optic: ${O.name}`],[a.cap,'End cap'],[a.male,'Linear joint'],
-      [JNC,PRODUCT.mount==='suspended'?'Junction, 2, 3 or 4-way':'Corner (planning only)'],[a.feed,'Mains supply into the body (built-in driver)'],[a.drv,PRODUCT.mount==='suspended'?'Suspension kit: cable and ceiling canopy':'Recessed into the ceiling cut-out']];
+      [JNC,PRODUCT.mount==='suspended'?'Junction, 2, 3 or 4-way':'Corner (planning only)'],[a.feed,PRODUCT.mount==='suspended'?'Mains feed: ceiling supply box and cable into the body (built-in driver)':'Mains supply into the body (built-in driver)'],[a.drv,PRODUCT.mount==='suspended'?'Suspension kit: cable and ceiling canopy':'Recessed into the ceiling cut-out']];
     const wp=a=>!a?null:a.obj?a.obj.localToWorld(a.p.clone()):a.getWorldPosition(V3());
     const KEY=INT?keyInt({...P0,male:P0.male||P1.male}):[[P0.prof,'Stainless profile, EOP H100 (in the ground)'],[P0.ins,'LED insert with opal face'],[P0.cap,'End cap, screwed to the profile'],
       [P0.male,'T1X lead, male'],[P1.female,'T1X lead, female'],[P0.feed,'Feed lead out through the end cap, T1X female'],[P0.drv,`${st.v}V DC driver${RGB?' + '+CTRL:''}, lead with T1X male`]];
@@ -1756,7 +1764,7 @@ $('pdf').onclick=async()=>{
     const [sCode,sStrip]=INT?['','']:codeOf(PIECE.L1000,'M',st,S.cct).split(' / ');
     title(PRODUCT.name,INT?`${BRAND} · ${PRODUCT.mount} profile ${PRODUCT.sec.w} × ${PRODUCT.sec.h} mm · ${O.name} · ${cctL} · ${pieces.length} bodies · ${runs.length} circuit${runs.length>1?'s':''}`:`Holectron · stainless profile EOP H100 · ${st.label} · ${cctL} · ${pieces.length} pieces · ${runs.length} feed${runs.length>1?'s':''}`);
     y=section('Component key',RX,38,RW);
-    const A_=PRODUCT.acc||{};const KC=INT?[R.pieces[0].code.replace(/\d+K\d.*$/,'…'),`part of the body code`,A_.caps+' (kit)',A_.joint,PRODUCT.mount==='suspended'?`${A_.j2} / ${A_.j3} / ${A_.j4}`:'to confirm','to be advised',PRODUCT.mount==='suspended'?`${A_.susp} / ${A_.susp3}`:'clips included (to confirm)']:['IngroundR … EOP H100',sStrip,'with start and end pieces','OR.T1x','OR.T1x','with each start piece','to be advised'];
+    const A_=PRODUCT.acc||{};const KC=INT?[R.pieces[0].code.replace(/\d+K\d.*$/,'…'),`part of the body code`,A_.caps+' (kit)',A_.joint,PRODUCT.mount==='suspended'?`${A_.j2} / ${A_.j3} / ${A_.j4}`:'to confirm',A_.feed?(S.dali?A_.feed+'5P':A_.feed):'to be advised',PRODUCT.mount==='suspended'?`${A_.susp} / ${A_.susp3}`:'clips included (to confirm)']:['IngroundR … EOP H100',sStrip,'with start and end pieces','OR.T1x','OR.T1x','with each start piece','to be advised'];
     KEY.forEach((k,i)=>{const cx=RX+(i<4?0:RW/2+6),cy=y+(i%4)*6.2,w=RW/2-6;dot(i+1,cx+1.9,cy-1);txt(k[1],cx+6,cy,{s:8});txt(KC[i],cx+w,cy,{s:7,c:GREY,a:'right'});rule(cx,cy+2.2,w);});
     y+=4*6.2+4;txt(INT?`Numbers on the drawing opposite mark these parts. Each body is one code (body, optic and built-in driver); joints, junctions, end caps and suspension are ordered separately.`:'Numbers on the drawing opposite mark these parts. Every piece is ordered as one code: profile, LED insert and T1X leads together.',RX,y,{s:6,c:LIGHT});y+=4.2;
     yl=olabel('Run data','per line',RX,y);yr=olabel('Parts','for the whole design',RX+RW/2+6,y);
