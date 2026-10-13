@@ -70,7 +70,7 @@ OPTICS=[dict(id='DK',name='DK microcell, 60°',ugr='UGR<16'),dict(id='CLD',name=
 PRODUCTS+=[
  dict(kind='interior',path='twos',name='Twos',brand='Esse-Ci',store='twosplan',mount='suspended',cct0='K3',ccts=[['K3','3000K'],['K4','4000K']],
       optics=OPTICS,bodies=TWOS,sec=dict(w=43,h=63),junction=81,perCircuit=25,
-      acc=dict(joint='54AA11',j2='54AA05',j3='54AA06',j4='54AA07',caps='54AA09',susp='54AA13',susp3='54AA1330'),strips=[]),
+      acc=dict(joint='54AA11',j2='54AA05',j3='54AA06',j4='54AA07',caps='54AA09',susp='54AA13',susp3='54AA1330',feed='00AA16'),strips=[]),
  dict(kind='interior',path='twos-display',name='Twos Display',brand='Esse-Ci',store='twosdplan',mount='recessed',cct0='K3',ccts=[['K3','3000K'],['K4','4000K']],
       optics=[o for o in OPTICS if o['id'] in ('DK','CLD','PG','AS')],bodies=DISPLAY,sec=dict(w=43,h=57,flange=58),junction=81,perCircuit=25,
       acc=dict(joint='54AA11',caps='54AA09R'),strips=[]),
