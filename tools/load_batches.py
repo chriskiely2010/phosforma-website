@@ -7,7 +7,7 @@
 """
 import csv, json, os, re, shutil, sys
 
-BASE = '/mnt/user-data/uploads/Downloads/Website Dont Delete'
+BASE = '/mnt/user-data/uploads/4. MARKETING/Website Dont Delete'  # shared Dropbox: ~/Phosforma Dropbox/4. MARKETING (moved from Downloads 13 Oct 2026)
 SKIP = {'Piccolo'}                      # phased out (user asked to remove it)
 names = [n for n in json.load(open('/tmp/claude-0/names.json')) if n not in SKIP]
 

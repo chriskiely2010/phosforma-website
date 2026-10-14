@@ -478,7 +478,7 @@ function removePiece(li,del){const JH=PRODUCT.junction/2,O=R.origin,ln=S.lines[l
 function chooserPick(e){const el=$('chooser'),li=+el.dataset.li,path=el.dataset.path?el.dataset.path.split('.').map(Number):[],kind=el.dataset.kind,ln=S.lines[li];if(e.target.closest('[data-chx]')){closeChooser();return;}if(!ln&&kind!=='spot'&&kind!=='furn')return;
   if(kind==='junc'){const jt=e.target.closest('[data-jt]:not([disabled])'),ja=e.target.closest('[data-ja]'),r=el.getBoundingClientRect();
     if(jt){setConnType(li,path,jt.dataset.jt,jt.dataset.side||'R');openJunc(li,path,r.left,r.top);return;}
-    if(ja){const pc=tGet(ln,path);if(pc&&pc.next){pc.next.a=+ja.dataset.ja;update(true);openJunc(li,path,r.left,r.top);}return;}
+    if(ja){const pc=tGet(ln,path);if(pc&&pc.next){const cn=pc.next;cornerKeep(li,cn,()=>{cn.a=+ja.dataset.ja;});update(true);openJunc(li,path,r.left,r.top);}return;}
     if(e.target.closest('[data-jdel]')){const pc=tGet(ln,path);if(pc){pc.next=null;selConn=null;closeChooser();update(true);toast('Junction removed, with everything after it');}return;}return;}
   if(kind==='spot'){const key=el.dataset.key,b=e.target.closest('[data-sp]');if(!b)return;const c=spotObjs(key)[0];if(!c)return;const u=c.userData.spot,cur=(S.spots||{})[key]||{pan:u.pan0,tilt:50},r=el.getBoundingClientRect();
     if(b.dataset.sp==='down')setSpot(key,cur.pan,0);else if(b.dataset.sp==='reset'){setSpot(key,u.pan0,50);}
@@ -719,7 +719,7 @@ $('proj').oninput=e=>{S.proj=e.target.value;save();};
 $('client').oninput=e=>{S.client=e.target.value;save();};
 $('chooser').addEventListener('click',chooserPick);
 $('chooser').addEventListener('input',e=>{const el=$('chooser');
-  if(e.target.matches('[data-jang]')){const ln=S.lines[+el.dataset.li],pc=ln&&tGet(ln,PP(el.dataset.path));if(!pc||!pc.next)return;pc.next.a=+e.target.value;$('ja-v').textContent=e.target.value+'°';update(false);if(current==='plan')$('plan').innerHTML=planSVG({screen:true});}
+  if(e.target.matches('[data-jang]')){const ln=S.lines[+el.dataset.li],pc=ln&&tGet(ln,PP(el.dataset.path));if(!pc||!pc.next)return;{const cn=pc.next;cornerKeep(+el.dataset.li,cn,()=>{cn.a=+e.target.value;});}R=resolve();$('ja-v').textContent=e.target.value+'°';update(false);if(current==='plan')$('plan').innerHTML=planSVG({screen:true});}
   if(e.target.matches('[data-frange]'))furnTurn(+el.dataset.fi,+e.target.value);
   if(e.target.matches('[data-span],[data-stilt]')){const key=el.dataset.key,c=spotObjs(key)[0];if(!c)return;const u=c.userData.spot,cur=(S.spots||{})[key]||{pan:u.pan0,tilt:50};
     if(e.target.matches('[data-span]')){cur.pan=+e.target.value;$('sp-pv').textContent=cur.pan+'°';}else{cur.tilt=+e.target.value;$('sp-tv').textContent=cur.tilt+'°';}setSpot(key,cur.pan,cur.tilt);}});
@@ -1373,9 +1373,18 @@ const JOPTS=[['joint','','Straight on'],['corner','L','Corner · left'],['corner
 const relOf=(cn,o)=>cn.k==='corner'?(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a):o.rel;
 function connAllowed(old,k,side){const occ=old.outs.map(o=>({rel:relOf(old,o),p:o.p})).filter(x=>x.p);if(old.outs.length===1&&CONN[k].outs.length===1)return true;
   const nc=mkConn(k,side),rs=nc.outs.map(o=>k==='corner'?(side==='L'?-90:90):o.rel);return occ.every(x=>rs.includes(x.rel));}
+// editing a turn keeps the bigger part of the structure where it is and swings the smaller part (a corner added at the start of a line
+// is the root of the tree, so without this the whole original shape would turn around the short new piece)
+function cornerKeep(li,cn,fn){const C=R.conns&&R.conns.find(c=>c.conn===cn),ln=S.lines[li];const r0=cn.k==='corner'?(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a):null;fn();
+  if(!C||!ln||cn.k!=='corner'||r0==null)return;
+  const r1=(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a),d=r1-r0;if(!d)return;const pre=C.path.concat(0).join('.');let dn=0,up=0;
+  R.segs.filter(g=>g.li===li).forEach(g=>{const p=g.path.join('.');if(p===pre||p.startsWith(pre+'.'))dn+=g.len;else up+=g.len;});if(dn<=up)return;
+  const O=R.origin,cx=C.c.x+O.x,cz=C.c.z+O.z,f=-d*Math.PI/180,sx=(+ln.x||0)-cx,sz=-(+ln.y||0)-cz;
+  ln.x=Math.round((cx+Math.cos(f)*sx-Math.sin(f)*sz)*10)/10;ln.y=Math.round(-(cz+Math.sin(f)*sx+Math.cos(f)*sz)*10)/10;ln.dir=((((+ln.dir||0)+d)%360)+360)%360;}
 function setConnType(li,path,k,side){const ln=S.lines[li],pc=tGet(ln,path);if(!pc||!pc.next)return;const old=pc.next;if(!connAllowed(old,k,side))return;
   const occ=old.outs.map(o=>({rel:relOf(old,o),p:o.p})).filter(x=>x.p),nc=mkConn(k,side);if(k==='corner'&&old.k==='corner')nc.a=old.a;
   if(old.outs.length===1&&nc.outs.length===1)nc.outs[0].p=old.outs[0].p;else nc.outs.forEach(o=>{const r=k==='corner'?(side==='L'?-90:90):o.rel,m=occ.find(x=>x.rel===r);if(m)o.p=m.p;});
+  if(old.k==='corner'&&k==='corner'){const sd=old.side,aa=old.a;cornerKeep(li,old,()=>{old.side=side||old.side;});if(old.side!==sd||old.a!==aa){update(true);return;}}
   pc.next=nc;update(true);}
 function openJunc(li,path,px,py){const ln=S.lines[li],pc=tGet(ln,path);if(!pc||!pc.next)return;const cn=pc.next,el=$('chooser'),rec=PRODUCT.mount==='recessed';
   selConn={li,path};selLabel=null;selF=null;markSidebar(true);highlight(hovered);
@@ -1455,8 +1464,16 @@ function svgPt(e){const svg=planEl.querySelector('svg'),m=svg.getScreenCTM().inv
 /* ---------- interior: drag a junction to set its angle (5° steps, arms at least 30° apart, no overlaps) ---------- */
 let angDrag=null,angRaf=0;
 function angBegin(ti,frame){const T=R.turns[ti];if(!T)return false;const cn=T.conn;
-  angDrag={li:T.li,cn,c0:{x:T.c.x,z:T.c.z},hin:T.hin,O0:{...R.origin},frame,valid:{side:cn.side,a:cn.a==null?90:+cn.a},s0:{side:cn.side,a:cn.a==null?90:+cn.a},base:new Set(clashFind(R).map(p=>p.join('-')))};return true;}
-function angTo(dx,dz){const A=angDrag,cn=A.cn;if(Math.hypot(dx,dz)<20)return false;let d=Math.atan2(dz,dx)-A.hin;d=Math.atan2(Math.sin(d),Math.cos(d))*180/Math.PI;d=Math.max(-150,Math.min(150,Math.round(d/5)*5));
+  angDrag={li:T.li,cn,c0:{x:T.c.x,z:T.c.z},hin:T.hin,O0:{...R.origin},frame,valid:{side:cn.side,a:cn.a==null?90:+cn.a},s0:{side:cn.side,a:cn.a==null?90:+cn.a},base:new Set(clashFind(R).map(p=>p.join('-')))};
+  // the bigger part stays put: if more of the structure lies past the corner than before it, the drag swings the part before it instead
+  const C=R.conns.find(c=>c.conn===cn),ln=S.lines[T.li];if(C){const pre=C.path.concat(0).join('.');let dn=0,up=0;R.segs.filter(g=>g.li===T.li).forEach(g=>{const p=g.path.join('.');if(p===pre||p.startsWith(pre+'.'))dn+=g.len;else up+=g.len;});
+    if(dn>up){const r0=(cn.side==='L'?-1:1)*(cn.a==null?90:+cn.a);angDrag.flip={x:ln.x,y:ln.y,dir:ln.dir,r0,cx:T.c.x+R.origin.x,cz:T.c.z+R.origin.z,hout:T.hin+r0*Math.PI/180};angDrag.validLn={x:ln.x,y:ln.y,dir:ln.dir};}}
+  return true;}
+function angTo(dx,dz){const A=angDrag,cn=A.cn;if(Math.hypot(dx,dz)<20)return false;if(A.flip){const F=A.flip,ln=S.lines[A.li];let r=(F.hout-(Math.atan2(dz,dx)+Math.PI))*180/Math.PI;r=Math.atan2(Math.sin(r*Math.PI/180),Math.cos(r*Math.PI/180))*180/Math.PI;r=Math.max(-150,Math.min(150,Math.round(r/5)*5));
+    const nt=r<0?'L':'R',na=Math.abs(r);if(nt===cn.side&&na===(cn.a==null?90:+cn.a))return false;cn.side=nt;cn.a=na;
+    const fr=-(r-F.r0)*Math.PI/180,sx=(+F.x||0)-F.cx,sz=-(+F.y||0)-F.cz;ln.x=Math.round((F.cx+Math.cos(fr)*sx-Math.sin(fr)*sz)*10)/10;ln.y=Math.round(-(F.cz+Math.sin(fr)*sx+Math.cos(fr)*sz)*10)/10;ln.dir=((((+F.dir||0)+(r-F.r0))%360)+360)%360;R=resolve();
+    const bad=(cn._c&&cn._c.bad)||clashFind(R).some(p=>p.includes(A.li)&&!A.base.has(p.join('-')));
+    if(bad){cn.side=A.valid.side;cn.a=A.valid.a;Object.assign(ln,A.validLn);R=resolve();return false;}A.valid={side:nt,a:na};A.validLn={x:ln.x,y:ln.y,dir:ln.dir};return true;}let d=Math.atan2(dz,dx)-A.hin;d=Math.atan2(Math.sin(d),Math.cos(d))*180/Math.PI;d=Math.max(-150,Math.min(150,Math.round(d/5)*5));
   const nt=d<0?'L':'R',na=Math.abs(d);if(nt===cn.side&&na===(cn.a==null?90:+cn.a))return false;cn.side=nt;cn.a=na;R=resolve();
   const bad=(cn._c&&cn._c.bad)||clashFind(R).some(p=>p.includes(A.li)&&!A.base.has(p.join('-')));
   if(bad){cn.side=A.valid.side;cn.a=A.valid.a;R=resolve();return false;}A.valid={side:nt,a:na};return true;}
