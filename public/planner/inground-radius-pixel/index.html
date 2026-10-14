@@ -441,7 +441,7 @@ function headJoin(ln,k,side){const D=Math.PI/2,h0=-(+ln.dir||0)*Math.PI/180,ho=h
   const A={joint:[ho],corner:[side==='L'?ho-D:ho+D],tee:[ho-D,ho+D],teeL:[ho,ho-D],teeR:[ho,ho+D],cross:[ho,ho-D,ho+D]}[k];if(!A)return;
   const hin=A[0]+Math.PI,old=nm(h0-hin),rels=A.slice(1).map(a=>nm(a-hin)).concat(old).sort((a,b)=>a-b),key=rels.join(',');
   const kind={'0':'joint','90':'corner','-90':'corner','-90,90':'tee','-90,0':'teeL','0,90':'teeR','-90,0,90':'cross'}[key];if(!kind)return;
-  const cn=mkConn(kind,old<0?'L':'R');let oi=0;cn.outs.forEach((o,i)=>{if(kind==='corner'||o.rel===old){o.p=ln.tree;oi=i;}});
+  const cn=mkConn(kind,old<0?'L':'R');if(kind==='corner')cn.rev=true;let oi=0;cn.outs.forEach((o,i)=>{if(kind==='corner'||o.rel===old){o.p=ln.tree;oi=i;}});
   const rp=pc=>{if(!pc)return;if(pc.link&&pc.to&&pc.to.k!=='head')pc.to.p=[oi].concat(pc.to.p===''?[]:pc.to.p.split('.')).join('.');if(pc.next)pc.next.outs.forEach(o=>rp(o.p));};rp(ln.tree);
   const len=intBodies().at(-1).len,root={len,next:cn},L=rootGeo(len,cn),J=/^J/.test(CONN[kind].t)?PRODUCT.junction/2:0; // a junction's centre sits half its size before the old start, so the bodies stay put
   const nx=(+ln.x||0)+Math.cos(ho)*J,ny=(+ln.y||0)-Math.sin(ho)*J;ln.x=Math.round(nx-Math.cos(hin)*L);ln.y=Math.round(ny+Math.sin(hin)*L);ln.dir=((Math.round(-hin*180/Math.PI)%360)+360)%360;ln.tree=root;}
@@ -595,12 +595,12 @@ function treeHTML(l,pc,path){const list=intBodies(),pd=`data-l="${l}" data-p="${
   if(pc.link)return `<li class="step"><span class="n" title="Closing piece">⇥</span><div class="body"><b style="font-size:12.5px">Closing run ${pc._to==='arm'?'into the junction ahead':pc._to==='inline'?'onto the open end ahead (linear joint)':pc._to==='corner'?'onto the open end ahead (corner junction)':'· nothing ahead to join'}</b><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove closing run" title="Remove this closing run">✕</button></div></li>`;
   let h=`<li class="step"><span class="n" title="Piece">▬</span><div class="body"><div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Piece · body length (mm)<input type="number" min="300" step="50" ${pd} data-tk="len" value="${pc.len}"></label><label class="f">${pc.blind?'Or one module':'Or one body'}<select ${pd} data-tk="body"><option value="">Pick a length…</option>${(pc.blind?BLIND:list).map(b=>`<option value="${b.len}"${b.len===+pc.len?' selected':''}>${b.len} mm${pc.blind?'':' · '+b.wl+' W'}</option>`).join('')}</select></label><label class="f" style="grid-column:1/-1">Type<select ${pd} data-tk="blind"><option value="0"${pc.blind?'':' selected'}>Lit bodies</option><option value="1"${pc.blind?' selected':''}>Blind modules (no light, joined with linear joints)</option></select></label></div><div class="res" id="tres-${id}"></div></div><div class="ctl"><button class="ib" data-tdel ${pd} aria-label="Remove piece" title="Remove this piece (everything else stays where it is)">✕</button></div></li>`;
   const cn=pc.next;if(!cn&&pc._cl)return h+`<li class="tadd note">Joined here by a closing run</li>`;if(!cn)return h+`<li class="tadd"><button class="btn dash" data-tadd="end" ${pd}>+ Add after this piece</button></li>`;
-  h+=`<li class="step"><span class="n j" title="Junction">◆</span><div class="body"><b style="font-size:12.5px">${CONN[cn.k].name}</b>${cn.k==='corner'?`<div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Turn<select ${pd} data-tk="side"><option value="L"${cn.side==='L'?' selected':''}>Left</option><option value="R"${cn.side!=='L'?' selected':''}>Right</option></select></label><label class="f">Angle (°)<input type="number" min="0" max="150" step="5" ${pd} data-tk="a" value="${cn.a==null?90:cn.a}"></label></div>`:''}<div class="res" id="cres-${id}"></div></div><div class="ctl"><button class="ib" data-cdel ${pd} aria-label="Remove junction" title="Remove this junction and everything after it">✕</button></div></li>`;
+  h+=`<li class="step"><span class="n j" title="Junction">◆</span><div class="body"><b style="font-size:12.5px">${CONN[cn.k].name}</b>${cn.k==='corner'?`<div class="fields" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><label class="f">Turn<select ${pd} data-tk="side"><option value="L"${sideShown(cn)==='L'?' selected':''}>Left</option><option value="R"${sideShown(cn)!=='L'?' selected':''}>Right</option></select></label><label class="f">Angle (°)<input type="number" min="0" max="150" step="5" ${pd} data-tk="a" value="${cn.a==null?90:cn.a}"></label></div>`:''}<div class="res" id="cres-${id}"></div></div><div class="ctl"><button class="ib" data-cdel ${pd} aria-label="Remove junction" title="Remove this junction and everything after it">✕</button></div></li>`;
   cn.outs.forEach((o,i)=>{const p2=path.concat(i),inner=o.p?treeHTML(l,o.p,p2):(cn._tk||[]).includes(i)?`<li class="tadd note">Joined here by a closing run</li>`:`<li class="tadd"><button class="btn dash" data-tadd="arm" data-l="${l}" data-p="${p2.join('.')}">+ Add a piece</button></li>`;
     h+=cn.outs.length===1?inner:`<li class="tarm"><div class="tarm-h">Arm · ${armName(o.rel)}</div><ol class="steps">${inner}</ol></li>`;});
   return h;}
 function renderTree(){$('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
-    <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div><div style="display:flex;gap:6px">${ln.tree?`<button class="btn" data-dupline="${l}" style="padding:4px 9px;font-size:11.5px" title="Copy this line and place the copy beside it">Duplicate</button>`:''}${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px" title="Remove this line">Remove</button>`:''}</div></div>
+    <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div><div style="display:flex;gap:6px">${ln.tree?`<button class="btn" data-rotline="${l}" style="padding:4px 9px;font-size:11.5px" title="Turn the whole line a quarter turn">Rotate 90°</button><button class="btn" data-dupline="${l}" style="padding:4px 9px;font-size:11.5px" title="Copy this line and place the copy beside it">Duplicate</button>`:''}${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px" title="Remove this line">Remove</button>`:''}</div></div>
     <div class="lstart">
       <label class="f">Start X (mm)<input type="number" step="10" data-l="${l}" data-lk="x" value="${ln.x}"${l===0?' title="Measured from the datum (0, 0)"':''}></label>
       <label class="f">Start Y (mm)<input type="number" step="10" data-l="${l}" data-lk="y" value="${ln.y}"></label>
@@ -610,7 +610,7 @@ function renderTree(){$('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line
   </div>`).join('');}
 function renderSteps(){if(INT){renderTree();return;}
   $('lines').innerHTML=S.lines.map((ln,l)=>`<div class="line" aria-label="Line ${LET(l)}">
-    <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div><div style="display:flex;gap:6px"><button class="btn" data-dupline="${l}" style="padding:4px 9px;font-size:11.5px" title="Copy this line and place the copy beside it">Duplicate</button>${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px" title="Remove this line">Remove</button>`:''}</div></div>
+    <div class="lhead"><div><b>Line ${LET(l)}</b><span class="tag" id="lsum-${l}"></span></div><div style="display:flex;gap:6px"><button class="btn" data-rotline="${l}" style="padding:4px 9px;font-size:11.5px" title="Turn the whole line a quarter turn">Rotate 90°</button><button class="btn" data-dupline="${l}" style="padding:4px 9px;font-size:11.5px" title="Copy this line and place the copy beside it">Duplicate</button>${S.lines.length>1?`<button class="btn" data-rmline="${l}" style="padding:4px 9px;font-size:11.5px" title="Remove this line">Remove</button>`:''}</div></div>
     <div class="lstart">
       <label class="f">Start X (mm)<input type="number" step="10" id="lx-${l}" data-l="${l}" data-lk="x" value="${ln.x}"${l===0?' title="Measured from the datum (0, 0)"':''}></label>
       <label class="f">Start Y (mm)<input type="number" step="10" id="ly-${l}" data-l="${l}" data-lk="y" value="${ln.y}"></label>
@@ -681,8 +681,8 @@ $('lines').addEventListener('input',e=>{const t=e.target,l=+t.dataset.l;if(Numbe
     if(k==='len'||k==='a')return; // applied when the typing is finished (change), so half-typed numbers never reshape the design
     if(k==='body'){if(!t.value)return;pc.len=+t.value;update(true);return;}
     if(k==='blind'){if(t.value==='1')pc.blind=true;else delete pc.blind;update(true);return;}
-    if(!pc.next)return;if(k==='side'){pc.next.side=t.value;update(true);return;}
-    if(k==='a'){const v=parseFloat(t.value);if(!(v>=0&&v<=150))return;pc.next.a=v;update(false);return;}return;}
+    if(!pc.next)return;if(k==='side'){const cn=pc.next,v=cn.rev?(t.value==='L'?'R':'L'):t.value;cornerKeep(+t.dataset.l,cn,()=>{cn.side=v;});update(true);return;}
+    if(k==='a'){const v=parseFloat(t.value);if(!(v>=0&&v<=150))return;const cn=pc.next;cornerKeep(+t.dataset.l,cn,()=>{cn.a=v;});update(true);return;}return;}
   if(!t.dataset.k)return;const s=ln.steps[+t.dataset.i];
   const v=t.dataset.k==='len'||t.dataset.k==='a'?parseFloat(t.value):t.value; if(t.type==='number'&&!(v>0||(INT&&t.dataset.k==='a'&&v===0)))return; if(INT&&t.dataset.k==='a'&&v>150)return; s[t.dataset.k]=v; update(false);});
 $('lines').addEventListener('change',e=>{if(!INT)return;const t=e.target,k=t.dataset.tk;if(k!=='len'&&k!=='a')return;const ln=S.lines[+t.dataset.l],pc=ln&&tGet(ln,PP(t.dataset.p));if(!pc)return;const v=parseFloat(t.value);
@@ -690,7 +690,7 @@ $('lines').addEventListener('change',e=>{if(!INT)return;const t=e.target,k=t.dat
 $('lines').addEventListener('click',e=>{
   if(!e.target.closest('input,select,button,label')){const st=e.target.closest('.step'),res=st&&st.querySelector('.res[id]');if(res){const id=res.id.replace(/^t?res-/,''),[l,p]=id.split('-');
     const q=INT?(()=>{const g=R.segs.find(g=>g.li===+l&&g.path.join('_')===p);return g&&R.pieces.find(q=>q.line===g.li&&q.step===g.si);})():R.pieces.find(q=>q.line===+l&&q.step===+p);if(q){selectPiece(q);return;}}}
-  const du=e.target.closest('[data-dupline]');if(du){dupLine(+du.dataset.dupline);return;}
+  const ro=e.target.closest('[data-rotline]');if(ro){turnLine(+ro.dataset.rotline);toast(`Line ${LET(+ro.dataset.rotline)} turned 90°`);return;}const du=e.target.closest('[data-dupline]');if(du){dupLine(+du.dataset.dupline);return;}
   const rm=e.target.closest('[data-rmline]');if(rm){S.lines.splice(+rm.dataset.rmline,1);update(true,true);return;}
   if(INT){const ta=e.target.closest('[data-tadd]');if(ta){const r=ta.getBoundingClientRect();openChooser(+ta.dataset.l,PP(ta.dataset.p),ta.dataset.tadd,r.left,r.bottom+4);e.stopPropagation();return;}
     const td=e.target.closest('[data-tdel]');if(td){const l=+td.dataset.l,pc=tGet(S.lines[l],PP(td.dataset.p));if(pc){closeChooser();removePiece(l,pc);}return;}
@@ -936,7 +936,7 @@ function linJoint(full){if(!INT||PRODUCT.mount==='recessed')return null;
 const cableM=new THREE.MeshStandardMaterial({color:0x151515,roughness:0.6});
 function feedGLB(len){if(!INT||PRODUCT.mount==='recessed')return null;const m=glbGet('twos-power');if(!m)return null;const gl=m.getObjectByName('CableGland'),bx=m.getObjectByName('CeilingPowerBox');if(!gl||!bx)return null;
   m.updateMatrixWorld(true);const bg=new THREE.Box3().setFromObject(gl),bb=new THREE.Box3().setFromObject(bx),cg=bg.getCenter(V3()),cb=bb.getCenter(V3()),hM=PRODUCT.sec.h/1000;
-  const g=new THREE.Group(),a=gl.clone(true),b=bx.clone(true);a.applyMatrix4(gl.parent.matrixWorld);b.applyMatrix4(bx.parent.matrixWorld);glbMats(a,null,0);glbMats(b,null,0);
+  const g=new THREE.Group(),a=gl.clone(true),b=bx.clone(true);a.applyMatrix4(gl.parent.matrixWorld);b.applyMatrix4(bx.parent.matrixWorld);const fm=finM();[a,b].forEach(r=>r.traverse(o=>{if(o.isMesh)o.material=fm;}));
   const ga=new THREE.Group(),gb=new THREE.Group();ga.add(a);gb.add(b);ga.position.set(-cg.x,hM-bg.min.y,-cg.z);gb.position.set(-cg.x,len-bb.max.y,-cb.z);
   const top=len-(bb.max.y-bb.min.y),bot=hM+(bg.max.y-bg.min.y),cab=new THREE.Mesh(new THREE.CylinderGeometry(0.003,0.003,Math.max(0.001,top-bot),12),cableM);cab.position.y=(top+bot)/2;
   g.add(ga,gb,cab);return g;}
@@ -966,7 +966,8 @@ function buildTwos(target,list,studioMode){const nodeJ=[],spotsL=[],group=new TH
       if(studioMode){j.userData.dir=V3();j.userData.mid=V3((next.mid.x-q.mid.x)/1000*0.125,0,(next.mid.z-q.mid.z)/1000*0.125);extras.push(j);anch.male=j;}}}
     if(!studioMode&&!rec&&(q.seg==='S'||q.seg==='I')){const fd=feedGLB(S.ceil/1000-yLine());if(fd){const T_=V3(Math.cos(f[0].h),0,Math.sin(f[0].h));fd.position.set(f[0].x/1000+T_.x*0.06,0,f[0].z/1000+T_.z*0.06);fd.rotation.y=-(f[0].h+Math.PI);prof.add(fd);}}
     if(studioMode&&(q.seg==='S'||q.seg==='I')){const P=(t)=>V3((f[0].x+(f[1].x-f[0].x)*t)/1000,hM,(f[0].z+(f[1].z-f[0].z)*t)/1000),a=P(0.06);
-      prof.add(new THREE.Mesh(loomGeo([a,a.clone().add(V3(0,0.22,0)),a.clone().add(V3(0,0.22,0)).addScaledVector(T,-0.14)],0.0035),new THREE.MeshStandardMaterial({color:0xe8e8e6,roughness:0.6})));anch.feed={obj:prof,p:a.clone().add(V3(0,0.12,0))};}
+      const fd=feedGLB(0.32);if(fd){const T_=V3(Math.cos(f[0].h),0,Math.sin(f[0].h));fd.position.set(f[0].x/1000+T_.x*0.06,0,f[0].z/1000+T_.z*0.06);fd.rotation.y=-(f[0].h+Math.PI);prof.add(fd);}
+      else prof.add(new THREE.Mesh(new THREE.CylinderGeometry(0.003,0.003,0.3,12).translate(0,0.15+hM,0),cableM).translateX(a.x).translateZ(a.z));anch.feed={obj:prof,p:a.clone().add(V3(0,0.2,0))};}
     anch.prof={obj:prof,p:V3((f[0].x*0.7+f[1].x*0.3)/1000-Math.sin(f[0].h)*PRODUCT.sec.w/2000,hM*0.6,(f[0].z*0.7+f[1].z*0.3)/1000+Math.cos(f[0].h)*PRODUCT.sec.w/2000)};
     anch.ins={obj:ins,p:V3((f[0].x*0.4+f[1].x*0.6)/1000,sec.face.y/1000,(f[0].z*0.4+f[1].z*0.6)/1000)};
     if(q.b.blind){face.material=finM().clone();face.material.emissiveIntensity=0;}
@@ -1381,6 +1382,7 @@ function cornerKeep(li,cn,fn){const C=R.conns&&R.conns.find(c=>c.conn===cn),ln=S
   R.segs.filter(g=>g.li===li).forEach(g=>{const p=g.path.join('.');if(p===pre||p.startsWith(pre+'.'))dn+=g.len;else up+=g.len;});if(dn<=up)return;
   const O=R.origin,cx=C.c.x+O.x,cz=C.c.z+O.z,f=-d*Math.PI/180,sx=(+ln.x||0)-cx,sz=-(+ln.y||0)-cz;
   ln.x=Math.round((cx+Math.cos(f)*sx-Math.sin(f)*sz)*10)/10;ln.y=Math.round(-(cz+Math.sin(f)*sx+Math.cos(f)*sz)*10)/10;ln.dir=((((+ln.dir||0)+d)%360)+360)%360;}
+function sideShown(cn){return cn.rev?(cn.side==='L'?'R':'L'):cn.side;}
 function setConnType(li,path,k,side){const ln=S.lines[li],pc=tGet(ln,path);if(!pc||!pc.next)return;const old=pc.next;if(!connAllowed(old,k,side))return;
   const occ=old.outs.map(o=>({rel:relOf(old,o),p:o.p})).filter(x=>x.p),nc=mkConn(k,side);if(k==='corner'&&old.k==='corner')nc.a=old.a;
   if(old.outs.length===1&&nc.outs.length===1)nc.outs[0].p=old.outs[0].p;else nc.outs.forEach(o=>{const r=k==='corner'?(side==='L'?-90:90):o.rel,m=occ.find(x=>x.rel===r);if(m)o.p=m.p;});
@@ -1389,9 +1391,9 @@ function setConnType(li,path,k,side){const ln=S.lines[li],pc=tGet(ln,path);if(!p
 function openJunc(li,path,px,py){const ln=S.lines[li],pc=tGet(ln,path);if(!pc||!pc.next)return;const cn=pc.next,el=$('chooser'),rec=PRODUCT.mount==='recessed';
   selConn={li,path};selLabel=null;selF=null;markSidebar(true);highlight(hovered);
   let h=`<div class="ch-h">${CONN[cn.k].name} · line ${LET(li)}<button class="ib" data-chx aria-label="Close">✕</button></div>`;
-  h+=`<div class="ch-g">${JOPTS.filter(([k])=>!rec||k==='joint').map(([k,sd,n])=>{const cur=cn.k===k&&(k!=='corner'||cn.side===sd),ok=connAllowed(cn,k,sd||cn.side);
-    return `<button class="btn${cur?' solid':''}" data-jt="${k}" data-side="${sd}"${ok?'':' disabled style="opacity:.4;cursor:not-allowed" title="This would cut off an arm that has pieces on it: remove them first"'}>${n}</button>`;}).join('')}</div>`;
-  if(cn.k==='corner'){const a=cn.a==null?90:+cn.a;h+=`<div class="ch-f"><label class="f">Angle · ${cn.side==='L'?'left':'right'} <b id="ja-v">${a}°</b><input type="range" min="0" max="150" step="5" value="${a}" data-jang style="accent-color:#ff5000;padding:0;border:0;background:none"></label>
+  h+=`<div class="ch-g">${JOPTS.filter(([k])=>!rec||k==='joint').map(([k,sd,n])=>{const sv=k==='corner'&&cn.rev?(sd==='L'?'R':'L'):sd,cur=cn.k===k&&(k!=='corner'||cn.side===sv),ok=connAllowed(cn,k,sv||cn.side);
+    return `<button class="btn${cur?' solid':''}" data-jt="${k}" data-side="${sv}"${ok?'':' disabled style="opacity:.4;cursor:not-allowed" title="This would cut off an arm that has pieces on it: remove them first"'}>${n}</button>`;}).join('')}</div>`;
+  if(cn.k==='corner'){const a=cn.a==null?90:+cn.a;h+=`<div class="ch-f"><label class="f">Angle · ${sideShown(cn)==='L'?'left':'right'} <b id="ja-v">${a}°</b><input type="range" min="0" max="150" step="5" value="${a}" data-jang style="accent-color:#ff5000;padding:0;border:0;background:none"></label>
     <div style="display:flex;gap:6px;margin-top:6px">${[30,45,60,90,120,135].map(v=>`<button class="btn" data-ja="${v}" style="flex:1;padding:5px 0;text-align:center">${v}°</button>`).join('')}</div></div>`;}
   h+=`<div style="display:flex;justify-content:space-between;gap:6px"><span class="note">Arms with pieces stay; the rest move with the junction.</span><button class="btn" data-jdel style="white-space:nowrap">Remove junction</button></div>`;
   el.innerHTML=h;el.hidden=false;el.dataset.li=li;el.dataset.path=path.join('.');el.dataset.kind='junc';
@@ -1478,7 +1480,7 @@ function angTo(dx,dz){const A=angDrag,cn=A.cn;if(Math.hypot(dx,dz)<20)return fal
   const bad=(cn._c&&cn._c.bad)||clashFind(R).some(p=>p.includes(A.li)&&!A.base.has(p.join('-')));
   if(bad){cn.side=A.valid.side;cn.a=A.valid.a;R=resolve();return false;}A.valid={side:nt,a:na};return true;}
 function angEnd(){const A=angDrag;angDrag=null;if(A.valid.side===A.s0.side&&A.valid.a===A.s0.a){const C=R.conns.find(c=>c.conn===A.cn);if(C&&A.at)openJunc(C.li,C.path,A.at.x,A.at.y);return;}R=resolve();const T={x:R.origin.x-A.O0.x,z:R.origin.z-A.O0.z};camShift=V3(-T.x/1000,0,-T.z/1000);keepSite=true;update(true);
-  toast(`Corner set to ${A.cn.a}° ${A.cn.side==='L'?'left':'right'}`);}
+  toast(`Corner set to ${A.cn.a}° ${sideShown(A.cn)==='L'?'left':'right'}`);}
 let lastDown={t:0,li:-1},planPick=null;
 planEl.addEventListener('pointerdown',e=>{const op=INT&&!e.button&&e.target.closest('[data-open]');
   if(op){e.preventDefault();e.stopPropagation();const o=R.opens[+op.dataset.open];if(o)openChooser(o.li,o.path,o.kind,e.clientX+12,e.clientY+12);return;}
@@ -1486,7 +1488,7 @@ planEl.addEventListener('pointerdown',e=>{const op=INT&&!e.button&&e.target.clos
   const tj=INT&&!e.button&&e.target.closest('[data-turn]');
   if(tj){e.preventDefault();const ti=+tj.dataset.turn,v=planEl.querySelector('svg').viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];
     if(angBegin(ti,planFrame)&&(angDrag.at={x:e.clientX+12,y:e.clientY+12})){planEl.setPointerCapture(e.pointerId);planEl.style.cursor='alias';}return;}const t=e.target.closest('[data-line]');if(!t||e.button)return;e.preventDefault();
-  const li=+t.dataset.line,now=performance.now();planPick=t.dataset.pi!=null?R.pieces[+t.dataset.pi]:null;if(lastDown.li===li&&now-lastDown.t<400){lastDown={t:0,li:-1};turnLine(li);return;}lastDown={t:now,li};
+  const li=+t.dataset.line,now=performance.now();planPick=t.dataset.pi!=null?R.pieces[+t.dataset.pi]:null;lastDown={t:now,li};
   const svg=planEl.querySelector('svg'),v=svg.viewBox.baseVal;planFrame=[v.x,v.y,v.width,v.height];const p=svgPt(e);dragBegin(+t.dataset.line,p.x,p.y,e.altKey);planEl.setPointerCapture(e.pointerId);planEl.style.cursor='grabbing';});
 planEl.addEventListener('pointermove',e=>{if(angDrag&&planFrame){const p=svgPt(e);if(angTo(p.x-angDrag.c0.x,p.y-angDrag.c0.z)){cancelAnimationFrame(angRaf);angRaf=requestAnimationFrame(()=>{if(!angDrag)return;
     planEl.innerHTML=planSVG({screen:true,frame:{vb:planFrame,tx:R.origin.x-angDrag.O0.x,tz:R.origin.z-angDrag.O0.z}});});}return;}
@@ -1532,7 +1534,7 @@ canvas.addEventListener('pointermove',e=>{if(ang3!==null&&angDrag){const g=groun
 let last3={t:0,li:-1};
 const up3=()=>{if(drag3&&drag&&!(drag.d.x||drag.d.z)&&!drag.dup)selectPiece(drag3.q);if(ang3!==null){ang3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');if(angDrag){cancelAnimationFrame(angRaf);angEnd();}return;}if(!drag3)return;const li=drag3.li;drag3=null;controls.enabled=true;canvas.style.cursor='';labels.forEach(l=>l.element.style.visibility='');
   const moved=drag&&(drag.d.x||drag.d.z);if(drag)dragEnd();
-  if(!moved){const now=performance.now();if(last3.li===li&&now-last3.t<400){last3={t:0,li:-1};turnLine(li);}else last3={t:now,li};}else last3={t:0,li:-1};};
+  last3={t:0,li:-1};};
 canvas.addEventListener('pointerup',up3);canvas.addEventListener('pointercancel',up3);
 
 /* ======================= plan drawing (SVG, mm) ======================= */
@@ -1579,7 +1581,7 @@ function planSVG(o={}){
     R.nodes.forEach((c,ci)=>{if(!c.jn||(solo&&!ps.some(q=>q.pts.some(p=>Math.hypot(p.x-c.x,p.z-c.z)<PRODUCT.junction))))return;const J=PRODUCT.junction,tr=turns[ci],hr=Math.max(J*0.42,fs*0.9);
       c.arms.forEach(a=>{s+=`<line x1="${c.x}" y1="${c.z}" x2="${c.x+Math.cos(a)*J/2}" y2="${c.z+Math.sin(a)*J/2}" stroke="#ff5000" stroke-width="${sw*0.9}"/>`;});
       const C=R.conns&&R.conns.find(x=>x.c===c);s+=`<circle${o.screen?(tr?` data-turn="${tr[0]}" style="cursor:alias"`:C?` data-conn="${C.li}|${C.path.join('.')}" style="cursor:pointer"`:''):''} cx="${c.x}" cy="${c.z}" r="${hr}" fill="#fff" stroke="#ff5000" stroke-width="${k*1.6}"/>`;
-      s+=`<text x="${c.x+hr*1.3}" y="${c.z-hr*1.3}" font-size="${fs*0.8}" fill="#ff5000" font-weight="700">${c.type[1]}-WAY${tr?' · '+(tr[1].a==null?90:+tr[1].a)+'° '+(tr[1].side==='L'?'L':'R'):''}</text>`;});}
+      s+=`<text x="${c.x+hr*1.3}" y="${c.z-hr*1.3}" font-size="${fs*0.8}" fill="#ff5000" font-weight="700">${c.type[1]}-WAY${tr?' · '+(tr[1].a==null?90:+tr[1].a)+'° '+sideShown(tr[1]):''}</text>`;});}
   // step callouts: radius + angle for turns, length for straights (right-hand side)
   if(!o.key&&INT)R.segs.forEach(g=>{if(solo&&g.li!==o.only)return;const mine=ps.filter(q=>q.line===g.li&&q.step===g.si);if(!mine.length)return;const q=mine[Math.floor(mine.length/2)],m=mine.length%2?q.mid:q.pts[0];
     const off=sw*0.5+fs*1.6,cx=m.x-Math.sin(m.h)*off,cz=m.z+Math.cos(m.h)*off;
@@ -1607,7 +1609,7 @@ function planSVG(o={}){
   const sbx=vb[0]+pad*0.3,sby=vb[1]+vb[3]-pad*0.3;
   s+=`<g><rect x="${sbx}" y="${sby-fs*0.4}" width="1000" height="${fs*0.4}" fill="${ink}"/><text x="${sbx}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}">0</text><text x="${sbx+1000}" y="${sby-fs*0.8}" font-size="${fs*0.85}" fill="${ink}" text-anchor="end">1 m</text></g>`;
   s+='</g>';
-  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange${' · drag a line to move it (Alt-drag to copy), double-click to turn it 90°'}</text>`;
+  if(o.screen)s+=`<text x="${vb[0]+vb[2]-pad*0.3}" y="${vb[1]+pad*0.45}" font-size="${fs*0.9}" fill="${grey}" text-anchor="end">Plan · dimensions on the centre line · end caps and feeds in orange${' · click + to add a piece · click a corner to change it · drag a line to move it'}</text>`;
   return s+'</svg>';
 }
 
@@ -1836,7 +1838,7 @@ function update(redrawSteps,reframe){
     document.querySelectorAll('[data-rgb]').forEach(b=>b.setAttribute('aria-pressed',isW?b.dataset.rgb==='W':!!sw&&b.dataset.rgb===sw[0]));$('rgbsel').value=sw?sw[0]:'custom';$('rgbpick').value=S.rgb;
     if(!SCENES.find(x=>x[0]===S.fx))S.fx='static';$('fxsel').value=S.fx;
     ['r','g','b','w'].slice(0,NCH).forEach((k,i)=>{$('mix-'+k).value=S.mix[i];if(document.activeElement!==$('mixn-'+k))$('mixn-'+k).value=S.mix[i];});}$('proj').value=S.proj;$('client').value=S.client;
-  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · drag a line to move it · Alt-drag to copy · double-click to turn it'+(INT?' · click a junction to change it · drag a corner to set its angle':'');
+  $('legend').textContent='Drag to orbit · scroll to zoom · hover a piece for its code'+' · click + to add a piece'+(INT?' · click a corner or junction to change it':'')+' · drag a line to move it';
   clearTimeout(rebuildT);rebuildT=setTimeout(()=>{buildSite();if(camShift){anim=0;camera.position.add(camShift);controls.target.add(camShift);camShift=null;}if(current==='plan')$('plan').innerHTML=planSVG({screen:true});if(reframe)go(current==='plan'?'plan':'aerial',true);},redrawSteps?0:180);
 }
 update(true);setTimeout(()=>go('aerial',true),0);
